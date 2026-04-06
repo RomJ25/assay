@@ -1,13 +1,13 @@
 services:
-  screener:
+  assay:
     build: .
-    container_name: sp500-screener
+    container_name: assay
     environment:
       - TZ=America/New_York
       - PYTHONUNBUFFERED=1
     volumes:
-      - screener_data:/app/data
+      - assay_data:/app/data
     restart: "no"
 
 volumes:
-  screener_data:
+  assay_data:

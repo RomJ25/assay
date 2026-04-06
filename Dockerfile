@@ -4,8 +4,8 @@ WORKDIR /app
 
 ENV TZ=America/New_York
 ENV PYTHONUNBUFFERED=1
-ENV SCREENER_RESULTS=/app/data/results
-ENV SCREENER_CACHE_DB=/app/data/cache.db
+ENV ASSAY_RESULTS=/app/data/results
+ENV ASSAY_CACHE_DB=/app/data/cache.db
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl && \

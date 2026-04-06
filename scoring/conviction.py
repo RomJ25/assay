@@ -24,6 +24,24 @@ def conviction_score(value_score: float | None, quality_score: float | None) -> 
     return round(math.sqrt(value_score * quality_score), 1)
 
 
+def confidence_level(value_score: float | None, quality_score: float | None) -> str | None:
+    """Rate conviction buy confidence based on margin above thresholds.
+
+    HIGH:     both scores >= 85 (15+ pts above threshold)
+    MODERATE: both scores >= 75 (5+ pts above threshold)
+    LOW:      at least one score barely above 70
+    """
+    if value_score is None or quality_score is None:
+        return None
+    margin = min(value_score - VALUE_HIGH_THRESHOLD,
+                 quality_score - QUALITY_HIGH_THRESHOLD)
+    if margin >= 15:
+        return "HIGH"
+    if margin >= 5:
+        return "MODERATE"
+    return "LOW"
+
+
 def classify(value_score: float | None, quality_score: float | None) -> str:
     """Classify stock into conviction matrix bucket."""
     if value_score is None or quality_score is None:

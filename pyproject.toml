@@ -1,7 +1,7 @@
 [project]
-name = "sp500-screener"
-version = "0.1.0"
-description = "S&P 500 intrinsic value + quality + growth stock screener with 2D conviction matrix"
+name = "assay"
+version = "0.2.0"
+description = "Assay — S&P 500 value + quality stock screener with 2D conviction matrix"
 requires-python = ">=3.11"
 
 dependencies = [

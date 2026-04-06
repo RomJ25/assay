@@ -10,15 +10,30 @@ from rich.panel import Panel
 
 console = Console()
 
+_CRITERION_LABELS = [
+    ("net_income_positive", "NI"),
+    ("ocf_positive", "OCF"),
+    ("roa_improving", "ROA"),
+    ("accruals_quality", "Accrual"),
+    ("debt_ratio_decreasing", "Debt"),
+    ("current_ratio_up", "CurRatio"),
+    ("no_dilution", "NoDilute"),
+    ("gross_margin_up", "Margin"),
+    ("asset_turnover_up", "Turnover"),
+]
 
-def print_report(today: date, results: list[dict], top_n: int = 20, wide: bool = False):
+_CONF_STYLE = {"HIGH": "bold green", "MODERATE": "yellow", "LOW": "red"}
+
+
+def print_report(today: date, results: list[dict], top_n: int = 20,
+                 wide: bool = False, breakdown: bool = False):
     """Print the screening report."""
     total = len(results)
     sorted_results = sorted(results, key=lambda r: r.get("conviction_score") or 0, reverse=True)
 
     console.print()
     console.print(Panel(
-        f"[bold]S&P 500 EARNINGS YIELD + QUALITY SCREENER[/bold]\n"
+        f"[bold]ASSAY — S&P 500 VALUE + QUALITY SCREENER[/bold]\n"
         f"Date: {today.isoformat()} | Screened: {total} stocks\n"
         f"Value: Earnings Yield rank (Carlisle) | Quality: Piotroski + Gross Profitability (Novy-Marx)",
         style="bold blue",
@@ -27,12 +42,12 @@ def print_report(today: date, results: list[dict], top_n: int = 20, wide: bool =
     # Conviction Buys
     buys = [r for r in sorted_results if r.get("classification") == "CONVICTION BUY"]
     if buys:
-        _print_main_table("CONVICTION BUYS — Cheap + High Quality", buys[:top_n], "green", wide)
+        _print_main_table("CONVICTION BUYS — Cheap + High Quality", buys[:top_n], "green", wide, breakdown)
 
     # Value Traps
     traps = [r for r in sorted_results if r.get("classification") == "VALUE TRAP"]
     if traps:
-        _print_main_table("VALUE TRAPS — Cheap but Low Quality (AVOID)", traps[:10], "red", wide)
+        _print_main_table("VALUE TRAPS — Cheap but Low Quality (AVOID)", traps[:10], "red", wide, breakdown)
         financial_traps = [r for r in traps if r.get("sector") == "Financials"]
         if financial_traps:
             console.print(
@@ -43,7 +58,7 @@ def print_report(today: date, results: list[dict], top_n: int = 20, wide: bool =
     # Watch List
     watch = [r for r in sorted_results if r.get("classification") == "WATCH LIST"]
     if watch:
-        _print_main_table("WATCH LIST — Cheap, Moderate Quality (Investigate)", watch[:10], "yellow", wide)
+        _print_main_table("WATCH LIST — Cheap, Moderate Quality (Investigate)", watch[:10], "yellow", wide, breakdown)
 
     # Summary
     from collections import Counter
@@ -63,7 +78,23 @@ def print_report(today: date, results: list[dict], top_n: int = 20, wide: bool =
     console.print()
 
 
-def _print_main_table(title: str, results: list[dict], color: str, wide: bool = False):
+def _format_breakdown(r: dict) -> str:
+    """Format Piotroski criterion breakdown as a compact string."""
+    bd = r.get("piotroski_breakdown", {})
+    criteria = bd.get("criteria", {})
+    if not criteria:
+        return ""
+    parts = []
+    for key, label in _CRITERION_LABELS:
+        c = criteria.get(key, {})
+        mark = "\u2713" if c.get("pass") else "\u2717"
+        parts.append(f"{mark}{label}")
+    raw = bd.get("raw_score", "?")
+    return f"F={raw}/9: {' '.join(parts)}"
+
+
+def _print_main_table(title: str, results: list[dict], color: str,
+                      wide: bool = False, breakdown: bool = False):
     """Print a table with earnings yield, quality metrics, and context.
 
     Normal mode (11 cols, ~105 chars): scores + key context
@@ -82,6 +113,8 @@ def _print_main_table(title: str, results: list[dict], color: str, wide: bool = 
     table.add_column("V", justify="right", width=3)
     table.add_column("Q", justify="right", width=3)
     table.add_column("Conv", justify="right", width=4)
+    if r_has_confidence(results):
+        table.add_column("Conf", justify="center", width=4)
     table.add_column("Grw", justify="right", width=3)
     if wide:
         table.add_column("F", justify="right", width=4)
@@ -91,6 +124,8 @@ def _print_main_table(title: str, results: list[dict], color: str, wide: bool = 
     if wide:
         table.add_column("52wH", justify="right", width=6)
     table.add_column("DCF", justify="right", width=8)
+
+    show_conf = r_has_confidence(results)
 
     for i, r in enumerate(results, 1):
         ey = f"{r['earnings_yield']:.1f}" if r.get("earnings_yield") else "-"
@@ -111,7 +146,12 @@ def _print_main_table(title: str, results: list[dict], color: str, wide: bool = 
         dcf = f"${r['dcf_base']:.0f}" if r.get("dcf_base") else "-"
 
         row = [str(i), r.get("ticker", ""), (r.get("company", "") or "")[:company_w],
-               f"${r.get('price', 0):.0f}", ey, v, q, cv, grw]
+               f"${r.get('price', 0):.0f}", ey, v, q, cv]
+        if show_conf:
+            conf = r.get("confidence") or ""
+            style = _CONF_STYLE.get(conf, "")
+            row.append(f"[{style}]{conf[:3]}[/{style}]" if conf else "-")
+        row.append(grw)
         if wide:
             row.extend([f_sc, gpa])
             row.append(f"{r['pe_ratio']:.1f}" if r.get("pe_ratio") else "-")
@@ -123,3 +163,16 @@ def _print_main_table(title: str, results: list[dict], color: str, wide: bool = 
         table.add_row(*row)
 
     console.print(table)
+
+    # Breakdown: print criterion grid below the table
+    if breakdown:
+        console.print(f"  [dim]Piotroski Criterion Breakdown:[/dim]")
+        for r in results:
+            bd_str = _format_breakdown(r)
+            if bd_str:
+                console.print(f"    [bold]{r.get('ticker', ''):6s}[/bold] {bd_str}")
+
+
+def r_has_confidence(results: list[dict]) -> bool:
+    """Check if any result has a confidence level (i.e., is a conviction buy)."""
+    return any(r.get("confidence") for r in results)

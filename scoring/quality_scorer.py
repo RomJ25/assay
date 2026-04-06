@@ -17,7 +17,7 @@ from quality.piotroski import PiotroskiModel
 
 def compute_quality_scores(
     all_data: dict[str, FinancialData],
-) -> tuple[dict[str, float], dict[str, int], dict[str, float]]:
+) -> tuple[dict[str, float], dict[str, int], dict[str, float], dict[str, dict]]:
     """Compute quality scores from Piotroski + Profitability.
 
     Profitability = Gross Profit / Total Assets (Novy-Marx factor).
@@ -27,17 +27,20 @@ def compute_quality_scores(
         quality_scores: {ticker: 0-100 score}
         piotroski_raw: {ticker: 0-9 raw F-Score}
         profitability_ratios: {ticker: profitability ratio used}
+        piotroski_breakdowns: {ticker: breakdown dict with per-criterion detail}
     """
     piotroski = PiotroskiModel()
 
-    # Piotroski F-Score (0-100 normalized)
+    # Piotroski F-Score (0-100 normalized) with per-criterion breakdown
     pio_scores: dict[str, float] = {}
     pio_raw: dict[str, int] = {}
+    pio_breakdowns: dict[str, dict] = {}
     for ticker, fd in all_data.items():
-        score = piotroski.calculate(fd)
+        score, breakdown = piotroski.calculate_detailed(fd)
         if score is not None:
             pio_scores[ticker] = score
-            pio_raw[ticker] = piotroski.raw_score(fd)
+            pio_raw[ticker] = round(score * 9 / 100)
+            pio_breakdowns[ticker] = breakdown
 
     # Profitability = GP/Assets, with ROA fallback for banks
     profitability_ratios: dict[str, float] = {}
@@ -77,4 +80,4 @@ def compute_quality_scores(
         elif g is not None:
             quality_scores[ticker] = round(g * QUALITY_SINGLE_SOURCE_PENALTY, 1)
 
-    return quality_scores, pio_raw, profitability_ratios
+    return quality_scores, pio_raw, profitability_ratios, pio_breakdowns

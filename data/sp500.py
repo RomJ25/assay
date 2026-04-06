@@ -20,7 +20,7 @@ def fetch_sp500_list() -> pd.DataFrame:
     Tickers have dots replaced with hyphens for Yahoo Finance compatibility.
     """
     logger.info("Fetching S&P 500 list from Wikipedia...")
-    resp = requests.get(SP500_WIKIPEDIA_URL, headers={"User-Agent": "SP500Screener/1.0"}, timeout=15)
+    resp = requests.get(SP500_WIKIPEDIA_URL, headers={"User-Agent": "Assay/1.0"}, timeout=15)
     resp.raise_for_status()
     tables = pd.read_html(io.StringIO(resp.text))
     if not tables:

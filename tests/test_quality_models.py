@@ -4,7 +4,7 @@ from data.providers.base import FinancialData
 from quality.growth import GrowthModel
 from quality.piotroski import PiotroskiModel
 from scoring.quality_scorer import compute_quality_scores
-from scoring.conviction import conviction_score, classify
+from scoring.conviction import conviction_score, classify, confidence_level
 
 
 def _make_fd(**overrides) -> FinancialData:
@@ -74,7 +74,7 @@ class TestQualityScorer:
             "HIGH_GP": _make_fd(ticker="HIGH_GP", gross_profit=[8e9], total_assets=[10e9, 9e9]),
             "LOW_GP": _make_fd(ticker="LOW_GP", gross_profit=[1e9], total_assets=[10e9, 9e9]),
         }
-        qs, _, _ = compute_quality_scores(stocks)
+        qs, _, _, _ = compute_quality_scores(stocks)
         assert qs["HIGH_GP"] > qs["LOW_GP"]
 
     def test_roa_fallback_for_banks(self):
@@ -82,7 +82,7 @@ class TestQualityScorer:
             "BANK": _make_fd(ticker="BANK", gross_profit=[None]*4, net_income=[2e9, 1.8e9, 1.5e9, 1.2e9],
                              total_assets=[100e9, 90e9]),
         }
-        qs, _, prof = compute_quality_scores(stocks)
+        qs, _, prof, _ = compute_quality_scores(stocks)
         assert "BANK" in qs  # should get quality score via ROA fallback
         assert "BANK" in prof  # should have profitability ratio
 
@@ -90,7 +90,7 @@ class TestQualityScorer:
         stocks = {
             "EMPTY": _make_fd(ticker="EMPTY", gross_profit=[None]*4, net_income=[None]*4),
         }
-        qs, _, _ = compute_quality_scores(stocks)
+        qs, _, _, _ = compute_quality_scores(stocks)
         # Should still get a Piotroski-only score or None, but not crash
 
     def test_single_source_penalized(self):
@@ -102,7 +102,7 @@ class TestQualityScorer:
             "SINGLE": _make_fd(ticker="SINGLE", gross_profit=[None]*4, net_income=[None]*4,
                                total_assets=[None]*2),
         }
-        qs, _, _ = compute_quality_scores(stocks)
+        qs, _, _, _ = compute_quality_scores(stocks)
         # SINGLE gets only Piotroski, penalized by 0.8x
         if "SINGLE" in qs and "DUAL" in qs:
             assert qs["DUAL"] > qs["SINGLE"]
@@ -163,3 +163,70 @@ class TestGrowthModel:
         # Profitability's neutral 25 survives even with no real data
         assert score is not None
         assert score < 50
+
+
+class TestPiotroskiBreakdown:
+    def test_calculate_detailed_returns_all_criteria(self):
+        """Breakdown should contain all 9 criteria with 'pass' booleans."""
+        pio = PiotroskiModel()
+        fd = _make_fd()
+        score, breakdown = pio.calculate_detailed(fd)
+        assert score is not None
+        criteria = breakdown["criteria"]
+        assert len(criteria) == 9
+        expected_keys = {
+            "net_income_positive", "ocf_positive", "roa_improving",
+            "accruals_quality", "debt_ratio_decreasing", "current_ratio_up",
+            "no_dilution", "gross_margin_up", "asset_turnover_up",
+        }
+        assert set(criteria.keys()) == expected_keys
+        for c in criteria.values():
+            assert "pass" in c
+            assert isinstance(c["pass"], bool)
+
+    def test_breakdown_sum_matches_raw_score(self):
+        """Sum of passing criteria must equal the raw score."""
+        pio = PiotroskiModel()
+        fd = _make_fd()
+        score, breakdown = pio.calculate_detailed(fd)
+        passes = sum(1 for c in breakdown["criteria"].values() if c["pass"])
+        assert passes == breakdown["raw_score"]
+        assert round((passes / 9) * 100, 1) == score
+
+    def test_breakdown_with_missing_data(self):
+        """Missing data should produce all-False criteria, not crash."""
+        pio = PiotroskiModel()
+        fd = _make_fd(
+            net_income=[None]*4, operating_cash_flow=[None]*4,
+            total_assets=[None]*2, total_debt=[None]*2,
+            current_assets=[None]*2, current_liabilities=[None]*2,
+            ordinary_shares_number=[None]*2,
+            gross_profit=[None]*4, revenue=[None]*4,
+        )
+        score, breakdown = pio.calculate_detailed(fd)
+        assert score == 0.0
+        assert breakdown["raw_score"] == 0
+
+    def test_calculate_wrapper_matches_detailed(self):
+        """calculate() must return the same score as calculate_detailed()[0]."""
+        pio = PiotroskiModel()
+        fd = _make_fd()
+        assert pio.calculate(fd) == pio.calculate_detailed(fd)[0]
+
+
+class TestConfidenceLevel:
+    def test_high_confidence(self):
+        assert confidence_level(90, 90) == "HIGH"
+        assert confidence_level(85, 86) == "HIGH"
+
+    def test_moderate_confidence(self):
+        assert confidence_level(78, 78) == "MODERATE"
+        assert confidence_level(75, 80) == "MODERATE"
+
+    def test_low_confidence(self):
+        assert confidence_level(71, 71) == "LOW"
+        assert confidence_level(70, 95) == "LOW"
+
+    def test_none_input(self):
+        assert confidence_level(None, 80) is None
+        assert confidence_level(80, None) is None

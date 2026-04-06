@@ -1,12 +1,12 @@
-"""Central configuration for the S&P 500 screener."""
+"""Central configuration for Assay — S&P 500 value + quality screener."""
 
 import os
 from pathlib import Path
 
 # ── Paths ──────────────────────────────────────────────────────────────
-PROJECT_ROOT = Path(os.environ.get("SCREENER_ROOT", Path(__file__).resolve().parent))
-RESULTS_DIR = Path(os.environ.get("SCREENER_RESULTS", PROJECT_ROOT / "results"))
-CACHE_DB_PATH = Path(os.environ.get("SCREENER_CACHE_DB", PROJECT_ROOT / "storage" / "cache.db"))
+PROJECT_ROOT = Path(os.environ.get("ASSAY_ROOT", os.environ.get("SCREENER_ROOT", Path(__file__).resolve().parent)))
+RESULTS_DIR = Path(os.environ.get("ASSAY_RESULTS", os.environ.get("SCREENER_RESULTS", PROJECT_ROOT / "results")))
+CACHE_DB_PATH = Path(os.environ.get("ASSAY_CACHE_DB", os.environ.get("SCREENER_CACHE_DB", PROJECT_ROOT / "storage" / "cache.db")))
 
 # ── S&P 500 List ──────────────────────────────────────────────────────
 SP500_WIKIPEDIA_URL = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"

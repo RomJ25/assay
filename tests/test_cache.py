@@ -1,10 +1,7 @@
 """Unit tests for the SQLite cache layer."""
 
-import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-
-import pandas as pd
 
 from data.cache import Cache
 

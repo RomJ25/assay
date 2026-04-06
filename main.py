@@ -1,4 +1,7 @@
-"""S&P 500 Value + Quality Screener — Earnings Yield + Piotroski + Gross Profitability.
+"""Assay — S&P 500 Value + Quality Stock Screener.
+
+Tests every stock for value (Earnings Yield) and quality (Piotroski F-Score
++ Gross Profitability), separating conviction buys from value traps.
 
 Based on academically proven quant strategies:
 - Carlisle's Acquirer's Multiple (EV/EBIT): 17.9% CAGR over 44 years
@@ -17,20 +20,18 @@ from rich.console import Console
 from rich.progress import Progress
 
 from data.fetcher import DataFetcher
-from data.providers.base import FinancialData
 from models.dcf import DCFModel
 from models.relative import RelativeModel
 from quality.growth import GrowthModel
-from quality.piotroski import PiotroskiModel
 from scoring.value_scorer import compute_value_scores, get_yield_metrics
 from scoring.quality_scorer import compute_quality_scores
-from scoring.conviction import conviction_score, classify
+from scoring.conviction import conviction_score, classify, confidence_level
 from scoring.filters import passes_data_quality
 from output.console_report import print_report
 from output.csv_report import save_csv, save_json
 
 console = Console()
-logger = logging.getLogger("screener")
+logger = logging.getLogger("assay")
 
 
 def setup_logging(verbose: bool = False):
@@ -43,13 +44,13 @@ def setup_logging(verbose: bool = False):
 
 
 def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = False,
-                 refresh: bool = False, wide: bool = False):
+                 refresh: bool = False, wide: bool = False, breakdown: bool = False):
     """Main screener pipeline."""
     setup_logging(verbose)
     today = date.today()
     start_time = time.time()
 
-    console.print(f"\n[bold blue]S&P 500 Screener — Earnings Yield + Quality[/bold blue]")
+    console.print(f"\n[bold blue]Assay — S&P 500 Value + Quality[/bold blue]")
 
     # Step 1: Fetch S&P 500 list
     fetcher = DataFetcher(force_refresh=refresh)
@@ -81,7 +82,7 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
     value_scores = compute_value_scores(screened)
 
     # Step 4: Score quality (Piotroski + Gross Profitability)
-    quality_scores, piotroski_raw, gp_ratios = compute_quality_scores(screened)
+    quality_scores, piotroski_raw, gp_ratios, pio_breakdowns = compute_quality_scores(screened)
 
     # Step 5: DCF + Relative as supplementary context (not for ranking)
     dcf_model = DCFModel()
@@ -98,6 +99,7 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
             q_score = quality_scores.get(t)
             conv = conviction_score(v_score, q_score)
             cl = classify(v_score, q_score)
+            conf = confidence_level(v_score, q_score) if cl == "CONVICTION BUY" else None
 
             # Yield metrics
             yields = get_yield_metrics(d)
@@ -107,7 +109,7 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
             dcf_details = dcf_r.details if dcf_r else {}
 
             # Context: Relative (supplementary)
-            rel_r = relative_model.calculate(d)
+            relative_model.calculate(d)
 
             # Context: Growth score (supplementary)
             growth_score = growth_model.calculate(d)
@@ -139,6 +141,7 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
                 "quality_score": q_score,
                 "conviction_score": conv,
                 "classification": cl,
+                "confidence": conf,
                 # Value metrics (the actual ranking signals)
                 "earnings_yield": yields.get("earnings_yield"),
                 "fcf_yield": yields.get("fcf_yield"),
@@ -146,6 +149,8 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
                 "piotroski_f": piotroski_raw.get(t, 0),
                 "gross_profitability": gp_ratio,
                 "growth_score": growth_score,
+                # Piotroski criterion breakdown
+                "piotroski_breakdown": pio_breakdowns.get(t, {}),
                 # Context (supplementary, not scoring)
                 "dcf_bear": dcf_details.get("dcf_bear"),
                 "dcf_base": dcf_details.get("dcf_base"),
@@ -172,7 +177,7 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
         return
 
     # Step 7: Output
-    print_report(today, results, top_n=top_n, wide=wide)
+    print_report(today, results, top_n=top_n, wide=wide, breakdown=breakdown)
     csv_path = save_csv(today, results)
     save_json(today, results)
 
@@ -182,17 +187,18 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
 
 def main():
     parser = argparse.ArgumentParser(
-        description="S&P 500 Screener — Earnings Yield + Piotroski + Gross Profitability"
+        description="Assay — S&P 500 Value + Quality Stock Screener"
     )
     parser.add_argument("--ticker", "-t", help="Screen a single ticker (e.g., AAPL)")
     parser.add_argument("--top", type=int, default=20, help="Show top N results (default: 20)")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose logging")
     parser.add_argument("--refresh", action="store_true", help="Bypass cache, fetch fresh data")
     parser.add_argument("--wide", action="store_true", help="Wide table with extra columns")
+    parser.add_argument("--breakdown", action="store_true", help="Show Piotroski criterion breakdown")
     args = parser.parse_args()
 
     run_screener(ticker=args.ticker, top_n=args.top, verbose=args.verbose,
-                 refresh=args.refresh, wide=args.wide)
+                 refresh=args.refresh, wide=args.wide, breakdown=args.breakdown)
 
 
 if __name__ == "__main__":
