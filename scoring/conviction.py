@@ -1,0 +1,55 @@
+"""2D Conviction Matrix — combines Value Score and Quality+Growth Score."""
+
+from __future__ import annotations
+
+import math
+
+from config import (
+    QUALITY_HIGH_THRESHOLD,
+    QUALITY_LOW_THRESHOLD,
+    VALUE_HIGH_THRESHOLD,
+    VALUE_LOW_THRESHOLD,
+)
+
+
+def conviction_score(value_score: float | None, quality_score: float | None) -> float | None:
+    """Geometric mean of value and quality scores.
+
+    Ensures both dimensions must be high for a high conviction score.
+    """
+    if value_score is None or quality_score is None:
+        return None
+    if value_score <= 0 or quality_score <= 0:
+        return 0.0
+    return round(math.sqrt(value_score * quality_score), 1)
+
+
+def classify(value_score: float | None, quality_score: float | None) -> str:
+    """Classify stock into conviction matrix bucket."""
+    if value_score is None or quality_score is None:
+        return "INSUFFICIENT DATA"
+
+    v_high = value_score >= VALUE_HIGH_THRESHOLD
+    v_mid = VALUE_LOW_THRESHOLD <= value_score < VALUE_HIGH_THRESHOLD
+    v_low = value_score < VALUE_LOW_THRESHOLD
+
+    q_high = quality_score >= QUALITY_HIGH_THRESHOLD
+    q_mid = QUALITY_LOW_THRESHOLD <= quality_score < QUALITY_HIGH_THRESHOLD
+    q_low = quality_score < QUALITY_LOW_THRESHOLD
+
+    if v_high and q_high:
+        return "CONVICTION BUY"
+    if v_high and q_low:
+        return "VALUE TRAP"
+    if v_high and q_mid:
+        return "WATCH LIST"
+    if v_mid and q_high:
+        return "QUALITY GROWTH PREMIUM"
+    if v_mid and q_mid:
+        return "HOLD"
+    if v_low and q_high:
+        return "OVERVALUED QUALITY"
+    if v_low and q_mid:
+        return "OVERVALUED"
+    # v_low + q_low OR v_mid + q_low
+    return "AVOID"

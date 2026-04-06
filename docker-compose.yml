@@ -1,0 +1,13 @@
+services:
+  screener:
+    build: .
+    container_name: sp500-screener
+    environment:
+      - TZ=America/New_York
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - screener_data:/app/data
+    restart: "no"
+
+volumes:
+  screener_data:
