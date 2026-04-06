@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 
 from config import (
+    MIN_PIOTROSKI_F,
     QUALITY_HIGH_THRESHOLD,
     QUALITY_LOW_THRESHOLD,
     VALUE_HIGH_THRESHOLD,
@@ -40,6 +41,16 @@ def confidence_level(value_score: float | None, quality_score: float | None) -> 
     if margin >= 5:
         return "MODERATE"
     return "LOW"
+
+
+def apply_min_fscore(classification: str, piotroski_f: int) -> str:
+    """Downgrade CONVICTION BUY to WATCH LIST if raw F-Score is below minimum.
+
+    Piotroski's paper found strongest outperformance at F >= 5-6.
+    """
+    if classification == "CONVICTION BUY" and piotroski_f < MIN_PIOTROSKI_F:
+        return "WATCH LIST"
+    return classification
 
 
 def classify(value_score: float | None, quality_score: float | None) -> str:

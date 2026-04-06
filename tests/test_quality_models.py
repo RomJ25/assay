@@ -4,7 +4,7 @@ from data.providers.base import FinancialData
 from quality.growth import GrowthModel
 from quality.piotroski import PiotroskiModel
 from scoring.quality_scorer import compute_quality_scores
-from scoring.conviction import conviction_score, classify, confidence_level
+from scoring.conviction import conviction_score, classify, confidence_level, apply_min_fscore
 
 
 def _make_fd(**overrides) -> FinancialData:
@@ -230,3 +230,50 @@ class TestConfidenceLevel:
     def test_none_input(self):
         assert confidence_level(None, 80) is None
         assert confidence_level(80, None) is None
+
+
+class TestMinFScoreGate:
+    def test_downgrades_low_fscore(self):
+        """F=4 with MIN_F=5 should downgrade CONVICTION BUY to WATCH LIST."""
+        assert apply_min_fscore("CONVICTION BUY", 4) == "WATCH LIST"
+
+    def test_keeps_high_fscore(self):
+        """F=6 should stay as CONVICTION BUY."""
+        assert apply_min_fscore("CONVICTION BUY", 6) == "CONVICTION BUY"
+        assert apply_min_fscore("CONVICTION BUY", 9) == "CONVICTION BUY"
+
+    def test_only_affects_conviction_buy(self):
+        """Other classifications should not be changed regardless of F-Score."""
+        assert apply_min_fscore("VALUE TRAP", 2) == "VALUE TRAP"
+        assert apply_min_fscore("WATCH LIST", 3) == "WATCH LIST"
+        assert apply_min_fscore("HOLD", 1) == "HOLD"
+
+    def test_boundary(self):
+        """F-Score exactly at minimum should pass."""
+        assert apply_min_fscore("CONVICTION BUY", 5) == "CONVICTION BUY"
+
+
+class TestExcludeFinancials:
+    def test_keeps_fintech_with_oi(self):
+        """Financials WITH operating income (PYPL-like) should be kept."""
+        from main import _include_stock
+        fd = _make_fd(sector="Financials", operating_income=[3e9, 2.5e9])
+        assert _include_stock(fd) is True
+
+    def test_removes_bank_without_oi(self):
+        """Financials WITHOUT operating income (bank-like) should be excluded."""
+        from main import _include_stock
+        fd = _make_fd(sector="Financials", operating_income=[None, None])
+        assert _include_stock(fd) is False
+
+    def test_removes_reit(self):
+        """Real Estate should always be excluded."""
+        from main import _include_stock
+        fd = _make_fd(sector="Real Estate", operating_income=[1e9, 0.9e9])
+        assert _include_stock(fd) is False
+
+    def test_keeps_non_financial(self):
+        """Non-financial sectors should always be kept."""
+        from main import _include_stock
+        fd = _make_fd(sector="Information Technology")
+        assert _include_stock(fd) is True

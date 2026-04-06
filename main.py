@@ -25,7 +25,7 @@ from models.relative import RelativeModel
 from quality.growth import GrowthModel
 from scoring.value_scorer import compute_value_scores, get_yield_metrics
 from scoring.quality_scorer import compute_quality_scores
-from scoring.conviction import conviction_score, classify, confidence_level
+from scoring.conviction import conviction_score, classify, confidence_level, apply_min_fscore
 from scoring.filters import passes_data_quality
 from output.console_report import print_report
 from output.csv_report import save_csv, save_json
@@ -43,8 +43,24 @@ def setup_logging(verbose: bool = False):
     )
 
 
+def _include_stock(d) -> bool:
+    """Check if a stock should be included when --exclude-financials is active.
+
+    Excludes Real Estate (REITs have distorted metrics) and Financials
+    that lack operating income (banks/insurance using 1/PE fallback).
+    Keeps fintech/payment companies (PYPL, MA, V) that report normal EBIT.
+    """
+    if d.sector == "Real Estate":
+        return False
+    if d.sector != "Financials":
+        return True
+    oi = d.get("operating_income", 0)
+    return oi is not None and oi > 0
+
+
 def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = False,
-                 refresh: bool = False, wide: bool = False, breakdown: bool = False):
+                 refresh: bool = False, wide: bool = False, breakdown: bool = False,
+                 exclude_financials: bool = False):
     """Main screener pipeline."""
     setup_logging(verbose)
     today = date.today()
@@ -78,6 +94,11 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
     screened = {t: d for t, d in all_data.items() if passes_data_quality(d)}
     console.print(f"Passed quality filter: {len(screened)}/{len(all_data)}")
 
+    if exclude_financials:
+        before = len(screened)
+        screened = {t: d for t, d in screened.items() if _include_stock(d)}
+        console.print(f"Excluded financials/RE: {before - len(screened)} removed, {len(screened)} remaining")
+
     # Step 3: RANK by earnings yield (value dimension)
     value_scores = compute_value_scores(screened)
 
@@ -99,6 +120,7 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
             q_score = quality_scores.get(t)
             conv = conviction_score(v_score, q_score)
             cl = classify(v_score, q_score)
+            cl = apply_min_fscore(cl, piotroski_raw.get(t, 0))
             conf = confidence_level(v_score, q_score) if cl == "CONVICTION BUY" else None
 
             # Yield metrics
@@ -177,7 +199,8 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
         return
 
     # Step 7: Output
-    print_report(today, results, top_n=top_n, wide=wide, breakdown=breakdown)
+    print_report(today, results, top_n=top_n, wide=wide, breakdown=breakdown,
+                 exclude_financials=exclude_financials)
     csv_path = save_csv(today, results)
     save_json(today, results)
 
@@ -195,10 +218,13 @@ def main():
     parser.add_argument("--refresh", action="store_true", help="Bypass cache, fetch fresh data")
     parser.add_argument("--wide", action="store_true", help="Wide table with extra columns")
     parser.add_argument("--breakdown", action="store_true", help="Show Piotroski criterion breakdown")
+    parser.add_argument("--exclude-financials", action="store_true",
+                        help="Remove banks, insurance, and REITs from the screen")
     args = parser.parse_args()
 
     run_screener(ticker=args.ticker, top_n=args.top, verbose=args.verbose,
-                 refresh=args.refresh, wide=args.wide, breakdown=args.breakdown)
+                 refresh=args.refresh, wide=args.wide, breakdown=args.breakdown,
+                 exclude_financials=args.exclude_financials)
 
 
 if __name__ == "__main__":

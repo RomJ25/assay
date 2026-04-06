@@ -57,6 +57,7 @@ VALUE_LOW_THRESHOLD = 40
 QUALITY_HIGH_THRESHOLD = 70  # top 30% on quality
 QUALITY_LOW_THRESHOLD = 40
 QUALITY_SINGLE_SOURCE_PENALTY = 0.8  # 20% discount for single-signal quality
+MIN_PIOTROSKI_F = 5  # Minimum raw F-Score (0-9) for conviction buy; below → WATCH LIST
 
 # ── Growth Model Thresholds (context display) ────────────────────────
 REVENUE_CAGR_TIERS = [
