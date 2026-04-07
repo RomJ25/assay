@@ -133,6 +133,11 @@ class DataFetcher:
                 if fd.market_cap > 0 and fd.current_price > 0:
                     fd.shares_outstanding = fd.market_cap / fd.current_price
 
+        # Step 6: Compute 12-1 month momentum
+        momentum = self._compute_momentum(list(all_data.keys()))
+        for ticker, fd in all_data.items():
+            fd.momentum_12m = momentum.get(ticker)
+
         total = len(all_data)
         skipped = len(tickers) - total
         logger.info(f"Data fetch complete: {total}/{len(tickers)} tickers ({skipped} skipped)")
@@ -156,6 +161,49 @@ class DataFetcher:
                 cached_prices.update(fresh_prices)
 
         return cached_prices
+
+    def _compute_momentum(self, tickers: list[str]) -> dict[str, float]:
+        """Compute 12-1 month momentum from yfinance historical prices."""
+        import yfinance as yf
+        from datetime import datetime, timedelta
+        from scoring.momentum_scorer import compute_momentum
+
+        try:
+            end = datetime.now()
+            start = end - timedelta(days=400)  # ~13 months of data
+            df = yf.download(tickers, start=start.strftime("%Y-%m-%d"),
+                             auto_adjust=True, threads=True, progress=False)
+            if df.empty:
+                return {}
+
+            # Resample to monthly closes
+            close = df["Close"] if "Close" in df.columns else df
+            monthly = close.resample("ME").last()
+
+            price_histories = {}
+            multi = isinstance(monthly.columns, type(df.columns)) and hasattr(monthly, "columns")
+
+            if len(tickers) == 1:
+                t = tickers[0]
+                vals = monthly.dropna().values.tolist()
+                if len(vals) >= 2:
+                    price_histories[t] = [float(v) for v in vals[-13:]]
+            else:
+                for t in tickers:
+                    try:
+                        col = monthly[t] if t in monthly.columns else None
+                        if col is None:
+                            continue
+                        vals = col.dropna().values.tolist()
+                        if len(vals) >= 2:
+                            price_histories[t] = [float(v) for v in vals[-13:]]
+                    except Exception:
+                        continue
+
+            return compute_momentum(price_histories)
+        except Exception as e:
+            logger.warning(f"Momentum computation failed: {e}")
+            return {}
 
     def close(self):
         self.cache.close()

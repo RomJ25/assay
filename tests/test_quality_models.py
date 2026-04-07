@@ -234,11 +234,12 @@ class TestConfidenceLevel:
 
 class TestMinFScoreGate:
     def test_downgrades_low_fscore(self):
-        """F=4 with MIN_F=5 should downgrade CONVICTION BUY to WATCH LIST."""
+        """F=5 with MIN_F=6 should downgrade CONVICTION BUY to WATCH LIST."""
+        assert apply_min_fscore("CONVICTION BUY", 5) == "WATCH LIST"
         assert apply_min_fscore("CONVICTION BUY", 4) == "WATCH LIST"
 
     def test_keeps_high_fscore(self):
-        """F=6 should stay as CONVICTION BUY."""
+        """F=6+ should stay as CONVICTION BUY."""
         assert apply_min_fscore("CONVICTION BUY", 6) == "CONVICTION BUY"
         assert apply_min_fscore("CONVICTION BUY", 9) == "CONVICTION BUY"
 
@@ -249,8 +250,8 @@ class TestMinFScoreGate:
         assert apply_min_fscore("HOLD", 1) == "HOLD"
 
     def test_boundary(self):
-        """F-Score exactly at minimum should pass."""
-        assert apply_min_fscore("CONVICTION BUY", 5) == "CONVICTION BUY"
+        """F-Score exactly at minimum (6) should pass."""
+        assert apply_min_fscore("CONVICTION BUY", 6) == "CONVICTION BUY"
 
 
 class TestExcludeFinancials:

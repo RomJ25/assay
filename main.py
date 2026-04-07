@@ -26,7 +26,8 @@ from quality.growth import GrowthModel
 from scoring.value_scorer import compute_value_scores, get_yield_metrics
 from scoring.quality_scorer import compute_quality_scores
 from scoring.conviction import conviction_score, classify, confidence_level, apply_min_fscore
-from scoring.filters import passes_data_quality
+from scoring.momentum_scorer import compute_momentum_percentiles, apply_momentum_gate
+from scoring.filters import passes_data_quality, include_stock
 from output.console_report import print_report
 from output.csv_report import save_csv, save_json
 
@@ -43,19 +44,7 @@ def setup_logging(verbose: bool = False):
     )
 
 
-def _include_stock(d) -> bool:
-    """Check if a stock should be included when --exclude-financials is active.
-
-    Excludes Real Estate (REITs have distorted metrics) and Financials
-    that lack operating income (banks/insurance using 1/PE fallback).
-    Keeps fintech/payment companies (PYPL, MA, V) that report normal EBIT.
-    """
-    if d.sector == "Real Estate":
-        return False
-    if d.sector != "Financials":
-        return True
-    oi = d.get("operating_income", 0)
-    return oi is not None and oi > 0
+_include_stock = include_stock  # backward compat alias
 
 
 def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = False,
@@ -72,17 +61,17 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
     fetcher = DataFetcher(force_refresh=refresh)
     tickers, sp500_info = fetcher.get_sp500()
 
+    single_ticker = None
     if ticker:
-        ticker = ticker.upper().replace(".", "-")
-        if ticker not in sp500_info:
-            console.print(f"[red]{ticker} not found in S&P 500[/red]")
+        single_ticker = ticker.upper().replace(".", "-")
+        if single_ticker not in sp500_info:
+            console.print(f"[red]{single_ticker} not found in S&P 500[/red]")
             return
-        tickers = [ticker]
-        console.print(f"Single stock mode: {ticker}")
+        console.print(f"Single stock mode: {single_ticker}")
     else:
         console.print(f"Loaded {len(tickers)} S&P 500 constituents")
 
-    # Step 2: Fetch data
+    # Step 2: Fetch data (always full universe for accurate percentile ranking)
     all_data = fetcher.fetch_all(tickers, sp500_info)
     console.print(f"Fetched data for {len(all_data)} stocks")
 
@@ -111,6 +100,10 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
     relative_model.compute_sector_medians(screened)
     growth_model = GrowthModel()
 
+    # Step 5b: Momentum gate
+    momentum_raw = {t: d.momentum_12m for t, d in screened.items() if d.momentum_12m is not None}
+    momentum_pcts = compute_momentum_percentiles(momentum_raw)
+
     # Step 6: Build results
     results = []
     with Progress(transient=True) as progress:
@@ -121,6 +114,7 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
             conv = conviction_score(v_score, q_score)
             cl = classify(v_score, q_score)
             cl = apply_min_fscore(cl, piotroski_raw.get(t, 0))
+            cl = apply_momentum_gate(cl, momentum_pcts.get(t))
             conf = confidence_level(v_score, q_score) if cl == "CONVICTION BUY" else None
 
             # Yield metrics
@@ -188,11 +182,16 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
                 "dividend_yield": d.dividend_yield,
                 "beta": d.beta,
                 "market_cap": d.market_cap,
+                "momentum_12m": d.momentum_12m,
             })
             progress.advance(task)
 
     elapsed = time.time() - start_time
     console.print(f"\nScreened {len(results)} stocks in {elapsed:.1f}s")
+
+    # Single-stock mode: filter to just the requested ticker after scoring
+    if single_ticker:
+        results = [r for r in results if r["ticker"] == single_ticker]
 
     if not results:
         console.print("[yellow]No stocks passed filters.[/yellow]")
@@ -220,11 +219,22 @@ def main():
     parser.add_argument("--breakdown", action="store_true", help="Show Piotroski criterion breakdown")
     parser.add_argument("--exclude-financials", action="store_true",
                         help="Remove banks, insurance, and REITs from the screen")
+    parser.add_argument("--backtest", action="store_true",
+                        help="Run historical backtest instead of live screen")
+    parser.add_argument("--backtest-years", type=int, default=4,
+                        help="Years to backtest (default: 4)")
     args = parser.parse_args()
 
-    run_screener(ticker=args.ticker, top_n=args.top, verbose=args.verbose,
-                 refresh=args.refresh, wide=args.wide, breakdown=args.breakdown,
-                 exclude_financials=args.exclude_financials)
+    if args.backtest:
+        setup_logging(args.verbose)
+        from backtest.engine import run_backtest
+        run_backtest(years=args.backtest_years,
+                     exclude_financials=args.exclude_financials,
+                     verbose=args.verbose)
+    else:
+        run_screener(ticker=args.ticker, top_n=args.top, verbose=args.verbose,
+                     refresh=args.refresh, wide=args.wide, breakdown=args.breakdown,
+                     exclude_financials=args.exclude_financials)
 
 
 if __name__ == "__main__":

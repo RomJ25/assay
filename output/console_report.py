@@ -37,7 +37,8 @@ def print_report(today: date, results: list[dict], top_n: int = 20,
     console.print(Panel(
         f"[bold]ASSAY — S&P 500 VALUE + QUALITY SCREENER[/bold]\n"
         f"Date: {today.isoformat()} | Screened: {total} stocks{exclusion_note}\n"
-        f"Value: Earnings Yield rank (Carlisle) | Quality: Piotroski + Gross Profitability (Novy-Marx)",
+        f"Value: Earnings Yield rank (Carlisle) | Quality: Piotroski + Gross Profitability (Novy-Marx)\n"
+        f"[dim]Research tool for idea generation. Not a trading signal. Minimum 3-5 year horizon.[/dim]",
         style="bold blue",
     ))
 

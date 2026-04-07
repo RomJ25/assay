@@ -68,6 +68,7 @@ class FinancialData:
     analyst_target: float | None = None  # targetMeanPrice from Yahoo
     fifty_two_week_high: float | None = None  # 52-week high price
     current_quarter_estimate: float | None = None
+    momentum_12m: float | None = None  # 12-1 month price return (decimal)
 
     def __post_init__(self):
         """Fill gaps where derived values can be computed from available data."""

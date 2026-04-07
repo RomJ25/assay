@@ -57,7 +57,7 @@ VALUE_LOW_THRESHOLD = 40
 QUALITY_HIGH_THRESHOLD = 70  # top 30% on quality
 QUALITY_LOW_THRESHOLD = 40
 QUALITY_SINGLE_SOURCE_PENALTY = 0.8  # 20% discount for single-signal quality
-MIN_PIOTROSKI_F = 5  # Minimum raw F-Score (0-9) for conviction buy; below → WATCH LIST
+MIN_PIOTROSKI_F = 6  # Minimum raw F-Score (0-9) for conviction buy; below → WATCH LIST
 
 # ── Growth Model Thresholds (context display) ────────────────────────
 REVENUE_CAGR_TIERS = [
@@ -72,3 +72,14 @@ PEG_TIERS = [
     (1.0, 50),
     (1.5, 30),
 ]
+
+# ── Backtest ──────────────────────────────────────────────────────────
+BACKTEST_DEFAULT_YEARS = 4
+BACKTEST_FILING_LAG_DAYS = 75      # 60-day SEC deadline + 15-day buffer
+BACKTEST_QUARTERS = [(3, 31), (6, 30), (9, 30), (12, 31)]
+BACKTEST_PRICE_LOOKBACK_DAYS = 5   # max days backward to find trading day
+
+# ── Momentum Gate ─────────────────────────────────────────────────────
+MOMENTUM_LOOKBACK_MONTHS = 12
+MOMENTUM_SKIP_MONTHS = 1           # skip most recent month (short-term reversal)
+MOMENTUM_GATE_PERCENTILE = 25      # exclude bottom 25% momentum from CONVICTION BUY
