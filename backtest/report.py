@@ -132,6 +132,7 @@ def save_backtest_csv(result) -> str:
     detail_path = RESULTS_DIR / f"backtest_detail_{date.today().isoformat()}.csv"
     detail_fields = [
         "quarter", "ticker", "sector", "value_score", "quality_score", "piotroski_f",
+        "momentum_pct",
     ]
     with open(detail_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=detail_fields)

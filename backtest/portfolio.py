@@ -36,6 +36,7 @@ def simulate_portfolio(
     quarterly_universe: list[tuple[date, list[str]]],
     cache: HistoricalCache,
     rebalance_dates: list[date],
+    tcost_bps: int = 0,
 ) -> tuple[list[dict], BacktestMetrics]:
     """Simulate equal-weight portfolio and compute three return series.
 
@@ -76,6 +77,19 @@ def simulate_portfolio(
             logger.warning(f"{rebal_date}: could not compute returns, skipping")
             continue
 
+        # Turnover (computed before cumulative update so costs can be deducted)
+        current_picks_set = set(picks)
+        if prev_picks:
+            sym_diff = len(prev_picks.symmetric_difference(current_picks_set))
+            total = len(prev_picks.union(current_picks_set))
+            turnovers.append(sym_diff / total * 100 if total > 0 else 0)
+        prev_picks = current_picks_set
+        picks_counts.append(len(picks))
+
+        # Deduct transaction costs from portfolio return
+        if tcost_bps > 0 and turnovers:
+            portfolio_ret -= (turnovers[-1] / 100) * (tcost_bps / 10000)
+
         # Update cumulative values
         portfolio_values.append(portfolio_values[-1] * (1 + portfolio_ret))
         universe_values.append(universe_values[-1] * (1 + universe_ret))
@@ -88,15 +102,6 @@ def simulate_portfolio(
             if ret > universe_ret:
                 hits += 1
             excess_returns_sum += ret - universe_ret
-
-        # Turnover
-        current_picks_set = set(picks)
-        if prev_picks:
-            sym_diff = len(prev_picks.symmetric_difference(current_picks_set))
-            total = len(prev_picks.union(current_picks_set))
-            turnovers.append(sym_diff / total * 100 if total > 0 else 0)
-        prev_picks = current_picks_set
-        picks_counts.append(len(picks))
 
         records.append({
             "date": rebal_date.isoformat(),
@@ -164,7 +169,7 @@ def _compute_equal_weight_return(
 ) -> float | None:
     """Compute equal-weight portfolio return using Adj Close."""
     if not tickers:
-        return None
+        return 0.0  # cash position — don't skip the quarter
 
     returns = []
     for ticker in tickers:

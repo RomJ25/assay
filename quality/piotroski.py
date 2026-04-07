@@ -47,7 +47,7 @@ class PiotroskiModel(QualityModel):
         ni_1 = data.get("net_income", 1)
         roa_0 = roa_1 = None
         passed = False
-        if all(v is not None and v > 0 for v in [assets_0, assets_1, ni_0]) and ni_1 is not None:
+        if all(v is not None and v > 0 for v in [assets_0, assets_1]) and ni_0 is not None and ni_1 is not None:
             roa_0 = ni_0 / assets_0
             roa_1 = ni_1 / assets_1
             passed = roa_0 > roa_1
@@ -101,7 +101,7 @@ class PiotroskiModel(QualityModel):
         rev_1 = data.get("revenue", 1)
         gm_0 = gm_1 = None
         passed = False
-        if all(v is not None and v > 0 for v in [gp_0, rev_0, gp_1, rev_1]):
+        if all(v is not None and v > 0 for v in [rev_0, rev_1]) and gp_0 is not None and gp_1 is not None:
             gm_0 = gp_0 / rev_0
             gm_1 = gp_1 / rev_1
             passed = gm_0 > gm_1

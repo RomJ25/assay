@@ -5,6 +5,7 @@ from datetime import date
 
 from backtest.portfolio import (
     _cagr,
+    _compute_equal_weight_return,
     _max_drawdown,
     _sharpe,
     BacktestMetrics,
@@ -190,3 +191,57 @@ class TestSimulatePortfolio:
         assert abs(records[1]["turnover"] - 66.7) < 0.1
         assert records[2]["turnover"] is not None
         assert abs(records[2]["turnover"] - 66.7) < 0.1
+
+    def test_tcost_reduces_return(self, tmp_path):
+        """Transaction costs should reduce portfolio returns."""
+        cache = HistoricalCache(db_path=tmp_path / "test.db")
+
+        dates = [date(2024, 3, 31), date(2024, 6, 30), date(2024, 9, 30)]
+        prices = []
+        for ticker in ["A", "B", "C", "SPY"]:
+            for i, d in enumerate(dates):
+                prices.append((ticker, d.isoformat(), 100 * (1.05 ** i), 100 * (1.05 ** i)))
+        cache.set_prices(prices)
+
+        # Q1: [A, B], Q2: [B, C] → 66.7% turnover in Q2
+        picks = [
+            (dates[0], ["A", "B"]),
+            (dates[1], ["B", "C"]),
+        ]
+        universe = [
+            (dates[0], ["A", "B", "C"]),
+            (dates[1], ["A", "B", "C"]),
+        ]
+
+        _, m_nocost = simulate_portfolio(picks, universe, cache, dates, tcost_bps=0)
+        _, m_cost = simulate_portfolio(picks, universe, cache, dates, tcost_bps=100)
+        cache.close()
+
+        assert m_nocost.total_return > m_cost.total_return
+
+    def test_zero_tcost_unchanged(self, tmp_path):
+        """tcost_bps=0 should match default behavior exactly."""
+        cache = HistoricalCache(db_path=tmp_path / "test.db")
+
+        dates = [date(2024, 3, 31), date(2024, 6, 30), date(2024, 9, 30)]
+        prices = []
+        for ticker in ["A", "B", "SPY"]:
+            for i, d in enumerate(dates):
+                prices.append((ticker, d.isoformat(), 100 * (1.05 ** i), 100 * (1.05 ** i)))
+        cache.set_prices(prices)
+
+        picks = [(dates[0], ["A", "B"]), (dates[1], ["A", "B"])]
+        universe = [(dates[0], ["A", "B"]), (dates[1], ["A", "B"])]
+
+        _, m_default = simulate_portfolio(picks, universe, cache, dates)
+        _, m_zero = simulate_portfolio(picks, universe, cache, dates, tcost_bps=0)
+        cache.close()
+
+        assert m_default.total_return == m_zero.total_return
+
+    def test_empty_picks_returns_zero(self, tmp_path):
+        """Empty tickers list should return 0.0 (cash), not None."""
+        cache = HistoricalCache(db_path=tmp_path / "test.db")
+        result = _compute_equal_weight_return([], date(2024, 3, 31), date(2024, 6, 30), cache)
+        cache.close()
+        assert result == 0.0

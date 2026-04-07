@@ -52,10 +52,10 @@ def compute_quality_scores(
         if not assets or assets <= 0:
             continue
 
-        if gp and gp > 0:
-            # Primary: Gross Profitability (Novy-Marx)
+        if gp is not None:
+            # Primary: Gross Profitability (Novy-Marx) — negative GP ranks low, not invisible
             profitability_ratios[ticker] = gp / assets
-        elif ni and ni > 0:
+        elif ni is not None:
             # Fallback: ROA for banks/financials that don't report Gross Profit
             profitability_ratios[ticker] = ni / assets
 

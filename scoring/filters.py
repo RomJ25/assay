@@ -11,11 +11,12 @@ def passes_data_quality(data: FinancialData) -> bool:
 
 
 def include_stock(d: FinancialData) -> bool:
-    """Check if a stock should be included when --exclude-financials is active.
+    """Check if a stock should be included (financials excluded by default).
 
     Excludes Real Estate (REITs have distorted metrics) and Financials
     that lack operating income (banks/insurance using 1/PE fallback).
     Keeps fintech/payment companies (PYPL, MA, V) that report normal EBIT.
+    Use --include-financials to bypass this filter.
     """
     if d.sector == "Real Estate":
         return False

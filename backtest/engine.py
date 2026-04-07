@@ -72,7 +72,7 @@ def _generate_rebalance_dates(years: int) -> list[date]:
 
 def run_backtest(
     years: int = BACKTEST_DEFAULT_YEARS,
-    exclude_financials: bool = False,
+    include_financials: bool = False,
     verbose: bool = False,
 ) -> BacktestResult:
     """Run the full backtest pipeline."""
@@ -120,7 +120,7 @@ def run_backtest(
             task = progress.add_task("[cyan]Screening quarters...", total=len(rebalance_dates))
 
             for rebal_date in rebalance_dates:
-                qr = _screen_quarter(rebal_date, tickers, info, cache, exclude_financials, verbose)
+                qr = _screen_quarter(rebal_date, tickers, info, cache, not include_financials, verbose)
                 if qr is not None:
                     quarter_results.append(qr)
                     quarterly_picks.append((rebal_date, qr.picks))
@@ -197,7 +197,7 @@ def _screen_quarter(
     tickers: list[str],
     sp500_info: dict[str, dict],
     cache: HistoricalCache,
-    exclude_financials: bool,
+    exclude_financials: bool,  # True = filter out banks/REITs
     verbose: bool,
 ) -> QuarterResult | None:
     """Run the screening pipeline for a single quarter."""

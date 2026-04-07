@@ -68,6 +68,31 @@ class TestPiotroskiModel:
         assert pio.raw_score(buyback) > pio.raw_score(no_data)
 
 
+    def test_roa_improving_from_negative(self):
+        """NI going from -500M to -200M is improving ROA — criterion 3 should pass."""
+        pio = PiotroskiModel()
+        fd = _make_fd(net_income=[-200e6, -500e6, -300e6, -100e6],
+                      total_assets=[10e9, 10e9])
+        _, breakdown = pio.calculate_detailed(fd)
+        assert breakdown["criteria"]["roa_improving"]["pass"] is True
+
+    def test_roa_worsening_from_negative(self):
+        """NI going from -200M to -500M is worsening ROA — criterion 3 should fail."""
+        pio = PiotroskiModel()
+        fd = _make_fd(net_income=[-500e6, -200e6, -100e6, -50e6],
+                      total_assets=[10e9, 10e9])
+        _, breakdown = pio.calculate_detailed(fd)
+        assert breakdown["criteria"]["roa_improving"]["pass"] is False
+
+    def test_gross_margin_improving_from_negative(self):
+        """GP going from -200M to +50M with stable revenue — criterion 8 should pass."""
+        pio = PiotroskiModel()
+        fd = _make_fd(gross_profit=[50e6, -200e6, -100e6, 0],
+                      revenue=[2e9, 2e9, 2e9, 2e9])
+        _, breakdown = pio.calculate_detailed(fd)
+        assert breakdown["criteria"]["gross_margin_up"]["pass"] is True
+
+
 class TestQualityScorer:
     def test_higher_profitability_ranks_higher(self):
         stocks = {
@@ -106,6 +131,39 @@ class TestQualityScorer:
         # SINGLE gets only Piotroski, penalized by 0.8x
         if "SINGLE" in qs and "DUAL" in qs:
             assert qs["DUAL"] > qs["SINGLE"]
+
+
+    def test_negative_gp_ranks_low(self):
+        """Negative GP is a real signal (bad), not missing — it ranks at the bottom."""
+        stocks = {
+            "GOOD": _make_fd(ticker="GOOD", gross_profit=[6e9], total_assets=[20e9, 18e9]),
+            "BAD": _make_fd(ticker="BAD", gross_profit=[-100e6], total_assets=[10e9, 9e9]),
+        }
+        qs, _, prof, _ = compute_quality_scores(stocks)
+        assert "BAD" in prof  # negative GP is scored, not excluded
+        assert prof["BAD"] < 0  # ratio is negative
+        assert qs["GOOD"] > qs["BAD"]
+
+    def test_negative_ni_roa_ranks_low(self):
+        """Negative NI via ROA fallback should rank low, not vanish."""
+        stocks = {
+            "LOSS": _make_fd(ticker="LOSS", gross_profit=[None] * 4,
+                             net_income=[-50e6], total_assets=[5e9, 4.5e9]),
+            "PROFIT": _make_fd(ticker="PROFIT", gross_profit=[3e9],
+                               total_assets=[10e9, 9e9]),
+        }
+        qs, _, prof, _ = compute_quality_scores(stocks)
+        assert "LOSS" in prof
+        assert prof["LOSS"] < 0
+
+    def test_none_gp_and_none_ni_excluded(self):
+        """Truly missing GP and NI (both None) → excluded from profitability."""
+        stocks = {
+            "MISSING": _make_fd(ticker="MISSING", gross_profit=[None] * 4,
+                                net_income=[None] * 4, total_assets=[10e9, 9e9]),
+        }
+        _, _, prof, _ = compute_quality_scores(stocks)
+        assert "MISSING" not in prof
 
 
 class TestConviction:

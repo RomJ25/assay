@@ -27,12 +27,12 @@ _CONF_STYLE = {"HIGH": "bold green", "MODERATE": "yellow", "LOW": "red"}
 
 def print_report(today: date, results: list[dict], top_n: int = 20,
                  wide: bool = False, breakdown: bool = False,
-                 exclude_financials: bool = False):
+                 include_financials: bool = False):
     """Print the screening report."""
     total = len(results)
     sorted_results = sorted(results, key=lambda r: r.get("conviction_score") or 0, reverse=True)
 
-    exclusion_note = " | [yellow]Financials/RE excluded[/yellow]" if exclude_financials else ""
+    exclusion_note = "" if include_financials else " | [yellow]Financials/RE excluded[/yellow]"
     console.print()
     console.print(Panel(
         f"[bold]ASSAY — S&P 500 VALUE + QUALITY SCREENER[/bold]\n"

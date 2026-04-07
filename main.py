@@ -49,7 +49,7 @@ _include_stock = include_stock  # backward compat alias
 
 def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = False,
                  refresh: bool = False, wide: bool = False, breakdown: bool = False,
-                 exclude_financials: bool = False):
+                 include_financials: bool = False):
     """Main screener pipeline."""
     setup_logging(verbose)
     today = date.today()
@@ -83,7 +83,7 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
     screened = {t: d for t, d in all_data.items() if passes_data_quality(d)}
     console.print(f"Passed quality filter: {len(screened)}/{len(all_data)}")
 
-    if exclude_financials:
+    if not include_financials:
         before = len(screened)
         screened = {t: d for t, d in screened.items() if _include_stock(d)}
         console.print(f"Excluded financials/RE: {before - len(screened)} removed, {len(screened)} remaining")
@@ -199,7 +199,7 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
 
     # Step 7: Output
     print_report(today, results, top_n=top_n, wide=wide, breakdown=breakdown,
-                 exclude_financials=exclude_financials)
+                 include_financials=include_financials)
     csv_path = save_csv(today, results)
     save_json(today, results)
 
@@ -217,8 +217,8 @@ def main():
     parser.add_argument("--refresh", action="store_true", help="Bypass cache, fetch fresh data")
     parser.add_argument("--wide", action="store_true", help="Wide table with extra columns")
     parser.add_argument("--breakdown", action="store_true", help="Show Piotroski criterion breakdown")
-    parser.add_argument("--exclude-financials", action="store_true",
-                        help="Remove banks, insurance, and REITs from the screen")
+    parser.add_argument("--include-financials", action="store_true",
+                        help="Include banks, insurance, and REITs (excluded by default)")
     parser.add_argument("--backtest", action="store_true",
                         help="Run historical backtest instead of live screen")
     parser.add_argument("--backtest-years", type=int, default=4,
@@ -229,12 +229,12 @@ def main():
         setup_logging(args.verbose)
         from backtest.engine import run_backtest
         run_backtest(years=args.backtest_years,
-                     exclude_financials=args.exclude_financials,
+                     include_financials=args.include_financials,
                      verbose=args.verbose)
     else:
         run_screener(ticker=args.ticker, top_n=args.top, verbose=args.verbose,
                      refresh=args.refresh, wide=args.wide, breakdown=args.breakdown,
-                     exclude_financials=args.exclude_financials)
+                     include_financials=args.include_financials)
 
 
 if __name__ == "__main__":

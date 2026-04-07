@@ -83,3 +83,9 @@ BACKTEST_PRICE_LOOKBACK_DAYS = 5   # max days backward to find trading day
 MOMENTUM_LOOKBACK_MONTHS = 12
 MOMENTUM_SKIP_MONTHS = 1           # skip most recent month (short-term reversal)
 MOMENTUM_GATE_PERCENTILE = 25      # exclude bottom 25% momentum from CONVICTION BUY
+
+# ── Transaction Costs ────────────────────────────────────────────────
+TCOST_BPS_ROUNDTRIP = 0  # basis points per full rebalance (0 = off; 10 typical for S&P 500)
+
+# ── Sector-Relative Scoring ──────────────────────────────────────────
+SECTOR_RELATIVE_BLEND = 0.3  # when --sector-relative active: 70% absolute + 30% sector-relative
