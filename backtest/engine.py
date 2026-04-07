@@ -74,6 +74,7 @@ def run_backtest(
     years: int = BACKTEST_DEFAULT_YEARS,
     include_financials: bool = False,
     verbose: bool = False,
+    tcost_bps: int = 0,
 ) -> BacktestResult:
     """Run the full backtest pipeline."""
     start_time = time.time()
@@ -136,6 +137,7 @@ def run_backtest(
         console.print("[dim]Simulating portfolio...[/dim]")
         returns, metrics = simulate_portfolio(
             quarterly_picks, quarterly_universe, cache, rebalance_dates,
+            tcost_bps=tcost_bps,
         )
 
         result = BacktestResult(

@@ -79,16 +79,18 @@ def simulate_portfolio(
 
         # Turnover (computed before cumulative update so costs can be deducted)
         current_picks_set = set(picks)
+        quarter_turnover = None
         if prev_picks:
             sym_diff = len(prev_picks.symmetric_difference(current_picks_set))
             total = len(prev_picks.union(current_picks_set))
-            turnovers.append(sym_diff / total * 100 if total > 0 else 0)
+            quarter_turnover = sym_diff / total * 100 if total > 0 else 0
+            turnovers.append(quarter_turnover)
         prev_picks = current_picks_set
         picks_counts.append(len(picks))
 
         # Deduct transaction costs from portfolio return
-        if tcost_bps > 0 and turnovers:
-            portfolio_ret -= (turnovers[-1] / 100) * (tcost_bps / 10000)
+        if tcost_bps > 0 and quarter_turnover is not None:
+            portfolio_ret -= (quarter_turnover / 100) * (tcost_bps / 10000)
 
         # Update cumulative values
         portfolio_values.append(portfolio_values[-1] * (1 + portfolio_ret))
@@ -111,7 +113,7 @@ def simulate_portfolio(
             "universe_return": round(universe_ret * 100, 2),
             "spy_return": round(spy_ret * 100, 2),
             "excess_return": round((portfolio_ret - universe_ret) * 100, 2),
-            "turnover": round(turnovers[-1], 1) if turnovers and len(turnovers) == len(records) else None,
+            "turnover": round(quarter_turnover, 1) if quarter_turnover is not None else None,
         })
 
     # Compute aggregate metrics

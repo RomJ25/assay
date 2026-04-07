@@ -229,6 +229,8 @@ def main():
                         help="Run historical backtest instead of live screen")
     parser.add_argument("--backtest-years", type=int, default=4,
                         help="Years to backtest (default: 4)")
+    parser.add_argument("--tcost-bps", type=int, default=0,
+                        help="Transaction cost in basis points per rebalance (default: 0, suggest 10)")
     args = parser.parse_args()
 
     if args.backtest:
@@ -236,7 +238,8 @@ def main():
         from backtest.engine import run_backtest
         run_backtest(years=args.backtest_years,
                      include_financials=args.include_financials,
-                     verbose=args.verbose)
+                     verbose=args.verbose,
+                     tcost_bps=args.tcost_bps)
     else:
         run_screener(ticker=args.ticker, top_n=args.top, verbose=args.verbose,
                      refresh=args.refresh, wide=args.wide, breakdown=args.breakdown,
