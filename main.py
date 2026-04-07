@@ -27,6 +27,8 @@ from scoring.value_scorer import compute_value_scores, get_yield_metrics
 from scoring.quality_scorer import compute_quality_scores
 from scoring.conviction import conviction_score, classify, confidence_level, apply_min_fscore
 from scoring.momentum_scorer import compute_momentum_percentiles, apply_momentum_gate
+from scoring.trajectory import compute_trajectory_scores
+from scoring.opportunity import compute_opportunity_scores
 from scoring.filters import passes_data_quality, include_stock
 from output.console_report import print_report
 from output.csv_report import save_csv, save_json
@@ -185,6 +187,14 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
                 "momentum_12m": d.momentum_12m,
             })
             progress.advance(task)
+
+    # Compute trajectory and opportunity scores
+    trajectory_scores = compute_trajectory_scores(screened, momentum_pcts)
+    opportunity_scores = compute_opportunity_scores(results, trajectory_scores)
+    for r in results:
+        t = r["ticker"]
+        r["trajectory_score"] = trajectory_scores.get(t)
+        r["opportunity_score"] = opportunity_scores.get(t)
 
     elapsed = time.time() - start_time
     console.print(f"\nScreened {len(results)} stocks in {elapsed:.1f}s")
