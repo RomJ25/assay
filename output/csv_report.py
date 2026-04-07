@@ -26,7 +26,7 @@ _CRITERION_MAP = [
 
 _CSV_COLUMNS = [
     "date", "ticker", "company", "sector", "price",
-    "opportunity_score", "trajectory_score",
+    "trajectory_score",
     "value_score", "quality_score", "conviction_score", "classification", "confidence",
     "earnings_yield", "fcf_yield",
     "piotroski_f", "gross_profitability", "growth_score",

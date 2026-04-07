@@ -45,8 +45,9 @@ def print_report(today: date, results: list[dict], top_n: int = 20,
     # Conviction Buys — sorted by opportunity score (definitive ranking)
     buys = [r for r in sorted_results if r.get("classification") == "CONVICTION BUY"]
     if buys:
-        buys.sort(key=lambda r: r.get("opportunity_score") or 0, reverse=True)
-        _print_main_table("CONVICTION BUYS — Ranked by Opportunity Score", buys[:top_n], "green", wide, breakdown)
+        # Primary: conviction (validated V×Q signal). Tie-break: trajectory (visible column)
+        buys.sort(key=lambda r: (r.get("conviction_score") or 0, r.get("trajectory_score") or 0), reverse=True)
+        _print_main_table("CONVICTION BUYS — Cheap + High Quality", buys[:top_n], "green", wide, breakdown)
 
     # Value Traps
     traps = [r for r in sorted_results if r.get("classification") == "VALUE TRAP"]
@@ -106,45 +107,39 @@ def _print_main_table(title: str, results: list[dict], color: str,
     """
     console.print(f"\n[bold {color}]{title}[/bold {color}]")
 
-    company_w = 25 if wide else 20
-
-    has_opp = any(r.get("opportunity_score") is not None for r in results)
-
-    table = Table(show_header=True, header_style=f"bold {color}", show_lines=False)
-    table.add_column("#", style="dim", width=3)
-    table.add_column("Ticker", style="bold", width=6)
-    table.add_column("Company", width=company_w, overflow="ellipsis")
-    table.add_column("Price", justify="right", width=7)
-    if has_opp:
-        table.add_column("Opp", justify="right", width=4, style="bold")
-    table.add_column("EY%", justify="right", width=5)
-    table.add_column("V", justify="right", width=3)
-    table.add_column("Q", justify="right", width=3)
-    table.add_column("Conv", justify="right", width=4)
-    if r_has_confidence(results):
-        table.add_column("Conf", justify="center", width=4)
-    if has_opp:
-        table.add_column("Trj", justify="right", width=3)
-    table.add_column("F", justify="right", width=4)
-    if wide:
-        table.add_column("GP/A", justify="right", width=5)
-        table.add_column("P/E", justify="right", width=5)
-    table.add_column("Analyst", justify="right", width=12)
-    if wide:
-        table.add_column("52wH", justify="right", width=6)
-    table.add_column("DCF", justify="right", width=8)
-
+    has_trj = any(r.get("trajectory_score") is not None for r in results)
     show_conf = r_has_confidence(results)
+
+    table = Table(show_header=True, header_style=f"bold {color}", show_lines=False,
+                  pad_edge=False, padding=(0, 1))
+    table.add_column("#", style="dim", width=2, no_wrap=True)
+    table.add_column("Ticker", style="bold", no_wrap=True)
+    table.add_column("Company", max_width=20, overflow="ellipsis", no_wrap=True)
+    table.add_column("Price", justify="right", no_wrap=True)
+    table.add_column("V", justify="right", no_wrap=True)
+    table.add_column("Q", justify="right", no_wrap=True)
+    table.add_column("Conv", justify="right", style="bold", no_wrap=True)
+    if show_conf:
+        table.add_column("Conf", justify="center", no_wrap=True)
+    if has_trj:
+        table.add_column("Trj", justify="right", style="cyan", no_wrap=True)
+    table.add_column("F", justify="right", no_wrap=True)
+    table.add_column("EY%", justify="right", no_wrap=True)
+    if wide:
+        table.add_column("FCF%", justify="right", no_wrap=True)
+        table.add_column("P/E", justify="right", no_wrap=True)
+    table.add_column("Analyst", justify="right", no_wrap=True)
+    table.add_column("DCF", justify="right", no_wrap=True)
 
     for i, r in enumerate(results, 1):
         ey = f"{r['earnings_yield']:.1f}" if r.get("earnings_yield") else "-"
+        fcfy = f"{r['fcf_yield']:.1f}" if r.get("fcf_yield") else "-"
         v = f"{r['value_score']:.0f}" if r.get("value_score") is not None else "-"
         q = f"{r['quality_score']:.0f}" if r.get("quality_score") is not None else "-"
         cv = f"{r['conviction_score']:.0f}" if r.get("conviction_score") is not None else "-"
         opp = f"{r['opportunity_score']:.0f}" if r.get("opportunity_score") is not None else "-"
         trj = f"{r['trajectory_score']:.0f}" if r.get("trajectory_score") is not None else "-"
         f_sc = f"{r.get('piotroski_f', 0)}/9"
-        gpa = f"{r['gross_profitability']:.0%}" if r.get("gross_profitability") else "-"
 
         if r.get("analyst_target") and r.get("analyst_upside") is not None:
             up = r["analyst_upside"]
@@ -152,27 +147,23 @@ def _print_main_table(title: str, results: list[dict], color: str,
         else:
             analyst = "-"
 
-        fh = f"{r['pct_from_52w_high']:+.0f}%" if r.get("pct_from_52w_high") is not None else "-"
         dcf = f"${r['dcf_base']:.0f}" if r.get("dcf_base") else "-"
 
-        row = [str(i), r.get("ticker", ""), (r.get("company", "") or "")[:company_w],
+        row = [str(i), r.get("ticker", ""), (r.get("company", "") or ""),
                f"${r.get('price', 0):.0f}"]
-        if has_opp:
-            row.append(opp)
-        row.extend([ey, v, q, cv])
+        row.extend([v, q, cv])
         if show_conf:
             conf = r.get("confidence") or ""
             style = _CONF_STYLE.get(conf, "")
             row.append(f"[{style}]{conf[:3]}[/{style}]" if conf else "-")
-        if has_opp:
+        if has_trj:
             row.append(trj)
         row.append(f_sc)
+        row.append(ey)
         if wide:
-            row.extend([gpa])
+            row.append(fcfy)
             row.append(f"{r['pe_ratio']:.1f}" if r.get("pe_ratio") else "-")
         row.append(analyst)
-        if wide:
-            row.append(fh)
         row.append(dcf)
 
         table.add_row(*row)
