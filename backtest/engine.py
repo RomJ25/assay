@@ -14,6 +14,7 @@ from config import (
     BACKTEST_DEFAULT_YEARS,
     BACKTEST_FILING_LAG_DAYS,
     BACKTEST_QUARTERS,
+    TCOST_BPS_ROUNDTRIP,
 )
 from backtest.cache import HistoricalCache
 from backtest.historical_fetcher import fetch_historical_data
@@ -75,7 +76,7 @@ def run_backtest(
     years: int = BACKTEST_DEFAULT_YEARS,
     include_financials: bool = False,
     verbose: bool = False,
-    tcost_bps: int = 0,
+    tcost_bps: int = TCOST_BPS_ROUNDTRIP,
 ) -> BacktestResult:
     """Run the full backtest pipeline."""
     start_time = time.time()
@@ -144,7 +145,7 @@ def run_backtest(
         # Step 5b: Top-N simulations (picks are already sorted by conviction)
         top_n_metrics = {}
         for n in (1, 3, 5):
-            top_n_picks = [(d, tickers[:n]) for d, tickers in quarterly_picks]
+            top_n_picks = [(d, picks[:n]) for d, picks in quarterly_picks]
             _, m = simulate_portfolio(
                 top_n_picks, quarterly_universe, cache, rebalance_dates,
                 tcost_bps=tcost_bps,
@@ -288,6 +289,10 @@ def _screen_quarter(
     # Sort picks by conviction (highest first) and extract tickers
     picks.sort(reverse=True)
     sorted_tickers = [t for _, t in picks]
+
+    # Sort pick_details to match conviction order
+    ticker_order = {t: i for i, t in enumerate(sorted_tickers)}
+    pick_details.sort(key=lambda p: ticker_order.get(p["ticker"], 999))
 
     if verbose:
         logger.info(f"{rebal_date}: {len(filtered)} screened, {len(sorted_tickers)} picks, {classifications}")

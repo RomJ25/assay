@@ -177,7 +177,7 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
                 "pct_from_52w_high": pct_from_high,
                 # Additional context
                 "revenue_cagr_3yr": rev_cagr,
-                "gross_margin": (d.gross_profit[0] / d.revenue[0]) if d.gross_profit[0] and d.revenue[0] else None,
+                "gross_margin": (d.gross_profit[0] / d.revenue[0]) if d.gross_profit[0] is not None and d.revenue[0] else None,
                 "pe_ratio": d.trailing_pe,
                 "ev_ebitda": d.enterprise_to_ebitda,
                 "dividend_yield": d.dividend_yield,

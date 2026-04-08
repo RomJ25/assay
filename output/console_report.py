@@ -137,7 +137,6 @@ def _print_main_table(title: str, results: list[dict], color: str,
         v = f"{r['value_score']:.0f}" if r.get("value_score") is not None else "-"
         q = f"{r['quality_score']:.0f}" if r.get("quality_score") is not None else "-"
         cv = f"{r['conviction_score']:.0f}" if r.get("conviction_score") is not None else "-"
-        opp = f"{r['opportunity_score']:.0f}" if r.get("opportunity_score") is not None else "-"
         trj = f"{r['trajectory_score']:.0f}" if r.get("trajectory_score") is not None else "-"
         f_sc = f"{r.get('piotroski_f', 0)}/9"
 
