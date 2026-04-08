@@ -10,7 +10,7 @@
 
 ### Contents
 
-[1. Philosophy](#1-philosophy) · [2. Value Dimension](#2-value-dimension) · [3. Quality Dimension](#3-quality-dimension) · [4. Conviction Scoring](#4-conviction-scoring) · [5. Classification Matrix](#5-classification-matrix) · [6. Safety Gates](#6-safety-gates) · [7. Momentum Gate](#7-momentum-gate) · [8. Supplementary Models](#8-supplementary-models) · [9. Fallback Hierarchy](#9-fallback-hierarchy) · [10. Academic Foundation](#10-academic-foundation)
+[1. Philosophy](#1-philosophy) · [2. Value Dimension](#2-value-dimension) · [3. Quality Dimension](#3-quality-dimension) · [4. Conviction Scoring](#4-conviction-scoring) · [5. Classification Matrix](#5-classification-matrix) · [6. Safety Gates](#6-safety-gates) · [7. Momentum Gate](#7-momentum-gate) · [8. Trajectory Score](#8-trajectory-score) · [9. Supplementary Models](#9-supplementary-models) · [10. Fallback Hierarchy](#10-fallback-hierarchy) · [11. Academic Foundation](#11-academic-foundation)
 
 ---
 
@@ -51,7 +51,7 @@ Where:
 - **EBIT** = Operating Income (most recent fiscal year)
 - **EV** = Enterprise Value = Market Cap + Total Debt - Cash & Equivalents
 
-This measures how much operating profit you're buying per dollar of total enterprise cost. Higher yield = cheaper stock.
+This measures how much operating profit you're buying per dollar of total enterprise cost. Higher yield = cheaper stock. **Negative EBIT is included** — a company losing money gets a negative yield and ranks at the bottom, rather than being excluded. Only truly missing EBIT (`None`) triggers the bank fallback.
 
 **Why EBIT/EV instead of P/E:**
 
@@ -78,7 +78,7 @@ The secondary signal confirms that reported earnings are backed by actual cash:
 
 Where **FCF** = Operating Cash Flow - Capital Expenditures.
 
-A stock can have high EBIT but low FCF if it spends heavily on CapEx or if working capital is consuming cash. The FCF yield is a reality check.
+A stock can have high EBIT but low FCF if it spends heavily on CapEx or if working capital is consuming cash. The FCF yield is a reality check. **Negative FCF is ranked at the bottom**, not treated as missing. Only truly absent FCF data (`None`) defaults to the 50th percentile.
 
 ### 2.3 Percentile Ranking
 
@@ -106,11 +106,11 @@ Properties of percentile ranking:
 The 70/30 weighting reflects:
 - Earnings yield is the primary, academically-validated signal (Carlisle)
 - FCF yield is confirmatory — catches cases where EBIT overstates economic reality
-- If FCF data is unavailable, the stock defaults to the **50th percentile** for that component
+- If FCF data is truly unavailable (`None`), the stock defaults to the **50th percentile** for that component. Negative FCF is ranked normally (at the bottom), not defaulted.
 
 ### 2.5 Bank Fallback
 
-Banks and insurance companies often don't report Operating Income comparably. When EBIT is missing:
+Banks and insurance companies often don't report Operating Income comparably. When EBIT is truly missing (`None`), not merely negative:
 
 ```
                          1
@@ -118,7 +118,7 @@ Banks and insurance companies often don't report Operating Income comparably. Wh
                         P/E
 ```
 
-This is reasonable because financials typically have low CapEx and minimal difference between operating and net income.
+This is reasonable because financials typically have low CapEx and minimal difference between operating and net income. A stock with negative EBIT uses the EBIT/EV path (negative yield, ranked at bottom) — it does NOT fall through to this fallback. Financials are excluded by default (`--include-financials` to override).
 
 ---
 
@@ -133,7 +133,7 @@ Nine binary criteria measuring profitability, leverage, liquidity, and efficienc
 ```
     F₁   Net Income > 0              NI₀ > 0                    Basic profitability
     F₂   Positive Cash Flow          OCF₀ > 0                   Cash-generating ability
-    F₃   Improving ROA              NI₀/A₀ > NI₁/A₁            Earnings momentum
+    F₃   Improving ROA              NI₀/A₀ > NI₁/A₁            Earnings momentum (negative NI allowed)
     F₄   Accruals Quality           OCF₀ > NI₀                  Cash backs earnings
 ```
 
@@ -148,7 +148,7 @@ Nine binary criteria measuring profitability, leverage, liquidity, and efficienc
 #### Operating Efficiency (2 criteria)
 
 ```
-    F₈   Expanding Margins         GP₀/Rev₀ > GP₁/Rev₁         Pricing power / cost control
+    F₈   Expanding Margins         GP₀/Rev₀ > GP₁/Rev₁         Pricing power (negative GP allowed)
     F₉   Improving Turnover        Rev₀/A₀ > Rev₁/A₁           More efficient asset use
 ```
 
@@ -184,9 +184,9 @@ Novy-Marx (2013) showed that **Gross Profit / Total Assets** has predictive powe
                        Total Assets
 ```
 
-This captures a company's fundamental economic engine before SG&A, depreciation, and other discretionary expenses. It is then converted to a **percentile rank** across the universe, identical to the earnings yield ranking.
+This captures a company's fundamental economic engine before SG&A, depreciation, and other discretionary expenses. It is then converted to a **percentile rank** across the universe, identical to the earnings yield ranking. **Negative gross profit is included** — it ranks at the bottom, not excluded.
 
-**Bank fallback:** When Gross Profit is unavailable:
+**Bank fallback:** When Gross Profit is truly unavailable (`None`):
 
 ```
                       Net Income
@@ -370,11 +370,48 @@ Research Affiliates (2024) demonstrated that excluding bottom-quartile momentum 
 
 ---
 
-## 8. Supplementary Models
+## 8. Trajectory Score
+
+A tie-breaker that measures fundamental improvement direction combined with price momentum. **Not used for ranking or classification** — visible as a separate column within conviction buys.
+
+### 8.1 Fundamental Trajectory
+
+```
+    ΔROA  = NI₀/A₀ - NI₁/A₁           (requires A > 0)
+    ΔGM   = GP₀/Rev₀ - GP₁/Rev₁       (requires Rev > 0)
+    ΔLEV  = D₁/A₁ - D₀/A₀             (positive = deleveraging)
+    ΔSHR  = -(Shares₀/Shares₁ - 1)     (positive = buybacks)
+
+    FT  = 0.35 × p(ΔROA) + 0.25 × p(ΔGM) + 0.25 × p(ΔLEV) + 0.15 × p(ΔSHR)
+```
+
+Where `p()` denotes cross-sectional percentile rank (0-100). Missing components default to 50 (neutral).
+
+### 8.2 Combined Trajectory
+
+```
+    Trajectory  =  0.70 × FT  +  0.30 × Momentum_percentile
+```
+
+A stock with improving ROA, expanding margins, declining debt, buybacks, AND strong price momentum scores highest. A stock deteriorating on all dimensions scores lowest.
+
+### 8.3 Sector-Relative Scoring (Optional)
+
+When `--sector-relative` is active, the value score blends absolute and within-sector percentile ranks:
+
+```
+    Value_blended = 0.70 × Value_absolute + 0.30 × Value_within_sector
+```
+
+Sectors with fewer than 3 stocks fall back to 100% absolute. This prevents a portfolio concentrated in one cheap sector (e.g., all energy during a commodity crash) while still rewarding the cheapest stock within any sector.
+
+---
+
+## 9. Supplementary Models
 
 These models provide **context only** — they do not affect rankings or classifications.
 
-### 8.1 Discounted Cash Flow (DCF)
+### 9.1 Discounted Cash Flow (DCF)
 
 Three-scenario DCF for additional perspective:
 
@@ -392,7 +429,7 @@ Parameters:
 
 > *Skipped for banks, insurance, and REITs where FCF-based valuation is inappropriate.*
 
-### 8.2 Relative Valuation
+### 9.2 Relative Valuation
 
 Compares a stock's multiples against its sector median:
 
@@ -402,7 +439,7 @@ Compares a stock's multiples against its sector median:
 
 Also computes EV/EBITDA and P/S relative discounts, plus PEG ratio. Outliers filtered: P/E > 100 and EV/EBITDA > 50 are excluded from sector medians. Sectors with < 3 comparables are skipped.
 
-### 8.3 Growth Score
+### 9.3 Growth Score
 
 A 0-100 display-only composite:
 
@@ -419,27 +456,31 @@ A 0-100 display-only composite:
 
 ---
 
-## 9. Fallback Hierarchy
+## 10. Fallback Hierarchy
 
 The system is designed to produce scores for as many stocks as possible with graceful degradation:
 
 ```
-    ┌──────────────────────────────────────────────────────────────────┐
-    │  Scenario                    Primary          Fallback           │
-    │  ────────                    ───────          ────────           │
-    │  No Operating Income         EBIT / EV        1 / P·E           │
-    │  No Gross Profit             GP / Assets      NI / Assets (ROA) │
-    │  No Enterprise Value         Yahoo's EV       MCap + Debt - Cash│
-    │  No FCF data                 FCF yield rank   50th percentile   │
-    │  Only one quality signal     50/50 composite  Signal × 0.80     │
-    │  No Diluted EPS              Reported EPS     NI / Shares       │
-    │  Negative FCF (all years)    Latest FCF       Skip DCF entirely │
-    └──────────────────────────────────────────────────────────────────┘
+    ┌──────────────────────────────────────────────────────────────────────┐
+    │  Scenario                    Behavior                              │
+    │  ────────                    ────────                              │
+    │  Negative EBIT               EBIT/EV computed (negative yield,     │
+    │                              ranks at bottom). NOT a fallback case.│
+    │  Missing EBIT (None)         1 / P·E fallback (banks only)        │
+    │  Negative Gross Profit       GP/Assets computed (negative ratio,   │
+    │                              ranks at bottom). NOT excluded.       │
+    │  Missing GP (None)           NI / Assets (ROA) fallback           │
+    │  Negative FCF                FCF/EV computed (ranks at bottom)     │
+    │  Missing FCF (None)          50th percentile default               │
+    │  No Enterprise Value         MCap + Debt - Cash                    │
+    │  Only one quality signal     Signal × 0.80                         │
+    │  Negative FCF (all years)    Skip DCF entirely (context model)     │
+    └──────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 10. Academic Foundation
+## 11. Academic Foundation
 
 ### Primary Sources
 

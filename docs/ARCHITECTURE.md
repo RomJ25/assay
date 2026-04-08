@@ -54,10 +54,11 @@ Assay follows a **linear pipeline architecture** — data flows in one direction
     │
     ├── scoring/                           SCORING LAYER
     │   ├── filters.py                     → providers/base.py
-    │   ├── value_scorer.py                → providers/base.py
+    │   ├── value_scorer.py                → providers/base.py, config.py
     │   ├── quality_scorer.py              → providers/base.py, quality/piotroski.py
     │   ├── conviction.py                  → config.py
-    │   └── momentum_scorer.py             → config.py
+    │   ├── momentum_scorer.py             → config.py
+    │   └── trajectory.py                  → providers/base.py (tie-breaker)
     │
     ├── quality/                           QUALITY MODELS
     │   ├── piotroski.py                   → providers/base.py, quality/base.py
@@ -189,7 +190,7 @@ These provide context for console and CSV output but **do not influence** rankin
     Scored & classified stocks
              │
              ├──► Console   Rich terminal tables, color-coded, grouped by class
-             ├──► CSV       results/screen_YYYY-MM-DD.csv  (37 columns)
+             ├──► CSV       results/screen_YYYY-MM-DD.csv  (38 columns)
              └──► JSON      results/screen_YYYY-MM-DD.json (full structure)
 ```
 
@@ -303,6 +304,14 @@ Tries yahooquery first (fast, batch-capable). For any tickers that fail, falls b
 
 ## Scoring Layer
 
+### Negative-vs-Missing Policy
+
+The scoring layer distinguishes between negative values (real signal) and missing values (`None`):
+
+- **Negative EBIT/FCF/GP** → included in percentile ranking, ranks at the bottom
+- **Missing (None)** → triggers fallback path (1/PE for value, ROA for quality) or exclusion
+- This prevents companies losing money from being invisible in rankings
+
 ### Independence Guarantee
 
 Value and quality scores are computed **completely independently**:
@@ -372,7 +381,7 @@ This produces a **uniform distribution** from ~0 to ~100 regardless of the under
     └──────────────────────────────────────────────────────────┘
 ```
 
-### CSV Schema (37 columns)
+### CSV Schema (38 columns)
 
 ```
     ┌──────────────────────────────────────────────────────────────────┐
@@ -437,10 +446,12 @@ All tunable parameters live in **one file** — `config.py`:
 
 ```
     Missing field?
-      ├── Value:    no EBIT  →  use 1/PE fallback
-      │             no PE    →  exclude from value ranking
-      ├── Quality:  no GP    →  use ROA fallback
-      │             no data  →  exclude from quality ranking
+      ├── Value:    negative EBIT  →  EBIT/EV (ranks at bottom)
+      │             EBIT = None    →  use 1/PE fallback (banks)
+      │             no PE either   →  exclude from value ranking
+      ├── Quality:  negative GP    →  GP/Assets (ranks at bottom)
+      │             GP = None      →  use ROA fallback
+      │             no data        →  exclude from quality ranking
       └── Both:     →  classification = "INSUFFICIENT DATA"
 ```
 
