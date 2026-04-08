@@ -48,6 +48,7 @@ class BacktestResult:
     metrics: BacktestMetrics
     effective_start: date
     effective_end: date
+    top_n_metrics: dict[int, BacktestMetrics] | None = None
 
 
 _include_stock = include_stock  # local alias
@@ -133,12 +134,22 @@ def run_backtest(
             cache.close()
             return None
 
-        # Step 5: Portfolio simulation
+        # Step 5: Portfolio simulation (full portfolio)
         console.print("[dim]Simulating portfolio...[/dim]")
         returns, metrics = simulate_portfolio(
             quarterly_picks, quarterly_universe, cache, rebalance_dates,
             tcost_bps=tcost_bps,
         )
+
+        # Step 5b: Top-N simulations (picks are already sorted by conviction)
+        top_n_metrics = {}
+        for n in (1, 3, 5):
+            top_n_picks = [(d, tickers[:n]) for d, tickers in quarterly_picks]
+            _, m = simulate_portfolio(
+                top_n_picks, quarterly_universe, cache, rebalance_dates,
+                tcost_bps=tcost_bps,
+            )
+            top_n_metrics[n] = m
 
         result = BacktestResult(
             quarters=quarter_results,
@@ -146,6 +157,7 @@ def run_backtest(
             metrics=metrics,
             effective_start=quarter_results[0].date,
             effective_end=quarter_results[-1].date,
+            top_n_metrics=top_n_metrics,
         )
 
         elapsed = time.time() - start_time
@@ -263,7 +275,7 @@ def _screen_quarter(
 
         classifications[cl] = classifications.get(cl, 0) + 1
         if cl == "CONVICTION BUY":
-            picks.append(t)
+            picks.append((conviction_score(v, q) or 0, t))  # store with conv for sorting
             pick_details.append({
                 "ticker": t,
                 "sector": filtered[t].sector,
@@ -273,12 +285,16 @@ def _screen_quarter(
                 "momentum_pct": round(momentum_pcts.get(t, 0), 1),
             })
 
+    # Sort picks by conviction (highest first) and extract tickers
+    picks.sort(reverse=True)
+    sorted_tickers = [t for _, t in picks]
+
     if verbose:
-        logger.info(f"{rebal_date}: {len(filtered)} screened, {len(picks)} picks, {classifications}")
+        logger.info(f"{rebal_date}: {len(filtered)} screened, {len(sorted_tickers)} picks, {classifications}")
 
     return QuarterResult(
         date=rebal_date,
-        picks=picks,
+        picks=sorted_tickers,
         universe=universe,
         num_screened=len(filtered),
         classifications=classifications,

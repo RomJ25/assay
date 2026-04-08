@@ -79,6 +79,55 @@ def print_backtest_report(result) -> None:
         console.print(f"  F=7       {f_mid:3d}  ({f_mid/f_total*100:.0f}%)")
         console.print(f"  F=8-9     {f_high:3d}  ({f_high/f_total*100:.0f}%)")
 
+    # Top-N concentrated portfolio analysis
+    if result.top_n_metrics:
+        console.print(f"\n[bold]CONCENTRATED PORTFOLIO — \"Best Ideas\" Analysis[/bold]")
+        console.print("  [dim]Research (Cohen, Polk & Silli) shows highest-conviction positions"
+                      "\n  outperform by 2.8-4.5% per year. How did our top picks do?[/dim]")
+
+        n_table = Table(show_header=True, header_style="bold cyan", show_lines=False)
+        n_table.add_column("Portfolio", width=14)
+        n_table.add_column("CAGR", justify="right", width=8)
+        n_table.add_column("Total", justify="right", width=8)
+        n_table.add_column("vs SPY", justify="right", width=8)
+        n_table.add_column("Sharpe", justify="right", width=7)
+        n_table.add_column("MaxDD", justify="right", width=8)
+        n_table.add_column("Avg Picks", justify="right", width=9)
+
+        for n in (1, 3, 5):
+            if n in result.top_n_metrics:
+                tm = result.top_n_metrics[n]
+                vs_spy = tm.cagr - m.spy_cagr
+                vs_style = "green" if vs_spy > 0 else "red"
+                n_table.add_row(
+                    f"Top {n}",
+                    _pct(tm.cagr),
+                    _pct(tm.total_return),
+                    f"[{vs_style}]{_pct(vs_spy)}[/{vs_style}]",
+                    f"{tm.sharpe_ratio:.2f}",
+                    f"{tm.max_drawdown*100:+.1f}%",
+                    f"{tm.avg_picks_per_quarter:.1f}",
+                )
+
+        # Add full portfolio and SPY for comparison
+        vs_spy_full = m.cagr - m.spy_cagr
+        vs_style = "green" if vs_spy_full > 0 else "red"
+        n_table.add_row(
+            f"All {m.avg_picks_per_quarter:.0f}",
+            _pct(m.cagr),
+            _pct(m.total_return),
+            f"[{vs_style}]{_pct(vs_spy_full)}[/{vs_style}]",
+            f"{m.sharpe_ratio:.2f}",
+            f"{m.max_drawdown*100:+.1f}%",
+            f"{m.avg_picks_per_quarter:.1f}",
+        )
+        n_table.add_row("SPY", _pct(m.spy_cagr), _pct(m.spy_total_return), "-", "-", "-", "-")
+        console.print(n_table)
+
+        n_quarters = m.total_quarters
+        if n_quarters < 30:
+            console.print(f"  [yellow]⚠ {n_quarters} quarters — minimum 30 required for statistical inference[/yellow]")
+
     # Quarterly breakdown
     if result.portfolio_returns:
         console.print(f"\n[bold]QUARTERLY BREAKDOWN[/bold]")
