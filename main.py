@@ -50,7 +50,7 @@ _include_stock = include_stock  # backward compat alias
 
 def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = False,
                  refresh: bool = False, wide: bool = False, breakdown: bool = False,
-                 include_financials: bool = False):
+                 include_financials: bool = False, sector_relative: bool = False):
     """Main screener pipeline."""
     setup_logging(verbose)
     today = date.today()
@@ -90,7 +90,7 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
         console.print(f"Excluded financials/RE: {before - len(screened)} removed, {len(screened)} remaining")
 
     # Step 3: RANK by earnings yield (value dimension)
-    value_scores = compute_value_scores(screened)
+    value_scores = compute_value_scores(screened, sector_relative=sector_relative)
 
     # Step 4: Score quality (Piotroski + Gross Profitability)
     quality_scores, piotroski_raw, gp_ratios, pio_breakdowns = compute_quality_scores(screened)
@@ -225,6 +225,8 @@ def main():
     parser.add_argument("--breakdown", action="store_true", help="Show Piotroski criterion breakdown")
     parser.add_argument("--include-financials", action="store_true",
                         help="Include banks, insurance, and REITs (excluded by default)")
+    parser.add_argument("--sector-relative", action="store_true",
+                        help="Blend 70%% absolute + 30%% within-sector percentile for value score")
     parser.add_argument("--backtest", action="store_true",
                         help="Run historical backtest instead of live screen")
     parser.add_argument("--backtest-years", type=int, default=4,
@@ -243,7 +245,8 @@ def main():
     else:
         run_screener(ticker=args.ticker, top_n=args.top, verbose=args.verbose,
                      refresh=args.refresh, wide=args.wide, breakdown=args.breakdown,
-                     include_financials=args.include_financials)
+                     include_financials=args.include_financials,
+                     sector_relative=args.sector_relative)
 
 
 if __name__ == "__main__":

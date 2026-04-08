@@ -2,7 +2,7 @@
 
 **A system that only acts when the evidence is aligned — and stays silent when it isn't.**
 
-Most screeners give you a list every time you run them. Assay is different. In the 2022 bear market, it produced zero picks for five straight quarters — while the S&P 500 fell 16%. It didn't predict the crash. It simply couldn't find a single stock where cheapness, quality, and financial health all aligned. That silence was its most valuable output.
+Most screeners give you a list every time you run them. Assay is different. From Q1 2022 through Q1 2023, it produced zero picks for five straight quarters. In the worst of those quarters, the S&P 500 fell 16% — Assay had nothing to buy. It didn't predict the crash. It simply couldn't find a single stock where cheapness, quality, and financial health all aligned. That willingness to say "nothing qualifies" is the system's most distinctive behavior.
 
 When Assay does surface a name, you know:
 - It's **cheap** relative to every other S&P 500 stock (top 30% on Earnings Yield)
@@ -11,7 +11,7 @@ When Assay does surface a name, you know:
 - It's **not in freefall** (passed the momentum gate)
 - And both cheapness and quality are high **at the same time** (geometric mean prevents one good dimension from masking a terrible one)
 
-The result is a short list — typically 15-25 stocks, occasionally zero — where every name has survived every filter. Your job is the last mile: pick 2-3 from that list using your own judgment about the business, the sector, and the timing.
+The result is a short list of conviction buys — typically 15-25 in normal markets, occasionally zero when nothing qualifies — where every name has survived every filter. Your job is the last mile: pick 2-3 from that list using your own judgment about the business, the sector, and the timing.
 
 Assay doesn't predict prices. It doesn't forecast earnings. It doesn't use machine learning. Every score traces to observable, auditable data — nine binary Piotroski criteria, two percentile ranks, one geometric mean. You can see exactly why every stock is where it is and decide whether you agree.
 
