@@ -261,7 +261,7 @@ def _screen_quarter(
     classifications = {}
     picks = []
     pick_details = []
-    universe = list(filtered.keys())
+    universe = []  # only include stocks that got scored, for fair benchmark comparison
 
     for t in filtered:
         v = value_scores.get(t)
@@ -269,6 +269,7 @@ def _screen_quarter(
         if v is None or q is None:
             continue
 
+        universe.append(t)
         cl = classify(v, q)
         pf = piotroski_raw.get(t, 0)
         cl = apply_min_fscore(cl, pf)
