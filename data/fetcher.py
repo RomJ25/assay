@@ -123,14 +123,18 @@ class DataFetcher:
             if still_failed:
                 logger.warning(f"Could not fetch data for {len(still_failed)} tickers: {still_failed[:10]}...")
 
-        # Step 5: Merge fresh prices and recalculate shares
-        # Shares must be recomputed because stock splits can cause
-        # info.currentPrice (used at fetch time) to differ from
-        # yf.download() price, making shares_outstanding wrong
+        # Step 5: Merge fresh prices and update market_cap
+        # Trust shares_outstanding (from Yahoo's reported value) and recompute
+        # market_cap = shares × new_price. This correctly handles normal price
+        # moves. For stock splits, shares may be temporarily stale until the
+        # next cache refresh, but the error is bounded.
         for ticker, fd in all_data.items():
             if ticker in prices:
                 fd.current_price = prices[ticker]
-                if fd.market_cap > 0 and fd.current_price > 0:
+                if fd.shares_outstanding > 0 and fd.current_price > 0:
+                    fd.market_cap = fd.shares_outstanding * fd.current_price
+                elif fd.market_cap > 0 and fd.current_price > 0:
+                    # Fallback: derive shares from cached market_cap
                     fd.shares_outstanding = fd.market_cap / fd.current_price
 
         # Step 6: Compute 12-1 month momentum
@@ -181,24 +185,22 @@ class DataFetcher:
             monthly = close.resample("ME").last()
 
             price_histories = {}
-            multi = isinstance(monthly.columns, type(df.columns)) and hasattr(monthly, "columns")
 
-            if len(tickers) == 1:
-                t = tickers[0]
-                vals = monthly.dropna().values.tolist()
-                if len(vals) >= 2:
-                    price_histories[t] = [float(v) for v in vals[-13:]]
-            else:
-                for t in tickers:
-                    try:
-                        col = monthly[t] if t in monthly.columns else None
-                        if col is None:
-                            continue
-                        vals = col.dropna().values.tolist()
-                        if len(vals) >= 2:
-                            price_histories[t] = [float(v) for v in vals[-13:]]
-                    except Exception:
+            for t in tickers:
+                try:
+                    # Handle both single-ticker (Series) and multi-ticker (DataFrame) cases
+                    if hasattr(monthly, "columns") and t in monthly.columns:
+                        col = monthly[t]
+                    elif len(tickers) == 1:
+                        # Single ticker: monthly may be a Series or 1-column DataFrame
+                        col = monthly.squeeze() if hasattr(monthly, "squeeze") else monthly
+                    else:
                         continue
+                    vals = col.dropna().values.tolist()
+                    if len(vals) >= 2:
+                        price_histories[t] = [float(v) for v in vals[-13:]]
+                except Exception:
+                    continue
 
             return compute_momentum(price_histories)
         except Exception as e:
