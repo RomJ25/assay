@@ -19,6 +19,7 @@ from datetime import date
 from rich.console import Console
 from rich.progress import Progress
 
+from config import TCOST_BPS_ROUNDTRIP
 from data.fetcher import DataFetcher
 from models.dcf import DCFModel
 from models.relative import RelativeModel
@@ -231,8 +232,8 @@ def main():
                         help="Run historical backtest instead of live screen")
     parser.add_argument("--backtest-years", type=int, default=4,
                         help="Years to backtest (default: 4)")
-    parser.add_argument("--tcost-bps", type=int, default=0,
-                        help="Transaction cost in basis points per rebalance (default: 0, suggest 10)")
+    parser.add_argument("--tcost-bps", type=int, default=TCOST_BPS_ROUNDTRIP,
+                        help=f"Transaction cost in basis points per rebalance (default: {TCOST_BPS_ROUNDTRIP}, suggest 10)")
     args = parser.parse_args()
 
     if args.backtest:
