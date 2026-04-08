@@ -323,6 +323,8 @@ For stocks classified as CONVICTION BUY:
 
 The `min()` function ensures the **weakest dimension** determines confidence. A stock scoring (95, 71) gets LOW despite its stellar value score.
 
+> See [`docs/CASE_STUDIES/2026-04-08_ceasefire.md`](CASE_STUDIES/2026-04-08_ceasefire.md) §4 for an empirical observation of this formula producing a monotonic HIGH/MODERATE/LOW return gradient on a one-day, high-variance event.
+
 ### 6.2 Minimum F-Score Gate
 
 ```

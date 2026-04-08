@@ -104,6 +104,12 @@ Financials (banks, insurance, REITs) are excluded by default because the EBIT/EV
 
 **131 tests. No API keys required. All data sources free.**
 
+## Case Studies
+
+Individual market events are not evidence — the backtest is. These case studies exist only to illustrate, in concrete terms, the kind of behavior the engine is designed to exhibit when a specific day exposes the mechanism clearly.
+
+- [`docs/CASE_STUDIES/2026-04-08_ceasefire.md`](docs/CASE_STUDIES/2026-04-08_ceasefire.md) — Iran ceasefire rally. The 2026-04-07 screen held zero Energy in CONVICTION BUY; when WTI crashed ~15% the next morning on the ceasefire announcement, AVOID was the worst-performing bucket in the universe, the confidence gradient (HIGH/MODERATE/LOW) was cleanly monotonic, and 19 of 20 CBs closed positive.
+
 ## Data Sources
 
 - **S&P 500 list:** Wikipedia (cached 7 days)
