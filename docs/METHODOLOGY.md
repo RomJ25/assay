@@ -10,7 +10,7 @@
 
 ### Contents
 
-[1. Philosophy](#1-philosophy) · [2. Value Dimension](#2-value-dimension) · [3. Quality Dimension](#3-quality-dimension) · [4. Conviction Scoring](#4-conviction-scoring) · [5. Classification Matrix](#5-classification-matrix) · [6. Safety Gates](#6-safety-gates) · [7. Momentum Gate](#7-momentum-gate) · [8. Trajectory Score](#8-trajectory-score) · [9. Supplementary Models](#9-supplementary-models) · [10. Fallback Hierarchy](#10-fallback-hierarchy) · [11. Academic Foundation](#11-academic-foundation)
+[1. Philosophy](#1-philosophy) · [2. Value Dimension](#2-value-dimension) · [3. Quality Dimension](#3-quality-dimension) · [4. Conviction Scoring](#4-conviction-scoring) · [5. Classification Matrix](#5-classification-matrix) · [6. Safety Gates](#6-safety-gates) · [7. Momentum Gate](#7-momentum-gate) · [8. Trajectory Score](#8-trajectory-score) · [9. Supplementary Models](#9-supplementary-models) · [10. Fallback Hierarchy](#10-fallback-hierarchy) · [11. Academic Foundation](#11-academic-foundation) · [12. Backtest Conventions](#12-backtest-conventions) · [13. Design Decision Log](#13-design-decision-log)
 
 ---
 
@@ -625,8 +625,16 @@ The default backtest covers 4 years (16 quarters). Academic factor research uses
 
 ---
 
+## 13. Design Decision Log
+
+Every deviation, alternative convention, and rejected change documented in this methodology is logged in a permanent decision register at [`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md). That file records *what was considered, what was decided, and why*, so future audits of the algorithm do not re-litigate settled questions from scratch. The register is organized by status (**kept**, **rejected**, **deferred**, **known deviations**) rather than by pipeline stage, because the question a future reader is almost always asking is "has this been considered before?" rather than "what does this scorer do?"
+
+If you are reading this document to evaluate whether a specific change to the algorithm would be an improvement, start there first — the answer may already be on the books.
+
+---
+
 <div align="center">
 
-<sub>[Back to README](../README.md)</sub>
+<sub>[Back to README](../README.md) · [Design Decisions](DESIGN_DECISIONS.md)</sub>
 
 </div>
