@@ -332,7 +332,7 @@ The `min()` function ensures the **weakest dimension** determines confidence. A 
         classification ← "WATCH LIST"
 ```
 
-Piotroski found the strongest return differential at **F ≥ 5-6**. Stocks below this may have high composite quality (through profitability) but show multiple signs of financial deterioration.
+Piotroski's 2000 paper compared stocks with F-scores of **8-9** ("high" financial health) against F-scores of **0-1** ("low") within high book-to-market value stocks, reporting the 13.4% long-only excess return cited in §11 and a 23% long-short return differential over 1976-1996. That paper does not single out F ≥ 5-6 as a threshold; the 6-of-9 gate is a pragmatic long-only choice Assay makes to preserve meaningful quality discrimination while allowing broader investment coverage on a 500-name universe. A stock with F < 6 may still have high composite Quality via strong Gross Profitability, but the raw F-Score is showing multiple signs of financial deterioration simultaneously — the gate prevents these from being promoted to CONVICTION BUY regardless of how high the composite score looks.
 
 ### 6.3 Data Quality Filter
 
@@ -502,6 +502,10 @@ The system is designed to produce scores for as many stocks as possible with gra
 
 > The foundational cross-sectional momentum paper. Stocks that performed well over the past 3-12 months continue to outperform, and vice versa. The 12-1 month variant (skip most recent month) is the most widely used in academic factor research.
 
+**Schwartz, M. & Hanauer, M. X.** (2024). *Formula Investing.* SSRN Working Paper 5043197.
+
+> The first unified empirical comparison of the Piotroski F-Score, Greenblatt Magic Formula, Carlisle Acquirer's Multiple, and van Vliet-Koning Conservative Formula over the 1963-2022 U.S. sample (CRSP/Compustat, microcaps excluded, 6-month filing lag, 921 average stocks). For concentrated post-2000 portfolios of 40 stocks, the Magic Formula produced the highest raw CAGR (**15.8%**), the Conservative Formula the highest Sharpe ratio (**0.78**), and the Acquirer's Multiple the highest top-decile return in the full 60-year sample — no single formula dominated across all metrics. The paper directly validates several of Assay's architectural choices: (a) EBIT/EV as a cap-structure-neutral replacement for book-to-market, (b) the value-plus-quality combination over either factor alone, (c) quarterly rebalance with a filing-lag convention, (d) annual accounting data only, (e) exclusion of financials. It is also the canonical modern reference for Piotroski's 23% long-short spread.
+
 ### Why These Together
 
 The factors are not redundant. They capture different dimensions of a stock's attractiveness:
@@ -526,6 +530,98 @@ The factors are not redundant. They capture different dimensions of a stock's at
     │                                                                      │
     └──────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 12. Backtest Conventions
+
+Assay's backtest applies specific implementation conventions that affect how its return numbers should be interpreted, especially in comparison to published academic backtests. This section documents each one explicitly so a user running `python main.py --backtest` can tell why the numbers might differ from a Schwartz-Hanauer (2024) style replication, and which of Assay's choices are deliberate vs. simply the best available from free data.
+
+### 12.1 Filing Lag — 75 Days
+
+```
+    BACKTEST_FILING_LAG_DAYS = 75    # config.py
+```
+
+At each rebalance date, Assay's backtest only uses financial statements with `asOfDate ≤ rebal_date − 75 days`. The 75-day choice reflects the **SEC Form 10-K deadline for large accelerated filers** (60 days after fiscal year-end) plus a 15-day buffer for late filings.
+
+Academic factor research (Fama & French 1993, Jensen et al. 2023, Schwartz & Hanauer 2024) uses a **180-day (6-month)** lag as a universally conservative convention. That choice is appropriate when the universe includes smaller firms with longer filing deadlines (90+ days for non-accelerated filers), or when paid databases like Compustat report accounting data with a multi-month lag relative to the SEC filing date.
+
+For an **S&P 500-only universe** — every member is a large accelerated filer subject to the 60-day rule — a 180-day lag would force the backtest to use financial data that is **15+ months old** at each rebalance. Assay's 75-day lag gives the screener access to the most recent annual report as soon as the filing window has passed plus a small buffer.
+
+**Trade-off**: Assay's backtest returns are **not directly comparable** to academic papers that use a 180-day lag. A 180-day lag is stricter (more conservative) and will generally produce slightly worse backtest returns because the screener is trading on older data. Users who want strict academic comparability can modify `BACKTEST_FILING_LAG_DAYS` in `config.py`.
+
+### 12.2 Survivorship Bias
+
+```
+    fetch_sp500_list() → current membership, not point-in-time
+```
+
+Assay's backtest universe is the **current** S&P 500 list (fetched from Wikipedia and cached), replayed backward in time. Companies that were S&P 500 members during the backtest period but have since been delisted, acquired, or removed from the index are silently excluded.
+
+This is a known upward bias. The Assay backtest disclaimer panel (`backtest/report.py:31-37`) estimates the effect at **2-5% CAGR overstatement**, consistent with published survivorship-bias literature on S&P 500 replay backtests.
+
+Correcting this bias requires a **point-in-time constituent database** (CRSP, Compustat, or equivalent), which is not available in free data sources. This is the most significant methodological limitation of Assay's backtest and one that cannot be fixed without changing data providers.
+
+### 12.3 Equal-Weight Portfolio Construction
+
+```
+    def _compute_equal_weight_return(tickers, ...):
+        returns = [return_for(t) for t in tickers]
+        return sum(returns) / len(returns)
+```
+
+Assay computes equal-weighted returns from the CONVICTION BUY tickers each quarter. Academic factor research (Schwartz-Hanauer 2024, Jensen et al. 2023b) typically reports **capped value-weighted** returns — weighted by market capitalization, then capped at the 80th percentile of NYSE market cap to prevent a single mega-cap from dominating the portfolio.
+
+Equal-weighting is **appropriate for individual investors** holding a small number of positions — nobody buys $10M of AAPL just because it's bigger than WMT. It also avoids the complexity of point-in-time market-cap reweighting.
+
+**Trade-off**: Equal-weighted backtest returns have slightly more exposure to smaller names in the universe. This is a deliberate design choice for the individual-investor use case, not an oversight.
+
+### 12.4 Quarterly Rebalance on Calendar Quarter-Ends
+
+```
+    BACKTEST_QUARTERS = [(3, 31), (6, 30), (9, 30), (12, 31)]    # config.py
+```
+
+Rebalance dates are the **last trading day of March, June, September, and December**, matching Schwartz-Hanauer 2024 and standard academic convention. The screen is run at market close on the rebalance date and the portfolio is assumed to re-weight instantaneously at that price — no slippage, no overnight gap, no intra-quarter adjustments.
+
+**Transaction costs**: The default is `TCOST_BPS_ROUNDTRIP = 0` to produce a clean, reproducible baseline. Users who want realistic execution friction should set `--tcost-bps` to a non-zero value: roughly 10 bps for retail round-trip on S&P 500 names, under 5 bps for institutional execution.
+
+### 12.5 Benchmark Universe — Two Benchmarks, Two Questions
+
+The backtest reports two benchmarks side by side:
+
+- **SPY** — the S&P 500 ETF, used as the standard market benchmark. Familiar to users.
+- **Equal-weighted universe** — every stock that successfully scored on that rebalance date (i.e., had enough data to receive both a value and quality score). Excludes INSUFFICIENT DATA.
+
+These answer **different questions**. Assay-vs-SPY measures whether the strategy beats the most familiar index-fund alternative. Assay-vs-universe-EW measures **selection alpha** — whether Assay's pick logic outperforms random equal-weighted selection from the same data-available pool, controlling for survivorship and data availability. The latter is the more meaningful test of the classifier itself; the former is the more meaningful comparison for a retail investor deciding whether to follow Assay's picks instead of holding SPY.
+
+### 12.6 Piotroski Implementation Deviations from the Modern Academic Reproduction
+
+Assay's Piotroski F-Score matches the 2000 paper exactly on **5 of 9 criteria** (F1 Net Income > 0, F2 Operating Cash Flow > 0, F4 Accruals, F6 Current Ratio, F8 Gross Margin). Four criteria have minor convention differences from the Jensen et al. (2023a) / Schwartz-Hanauer (2024) modern reproduction:
+
+```
+    ┌───────────────────────────────────────────────────────────────────┐
+    │  Criterion  Assay                   Academic standard             │
+    │  ────────   ─────                   ─────────────────             │
+    │  F3 ΔROA    end-of-year assets      beginning-of-year assets      │
+    │  F5 ΔLEV    total_debt, strict <    LT_debt, ≤ ("did not rise")   │
+    │  F7 EQIS    shares_out ≤ prior yr   Compustat EQIS field          │
+    │  F9 ΔTURN   end-of-year assets      beginning-of-year assets      │
+    └───────────────────────────────────────────────────────────────────┘
+```
+
+- **F3 and F9 (denominator convention)**: Assay uses end-of-year total assets; Jensen et al. 2023a uses beginning-of-year (= prior-year ending) assets. Both conventions detect the same trend direction for stable companies. Fixing to the academic convention would require extending `FinancialData` balance-sheet depth from 2 to 3 years.
+- **F5 (leverage)**: Assay uses `TotalDebt` (Yahoo's combined long-term + short-term debt field) and a strict `<` comparison. The academic reproduction uses long-term debt specifically and `≤` ("did not increase"). For S&P 500 large-caps, long-term debt is typically 85-95% of total debt, so the practical impact is small. Assay's strict `<` matches Piotroski 2000's original "fell" language.
+- **F7 (no share dilution)**: Assay uses `shares_outstanding ≤ prior year` as a proxy. The academic reproduction uses Compustat's explicit EQIS (equity issuance) field. Yahoo does not expose EQIS; the shares proxy is the best available from free data. Buybacks can occasionally offset dilution in the proxy.
+
+**These deviations are documented for transparency, not flagged as errors.** They are alternative conventions present in the broader Piotroski literature, not implementation bugs. Fixing them to match the modern academic reproduction would require data-layer refactors (a 3rd year of balance sheet, a long-term debt field) and would change historical F-scores for some stocks — with no clear evidence of producing a better strategy on S&P 500 large-caps.
+
+### 12.7 Sample-Size Disclaimer
+
+The default backtest covers 4 years (16 quarters). Academic factor research uses 20-60 year samples (80+ quarters minimum). Assay's backtest report explicitly warns when the sample is below 30 quarters (`backtest/report.py:129`).
+
+**All CAGR, Sharpe, and excess-return numbers from a short backtest should be treated as illustrative, not inferential.** The four-year sample spans at most one bear market and one recovery cycle and is too small for any statistical claim about factor performance. The backtest's main value at this sample size is validating that the pipeline runs without look-ahead bias, not estimating expected returns.
 
 ---
 
