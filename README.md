@@ -2,12 +2,14 @@
 
 **A system that only acts when the evidence is aligned — and stays silent when it isn't.**
 
-Most screeners give you a list every time you run them. Assay is different. From Q1 2022 through Q1 2023, it produced zero picks for five straight quarters. In the worst of those quarters, the S&P 500 fell 16% — Assay had nothing to buy. It didn't predict the crash. It simply couldn't find a single stock where cheapness, quality, and financial health all aligned. That willingness to say "nothing qualifies" is the system's most distinctive behavior.
+*An S&P 500 value + quality screener — a first filter for research, not a trading signal. Built for investors who would rather see zero picks than a forced shortlist of twenty.*
+
+Most screeners give you a list every time you run them. Assay is different. For five consecutive quarterly rebalances from March 2022 through March 2023, it produced zero picks. In the worst of those quarters, the S&P 500 fell 16% — Assay had nothing to buy. It didn't predict the crash. It simply couldn't find a single stock where cheapness, quality, and financial health all aligned. That willingness to say "nothing qualifies" is the system's most distinctive behavior.
 
 When Assay does surface a name, you know:
-- It's **cheap** relative to every other S&P 500 stock (top 30% on Earnings Yield)
+- It's **cheap** relative to every other S&P 500 stock (Value score >= 70, driven by Earnings Yield with a Free Cash Flow reality check)
 - It's **financially healthy** (Piotroski F-Score >= 6/9 — positive cash flow, improving returns, no dilution)
-- It's **profitable** (top 30% on Gross Profitability)
+- It's **profitable** (Quality score >= 70, anchored in Gross Profitability and the Piotroski criteria)
 - It's **not in freefall** (passed the momentum gate)
 - And both cheapness and quality are high **at the same time** (geometric mean prevents one good dimension from masking a terrible one)
 
