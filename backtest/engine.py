@@ -24,12 +24,38 @@ from backtest.report import print_backtest_report, save_backtest_csv
 from data.sp500 import fetch_sp500_list, sp500_info_dict
 from scoring.value_scorer import compute_value_scores
 from scoring.quality_scorer import compute_quality_scores
-from scoring.conviction import conviction_score, classify, apply_min_fscore
+from scoring.conviction import conviction_score, classify, apply_min_fscore, confidence_level
 from scoring.momentum_scorer import compute_momentum_percentiles, apply_momentum_gate
 from scoring.filters import passes_data_quality, include_stock
 
 logger = logging.getLogger(__name__)
 console = Console()
+
+
+@dataclass
+class StockDetail:
+    """Per-stock scoring and classification data for case study analysis."""
+    ticker: str
+    sector: str
+    value_score: float
+    quality_score: float
+    conviction_score: float
+    piotroski_f: int
+    momentum_pct: float | None
+    raw_classification: str       # From classify() before any gates
+    final_classification: str     # After F-gate and momentum gate
+    f_gate_fired: bool            # True if F-gate downgraded from CB
+    momentum_gate_fired: bool     # True if momentum gate downgraded from CB
+    confidence: str | None        # HIGH/MOD/LOW for final CB only
+
+
+@dataclass
+class FullQuarterSnapshot:
+    """Complete classification data for all stocks at a rebalance date."""
+    date: date
+    stock_details: list[StockDetail]
+    classifications: dict[str, int] = field(default_factory=dict)
+    num_screened: int = 0
 
 
 @dataclass
@@ -207,15 +233,15 @@ def _compute_backtest_momentum(
     return results
 
 
-def _screen_quarter(
+def _screen_quarter_full(
     rebal_date: date,
     tickers: list[str],
     sp500_info: dict[str, dict],
     cache: HistoricalCache,
-    exclude_financials: bool,  # True = filter out banks/REITs
+    exclude_financials: bool,
     verbose: bool,
-) -> QuarterResult | None:
-    """Run the screening pipeline for a single quarter."""
+) -> FullQuarterSnapshot | None:
+    """Run the screening pipeline and return ALL stocks' classifications with gate tracking."""
     # Build snapshots
     snapshots = {}
     for ticker in tickers:
@@ -252,16 +278,12 @@ def _screen_quarter(
     value_scores = compute_value_scores(filtered)
     quality_scores, piotroski_raw, _, _ = compute_quality_scores(filtered)
 
-    # Momentum: compute 12-1 month return from cached rebalance date prices
-    # Use the rebalance date ~12 months ago and ~1 month ago as approximations
     momentum_raw = _compute_backtest_momentum(list(filtered.keys()), rebal_date, cache)
     momentum_pcts = compute_momentum_percentiles(momentum_raw)
 
-    # Classify
+    # Classify ALL stocks with gate tracking
     classifications = {}
-    picks = []
-    pick_details = []
-    universe = []  # only include stocks that got scored, for fair benchmark comparison
+    stock_details = []
 
     for t in filtered:
         v = value_scores.get(t)
@@ -269,40 +291,89 @@ def _screen_quarter(
         if v is None or q is None:
             continue
 
-        universe.append(t)
-        cl = classify(v, q)
+        raw_cl = classify(v, q)
         pf = piotroski_raw.get(t, 0)
-        cl = apply_min_fscore(cl, pf)
-        cl = apply_momentum_gate(cl, momentum_pcts.get(t))
+        post_f = apply_min_fscore(raw_cl, pf)
+        final = apply_momentum_gate(post_f, momentum_pcts.get(t))
 
-        classifications[cl] = classifications.get(cl, 0) + 1
-        if cl == "CONVICTION BUY":
-            picks.append((conviction_score(v, q) or 0, t))  # store with conv for sorting
+        classifications[final] = classifications.get(final, 0) + 1
+
+        conv = conviction_score(v, q) or 0.0
+        conf = confidence_level(v, q) if final == "CONVICTION BUY" else None
+        mom = momentum_pcts.get(t)
+
+        stock_details.append(StockDetail(
+            ticker=t,
+            sector=filtered[t].sector,
+            value_score=round(v, 1),
+            quality_score=round(q, 1),
+            conviction_score=round(conv, 1),
+            piotroski_f=pf,
+            momentum_pct=round(mom, 1) if mom is not None else None,
+            raw_classification=raw_cl,
+            final_classification=final,
+            f_gate_fired=(raw_cl == "CONVICTION BUY" and raw_cl != post_f),
+            momentum_gate_fired=(post_f == "CONVICTION BUY" and post_f != final),
+            confidence=conf,
+        ))
+
+    if verbose:
+        cb_count = classifications.get("CONVICTION BUY", 0)
+        logger.info(f"{rebal_date}: {len(stock_details)} screened, {cb_count} picks, {classifications}")
+
+    return FullQuarterSnapshot(
+        date=rebal_date,
+        stock_details=stock_details,
+        classifications=classifications,
+        num_screened=len(stock_details),
+    )
+
+
+def _screen_quarter(
+    rebal_date: date,
+    tickers: list[str],
+    sp500_info: dict[str, dict],
+    cache: HistoricalCache,
+    exclude_financials: bool,
+    verbose: bool,
+) -> QuarterResult | None:
+    """Run the screening pipeline for a single quarter.
+
+    Delegates to _screen_quarter_full() and extracts CB picks for backward compatibility.
+    """
+    full = _screen_quarter_full(rebal_date, tickers, sp500_info, cache, exclude_financials, verbose)
+    if full is None:
+        return None
+
+    # Extract CB picks sorted by conviction (highest first)
+    picks = []
+    pick_details = []
+    universe = []
+
+    for sd in full.stock_details:
+        universe.append(sd.ticker)
+        if sd.final_classification == "CONVICTION BUY":
+            picks.append((sd.conviction_score, sd.ticker))
             pick_details.append({
-                "ticker": t,
-                "sector": filtered[t].sector,
-                "value_score": round(v, 1),
-                "quality_score": round(q, 1),
-                "piotroski_f": pf,
-                "momentum_pct": round(momentum_pcts.get(t, 0), 1),
+                "ticker": sd.ticker,
+                "sector": sd.sector,
+                "value_score": sd.value_score,
+                "quality_score": sd.quality_score,
+                "piotroski_f": sd.piotroski_f,
+                "momentum_pct": sd.momentum_pct if sd.momentum_pct is not None else 0.0,
             })
 
-    # Sort picks by conviction (highest first) and extract tickers
     picks.sort(reverse=True)
     sorted_tickers = [t for _, t in picks]
 
-    # Sort pick_details to match conviction order
     ticker_order = {t: i for i, t in enumerate(sorted_tickers)}
     pick_details.sort(key=lambda p: ticker_order.get(p["ticker"], 999))
-
-    if verbose:
-        logger.info(f"{rebal_date}: {len(filtered)} screened, {len(sorted_tickers)} picks, {classifications}")
 
     return QuarterResult(
         date=rebal_date,
         picks=sorted_tickers,
         universe=universe,
-        num_screened=len(filtered),
-        classifications=classifications,
+        num_screened=full.num_screened,
+        classifications=full.classifications,
         pick_details=pick_details,
     )

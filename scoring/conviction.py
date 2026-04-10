@@ -46,7 +46,10 @@ def confidence_level(value_score: float | None, quality_score: float | None) -> 
 def apply_min_fscore(classification: str, piotroski_f: int) -> str:
     """Downgrade CONVICTION BUY to WATCH LIST if raw F-Score is below minimum.
 
-    Piotroski's paper found strongest outperformance at F >= 5-6.
+    Piotroski's paper compared F >= 8 ("high") vs F <= 1 ("low") within high-B/M
+    stocks and reported a 13.4% long-only excess return. The F >= 6 gate here is a
+    pragmatic long-only choice for the 500-name large-cap universe, not a claim from
+    the paper. See docs/DESIGN_DECISIONS.md for the full rationale.
     """
     if classification == "CONVICTION BUY" and piotroski_f < MIN_PIOTROSKI_F:
         return "WATCH LIST"

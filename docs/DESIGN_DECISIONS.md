@@ -10,7 +10,7 @@
 
 ### Contents
 
-[Purpose](#purpose) · [How to read this file](#how-to-read-this-file) · [Kept decisions](#kept-decisions-actively-defended) · [Rejected alternatives](#rejected-alternatives-considered-and-declined) · [Deferred changes](#deferred-changes-would-require-data-layer-work) · [Known deviations](#known-deviations-from-academic-reproduction) · [Review log](#review-log)
+[Purpose](#purpose) · [How to read this file](#how-to-read-this-file) · [Kept decisions](#kept-decisions-actively-defended) · [Rejected alternatives](#rejected-alternatives-considered-and-declined) · [Deferred changes](#deferred-changes-would-require-data-layer-work) · [Known deviations](#known-deviations-from-academic-reproduction) · [Empirical investigation](#empirical-investigation--component-effectiveness-april-2026) · [Review log](#review-log)
 
 ---
 
@@ -476,9 +476,137 @@ Five of nine Piotroski criteria (F1, F2, F4, F6, F8) are mathematically identica
 
 ---
 
+## Empirical investigation — component effectiveness (April 2026)
+
+This section records the results of a systematic 10-test investigation that replayed the full screener across 12 quarters (Q1 2023 through Q1 2026, the range with reliable cached financial data) and tested each component independently. All findings are directional hypotheses at n=12 quarters — minimum 30 quarters needed for statistical significance.
+
+Infrastructure: `backtest/case_study.py` (analysis engine), `scripts/run_investigation.py` (runner). The investigation replays the FULL classification pipeline for ALL stocks (not just CB picks), tracks which gate downgraded each stock, and computes per-bucket quarterly returns.
+
+### Classification gradient is not consistently monotonic
+
+**Status:** INVESTIGATED — WEAKER THAN EXPECTED
+
+**Tested:** 2026-04-10 | **Sample:** 11 active quarters
+
+**Finding.** CB beat AVOID in only 6 of 11 quarters. Average CB−AVOID spread: **−0.8%**. The full monotonic ordering (CB > WL > HOLD > AVOID) held in **0 of 11 quarters**. The middle buckets (WL, HOLD, OV) are jumbled and don't follow a consistent ordering.
+
+**Decision.** Keep current 40/70 thresholds. The classification is directionally useful (VALUE TRAPs and AVOID are worst 7/11 quarters) but the clean gradient the README describes is not present per-quarter.
+
+**Would move us:** If CB consistently underperforms AVOID over 30+ quarters, reconsider the threshold structure.
+
+### F-gate is neutral
+
+**Status:** INVESTIGATED — NEUTRAL
+
+**Tested:** 2026-04-10 | **Sample:** 17 F-gate victims across 12 quarters
+
+**Finding.** F-gate victims (V≥70, Q≥70, F<6) averaged **+2.7%** return vs CB survivors **+4.5%**. The gate helped in 4 quarters and hurt in 3. Repeat victims BLDR (4 appearances, highly volatile: −33.6%, +40.1%, −26.3%, −12.6%) dominate the sample. The gate fires 0–4 times per quarter.
+
+**Decision.** KEEP. The gate is cheap insurance with near-zero cost (low firing rate) and an academic prior (Piotroski 2000). Removing it based on n=17 would be overfitting to noise.
+
+**Would move us:** If 50+ victims over 30 quarters show significant outperformance of CB.
+
+### Momentum gate helps
+
+**Status:** INVESTIGATED — CONFIRMED
+
+**Tested:** 2026-04-10 | **Sample:** 98 momentum-gate victims across 12 quarters
+
+**Finding.** Momentum victims (bottom-25% momentum, downgraded from CB to WL) averaged **+2.6%** vs CB survivors **+4.5%** (delta −1.9%). Victims underperformed CB in **7 of 10** quarters with data. Notable exceptions exist (ULTA +27.6%, DVA +35.3%) but the central tendency is clear.
+
+**Decision.** KEEP at bottom-25% percentile. This is the screener's most empirically validated gate.
+
+**Would move us:** If victims begin systematically outperforming over an extended period.
+
+### Confidence gradient works in aggregate, not per-quarter
+
+**Status:** INVESTIGATED — PARTIALLY CONFIRMED
+
+**Tested:** 2026-04-10 | **Sample:** 170 CB stock-quarter observations
+
+**Finding.** Aggregate returns: HIGH **+6.7%** (n=17), MODERATE **+5.4%** (n=69), LOW **+3.3%** (n=84) — a perfect gradient. But per-quarter monotonicity held in only **1 of 11** quarters. The ceasefire case study (2026-04-08) caught one of the rare monotonic days.
+
+**Decision.** KEEP confidence labels. They are meaningful in expectation but should not be relied on for any individual quarter. Frame as long-run probability, not per-quarter guarantee.
+
+**Would move us:** If the aggregate gradient breaks down over 30+ quarters.
+
+### VALUE TRAP classification works
+
+**Status:** INVESTIGATED — CONFIRMED
+
+**Tested:** 2026-04-10 | **Sample:** 276 VALUE TRAP stock-quarters
+
+**Finding.** VALUE TRAPs underperformed CB in **7 of 11** quarters. The 4 failures include the Q4 2025 Iran oil shock (VT +26.6% vs CB +3.6%, driven by cheap energy names getting a macro tailwind) and quarters where both VT and CB were negative. On average, VT significantly trails CB.
+
+**Decision.** KEEP. The classification correctly identifies cheap stocks with weak fundamentals. Failures during commodity booms are expected — the screener is correctly refusing a sector-directional bet.
+
+**Would move us:** If VT consistently outperforms CB outside commodity events.
+
+### No meaningful win/loss asymmetry
+
+**Status:** INVESTIGATED — NOT CONFIRMED
+
+**Tested:** 2026-04-10 | **Sample:** 170 CB stock-quarter observations
+
+**Finding.** Individual CB picks had 88 positive excess returns (mean +10.3%) and 82 negative excess returns (mean −9.8%), yielding a win/loss ratio of **1.05×** and hit rate of **52%**. This is essentially random — the README's prior claim that "the edge is in the asymmetry (wins are bigger than losses)" is not supported by this data.
+
+**Decision.** README updated to remove the unsupported asymmetry claim. The screener is a disciplined filter, not an asymmetric return generator.
+
+**Would move us:** If the ratio reaches 1.3× or higher over 30+ quarters with a hit rate above 55%.
+
+### Sector rotation, not stock selection
+
+**Status:** INVESTIGATED — IMPORTANT STRUCTURAL FINDING
+
+**Tested:** 2026-04-10 | **Sample:** 170 CB stock-quarter observations
+
+**Finding.** After sector-neutralizing returns (comparing each CB pick to its own sector mean rather than the universe mean), the average excess was **+0.1%** — essentially zero. Positive stock selection appeared in only **5 of 11** quarters. 80% of pick-quarters came from 4 sectors: Consumer Discretionary (25.5%), Health Care (19.7%), Industrials (18.6%), Consumer Staples (16.0%).
+
+**Decision.** ACKNOWLEDGE in documentation. The screener's value comes from systematic sector tilting toward cheap, quality sectors — not from picking the best stocks within those sectors. This is not a deficiency: fundamental-driven sector rotation is a valid, documented strategy. Do not add sector concentration caps yet — the sample is too small to determine whether forced diversification would help or hurt.
+
+**Would move us:** If sector-neutralized excess remains near zero over 30+ quarters, add sector concentration limits (e.g., max 30% from any single sector).
+
+### New entries outperform repeat picks
+
+**Status:** INVESTIGATED — DIRECTIONAL
+
+**Tested:** 2026-04-10 | **Sample:** 103 returning picks, 67 new entries
+
+**Finding.** New entries to CB averaged **+5.5%** per quarter vs returning picks (in CB the previous quarter) at **+3.8%**, a delta of **−1.7%** against returning picks. "Permanent residents" (MO 9/12 quarters, HCA 9/12, NTAP 8/12) may be a drag.
+
+**Decision.** LOG and MONITOR. Do not add a freshness signal or holding-period cap based on n=170. The finding is directionally interesting but could reverse with more data.
+
+**Would move us:** If the delta persists and grows over 30+ quarters, add a freshness signal (e.g., flag first-quarter-in-CB picks as higher priority).
+
+### Conviction ordering (sqrt(V×Q)) is not predictive within CB
+
+**Status:** INVESTIGATED — NOT CONFIRMED
+
+**Tested:** 2026-04-10 | **Sample:** 10 quarters with ≥3 CB picks
+
+**Finding.** Kendall's τ between conviction score and quarterly return within CB averaged **−0.038**. Positive correlation appeared in only **2 of 10** quarters. Higher conviction scores do not predict higher returns within the CB bucket. The geometric mean is effective as a *threshold mechanism* (both V and Q must be ≥70) but not as a *ranking mechanism* for position sizing.
+
+**Decision.** KEEP geometric mean for threshold qualification. Do not use conviction ordering for position sizing recommendations until an alternative ranking shows consistent positive τ. The "Best Ideas" (top 1/3/5) analysis in the backtest report should be interpreted with this caveat.
+
+**Would move us:** If an alternative ranking signal (e.g., momentum, min(V,Q), or freshness) shows consistently positive τ over 30+ quarters.
+
+---
+
 ## Review log
 
 This log records each formal audit of the algorithm. The point is to make it visible how much has changed between audits, so the project's thinking is traceable over time.
+
+### 2026-04-10 — Empirical component investigation (10 tests, 12 quarters)
+
+**Scope.** Full classification replay of all ~420 stocks across 12 quarters (Q1 2023 to Q1 2026). Tested: classification gradient, F-gate, momentum gate, confidence gradient, VALUE TRAP validation, selectivity signal, win/loss asymmetry, sector-neutralized returns, repeat-pick persistence, conviction score ordering. Infrastructure built: `backtest/case_study.py`, `scripts/run_investigation.py`.
+
+**Outcome.** Zero code changes to the algorithm. One README fix (asymmetry claim removed — unsupported by data). Nine findings logged in new [Empirical investigation](#empirical-investigation--component-effectiveness-april-2026) section. Stale docstring in `scoring/conviction.py:49` corrected.
+
+**Key findings.** Momentum gate is the one clearly validated component (−1.9% delta, n=98). F-gate is neutral (n=17). Confidence gradient works in aggregate (HIGH +6.7% > MOD +5.4% > LOW +3.3%) but not per-quarter. Sector-neutralized alpha is near zero (+0.1%) — the screener tilts sectors, not picks stocks. Conviction ordering has slightly negative τ within CB. Win/loss asymmetry is 1.05× (essentially random). All findings are directional hypotheses at n=12 quarters.
+
+**Audit triggered by.** User request to systematically investigate screener effectiveness and build evidence for case studies.
+
+---
 
 ### 2026-04-09 — Deep algorithm audit (third pass)
 

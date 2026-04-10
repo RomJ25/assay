@@ -83,7 +83,11 @@ def print_backtest_report(result) -> None:
     if result.top_n_metrics:
         console.print(f"\n[bold]CONCENTRATED PORTFOLIO — \"Best Ideas\" Analysis[/bold]")
         console.print("  [dim]Research (Cohen, Polk & Silli) shows highest-conviction positions"
-                      "\n  outperform by 2.8-4.5% per year. How did our top picks do?[/dim]")
+                      "\n  outperform by 2.8-4.5% per year. Top-N picks are sorted by conviction"
+                      "\n  score (√(V×Q)). Note: empirical testing shows conviction ordering has"
+                      "\n  near-zero correlation with subsequent returns within CB (Kendall τ ≈ −0.04"
+                      "\n  over 12 quarters). Treat Top-N as concentration analysis, not as evidence"
+                      "\n  that higher-conviction picks are better.[/dim]")
 
         n_table = Table(show_header=True, header_style="bold cyan", show_lines=False)
         n_table.add_column("Portfolio", width=14)
@@ -127,6 +131,10 @@ def print_backtest_report(result) -> None:
         n_quarters = m.total_quarters
         if n_quarters < 30:
             console.print(f"  [yellow]⚠ {n_quarters} quarters — minimum 30 required for statistical inference[/yellow]")
+
+        console.print(f"\n  [dim]Confidence tiers within CB (aggregate across 12-quarter investigation):[/dim]")
+        console.print(f"  [dim]  HIGH (V,Q ≥ 85): +6.7%/qtr avg  |  MOD (V,Q ≥ 75): +5.4%  |  LOW (near 70): +3.3%[/dim]")
+        console.print(f"  [dim]  Gradient is directional in aggregate but not reliable per-quarter.[/dim]")
 
     # Quarterly breakdown
     if result.portfolio_returns:
