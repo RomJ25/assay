@@ -2,12 +2,24 @@ services:
   assay:
     build: .
     container_name: assay
+    ports:
+      - "8000:8000"
     environment:
       - TZ=America/New_York
       - PYTHONUNBUFFERED=1
+      - ASSAY_RESULTS=/app/data/results
+      - ASSAY_CACHE_DB=/app/data/cache.db
     volumes:
       - assay_data:/app/data
-    restart: "no"
+      - assay_logos:/app/storage/logos
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   assay_data:
+  assay_logos:

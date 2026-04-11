@@ -3,9 +3,14 @@ __pycache__/
 .pytest_cache/
 storage/
 results/
-tests/
 .git/
 .gitignore
 .DS_Store
 .env
 .env.example
+.venv/
+*.egg-info/
+.playwright-mcp/
+web/node_modules/
+web/dist/
+*.png
