@@ -56,7 +56,7 @@ export function Home() {
 
       {/* Stock Deep Dive */}
       {selectedStock && (
-        <StockSheet stock={selectedStock} onClose={() => setSelectedTicker(null)} />
+        <StockSheet stock={selectedStock} allStocks={data.stocks} onClose={() => setSelectedTicker(null)} />
       )}
     </div>
   );

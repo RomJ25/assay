@@ -39,7 +39,7 @@ export function App() {
 
       {/* Stock deep dive from global search */}
       {searchStock && (
-        <StockSheet stock={searchStock} onClose={() => setSearchTicker(null)} />
+        <StockSheet stock={searchStock} allStocks={data?.stocks} onClose={() => setSearchTicker(null)} />
       )}
     </div>
   );

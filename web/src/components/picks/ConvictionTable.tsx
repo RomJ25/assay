@@ -60,12 +60,40 @@ export function ConvictionTable({ stocks, onSelectStock }: Props) {
     return sortDir === "asc" ? " ↑" : " ↓";
   };
 
+  function exportCSV() {
+    const headers = ["Rank", "Ticker", "Company", "Sector", "Price", "Conv", "Confidence", "V", "Q", "F", "EY%", "Analyst Target"];
+    const rows = sorted.map((s, i) => [
+      i + 1, s.ticker, s.company, s.sector, s.price.toFixed(2),
+      s.conviction_score.toFixed(1), s.confidence || "",
+      Math.round(s.value_score), Math.round(s.quality_score),
+      s.piotroski_f, s.earnings_yield?.toFixed(1) ?? "",
+      s.analyst_target?.toFixed(0) ?? "",
+    ]);
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `assay_conviction_buys.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="px-8 pb-8">
-      <h2 className="text-[11px] font-medium uppercase tracking-[0.06em] mb-4"
-          style={{ color: "var(--color-text-muted)" }}>
-        All {cbPicks.length} Conviction Buys
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-[11px] font-medium uppercase tracking-[0.06em]"
+            style={{ color: "var(--color-text-muted)" }}>
+          All {cbPicks.length} Conviction Buys
+        </h2>
+        <button
+          className="text-[11px] rounded-md px-2.5 py-1 transition-colors hover:opacity-80"
+          style={{ backgroundColor: "var(--color-surface-1)", border: "1px solid var(--color-border)", color: "var(--color-text-secondary)" }}
+          onClick={exportCSV}
+        >
+          Export CSV
+        </button>
+      </div>
 
       <div className="overflow-x-auto">
         <table className="w-full">

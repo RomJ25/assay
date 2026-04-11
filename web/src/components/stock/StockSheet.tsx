@@ -1,14 +1,16 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import type { ScreenStock, Classification, Confidence } from "../../lib/types";
 import { classificationColors, confidenceColors, confidenceIcons, scoreColor } from "../../lib/colors";
 import { fmtPrice, fmtMarketCap } from "../../lib/format";
 
 interface Props {
   stock: ScreenStock;
+  allStocks?: ScreenStock[]; // Pass all stocks for peer analysis
   onClose: () => void;
 }
 
-export function StockSheet({ stock, onClose }: Props) {
+export function StockSheet({ stock, allStocks, onClose }: Props) {
+  const [tab, setTab] = useState<"detail" | "peers">("detail");
   // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -150,6 +152,9 @@ export function StockSheet({ stock, onClose }: Props) {
             { label: "Gross Profitability", value: stock.gross_profitability?.toFixed(3) ?? null },
             { label: "Growth Score", value: stock.growth_score?.toFixed(0) ?? null },
           ]} />
+
+          {/* ── Sector Peers ── */}
+          {allStocks && <SectorPeers stock={stock} allStocks={allStocks} />}
         </div>
       </div>
     </div>
@@ -402,5 +407,108 @@ function MetricsGrid({ metrics }: { metrics: { label: string; value: string | nu
         </div>
       ))}
     </div>
+  );
+}
+
+/* ── Sector Peers ── */
+
+function SectorPeers({ stock, allStocks }: { stock: ScreenStock; allStocks: ScreenStock[] }) {
+  const peers = allStocks
+    .filter((s) => s.sector === stock.sector && s.ticker !== stock.ticker)
+    .sort((a, b) => (b.conviction_score || 0) - (a.conviction_score || 0))
+    .slice(0, 15);
+
+  if (peers.length === 0) return null;
+
+  // Sector medians
+  const sectorStocks = allStocks.filter((s) => s.sector === stock.sector);
+  const median = (arr: number[]) => {
+    const sorted = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  };
+
+  const peValues = sectorStocks.map((s) => s.pe_ratio).filter((v): v is number => v != null);
+  const eyValues = sectorStocks.map((s) => s.earnings_yield).filter((v): v is number => v != null);
+  const medianPE = peValues.length > 0 ? median(peValues) : null;
+  const medianEY = eyValues.length > 0 ? median(eyValues) : null;
+
+  return (
+    <div>
+      <SectionLabel className="mt-6">
+        Sector Peers · {stock.sector} ({sectorStocks.length} stocks)
+      </SectionLabel>
+
+      {/* Sector medians */}
+      {(medianPE || medianEY) && (
+        <div className="flex gap-4 mb-3 text-[11px]" style={{ color: "var(--color-text-secondary)" }}>
+          {medianPE && <span>Sector Median P/E: <span className="font-mono">{medianPE.toFixed(1)}</span></span>}
+          {medianEY && <span>Sector Median EY: <span className="font-mono">{medianEY.toFixed(1)}%</span></span>}
+          {stock.pe_ratio && medianPE && (
+            <span>
+              {stock.ticker} discount:{" "}
+              <span className="font-mono" style={{ color: stock.pe_ratio < medianPE ? "#22c55e" : "#ef4444" }}>
+                {((1 - stock.pe_ratio / medianPE) * 100).toFixed(0)}%
+              </span>
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Peer table */}
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b" style={{ borderColor: "var(--color-surface-3)" }}>
+              {["Ticker", "Company", "Class", "V", "Q", "Conv", "F", "EY%"].map((h) => (
+                <th key={h} className={`text-[9px] font-medium uppercase tracking-[0.06em] py-2 px-1.5 ${
+                  ["V", "Q", "Conv", "F", "EY%"].includes(h) ? "text-right" : "text-left"
+                }`} style={{ color: "var(--color-text-muted)" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {/* Current stock highlighted */}
+            <tr className="border-b" style={{ borderColor: "rgba(39,39,42,0.5)", backgroundColor: "var(--color-surface-1)" }}>
+              <td className="font-mono text-[11px] font-semibold py-1.5 px-1.5" style={{ color: "#60a5fa" }}>{stock.ticker} ←</td>
+              <td className="text-[11px] py-1.5 px-1.5 truncate max-w-[120px]" style={{ color: "var(--color-text-secondary)" }}>{stock.company}</td>
+              <td className="py-1.5 px-1.5"><ClassBadge cl={stock.classification} /></td>
+              <td className="font-mono text-[11px] py-1.5 px-1.5 text-right">{Math.round(stock.value_score)}</td>
+              <td className="font-mono text-[11px] py-1.5 px-1.5 text-right">{Math.round(stock.quality_score)}</td>
+              <td className="font-mono text-[11px] py-1.5 px-1.5 text-right font-medium">{stock.conviction_score.toFixed(1)}</td>
+              <td className="font-mono text-[11px] py-1.5 px-1.5 text-right">{stock.piotroski_f}/9</td>
+              <td className="font-mono text-[11px] py-1.5 px-1.5 text-right">{stock.earnings_yield?.toFixed(1) ?? "—"}%</td>
+            </tr>
+            {/* Peers */}
+            {peers.map((p) => (
+              <tr key={p.ticker} className="border-b" style={{ borderColor: "rgba(39,39,42,0.3)" }}>
+                <td className="font-mono text-[11px] py-1.5 px-1.5">{p.ticker}</td>
+                <td className="text-[11px] py-1.5 px-1.5 truncate max-w-[120px]" style={{ color: "var(--color-text-secondary)" }}>{p.company}</td>
+                <td className="py-1.5 px-1.5"><ClassBadge cl={p.classification} /></td>
+                <td className="font-mono text-[11px] py-1.5 px-1.5 text-right">{Math.round(p.value_score)}</td>
+                <td className="font-mono text-[11px] py-1.5 px-1.5 text-right">{Math.round(p.quality_score)}</td>
+                <td className="font-mono text-[11px] py-1.5 px-1.5 text-right">{p.conviction_score.toFixed(1)}</td>
+                <td className="font-mono text-[11px] py-1.5 px-1.5 text-right" style={{ color: "var(--color-text-muted)" }}>{p.piotroski_f}/9</td>
+                <td className="font-mono text-[11px] py-1.5 px-1.5 text-right" style={{ color: "var(--color-text-muted)" }}>{p.earnings_yield?.toFixed(1) ?? "—"}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ClassBadge({ cl }: { cl: Classification }) {
+  const color = classificationColors[cl] || "#71717a";
+  const SHORT: Record<string, string> = {
+    "CONVICTION BUY": "CB", "QUALITY GROWTH PREMIUM": "QGP", "WATCH LIST": "WL",
+    HOLD: "HOLD", "OVERVALUED QUALITY": "OQ", OVERVALUED: "OV", "VALUE TRAP": "VT", AVOID: "AV",
+  };
+  return (
+    <span className="text-[9px] font-mono font-medium rounded px-1 py-0.5"
+          style={{ backgroundColor: `${color}20`, color }}>
+      {SHORT[cl] || cl}
+    </span>
   );
 }
