@@ -108,9 +108,15 @@ Financials (banks, insurance, REITs) are excluded by default because the EBIT/EV
 
 ## Case Studies
 
-Individual market events are not evidence — the backtest is. These case studies exist only to illustrate, in concrete terms, the kind of behavior the engine is designed to exhibit when a specific day exposes the mechanism clearly.
+Individual market events are not evidence — the backtest is. These case studies exist only to illustrate, in concrete terms, the kind of behavior the engine is designed to exhibit. A 12-quarter empirical investigation (see `docs/DESIGN_DECISIONS.md`) provides the systematic context; the case studies make specific quarters concrete.
 
-- [`docs/CASE_STUDIES/2026-04-08_ceasefire.md`](docs/CASE_STUDIES/2026-04-08_ceasefire.md) — Iran ceasefire rally. The 2026-04-07 screen held zero Energy in CONVICTION BUY; when WTI crashed ~15% the next morning on the ceasefire announcement, AVOID was the worst-performing bucket in the universe, the confidence gradient (HIGH/MODERATE/LOW) was cleanly monotonic, and 19 of 20 CBs closed positive.
+- [`docs/CASE_STUDIES/2023-Q4_when_everything_aligned.md`](docs/CASE_STUDIES/2023-Q4_when_everything_aligned.md) — **Best quarter.** 5 concentrated IT picks returned +23.0% vs +11.6% SPY. Sector-neutralized excess was +6.0% — the one quarter with genuine stock selection, not just sector rotation.
+
+- [`docs/CASE_STUDIES/2024-Q1_when_the_market_left_us_behind.md`](docs/CASE_STUDIES/2024-Q1_when_the_market_left_us_behind.md) — **Worst quarter.** 19 picks returned -5.4% while SPY gained +4.4%. AVOID (+2.3%) beat CB — the gradient inverted during the Magnificent Seven growth rally. Honest failure analysis.
+
+- [`docs/CASE_STUDIES/2025-04_liberation_day.md`](docs/CASE_STUDIES/2025-04_liberation_day.md) — **Stress test.** VIX hit 60 during the April 2025 tariff shock. 26 CB picks fell less than SPY during the crash (-8.8% vs -9.8%) but lagged the recovery (+5.6% vs +8.8%). VALUE TRAPs were devastated (-14.4%).
+
+- [`docs/CASE_STUDIES/2026-04-08_ceasefire.md`](docs/CASE_STUDIES/2026-04-08_ceasefire.md) — **Single-day rotation.** Iran ceasefire rally. Zero Energy in CB; when WTI crashed ~15%, AVOID was the worst-performing bucket, the confidence gradient was monotonic, and 19 of 20 CBs closed positive.
 
 ## Data Sources
 
