@@ -103,26 +103,51 @@ def run_backtest(
     include_financials: bool = False,
     verbose: bool = False,
     tcost_bps: int = TCOST_BPS_ROUNDTRIP,
+    survivorship_free: bool = False,
 ) -> BacktestResult:
-    """Run the full backtest pipeline."""
+    """Run the full backtest pipeline.
+
+    Args:
+        survivorship_free: If True, use point-in-time S&P 500 constituents
+            for each quarter instead of the current list. Eliminates
+            survivorship bias but requires more data fetching.
+    """
     start_time = time.time()
 
+    bias_label = "survivorship-free" if survivorship_free else "current list (survivorship bias)"
     console.print(f"\n[bold blue]Assay Backtest — S&P 500 Value + Quality[/bold blue]")
-    console.print(f"Period: {years} years | Rebalancing: quarterly | Filing lag: {BACKTEST_FILING_LAG_DAYS} days\n")
+    console.print(f"Period: {years} years | Rebalancing: quarterly | Filing lag: {BACKTEST_FILING_LAG_DAYS} days")
+    console.print(f"Universe: {bias_label}\n")
 
-    # Step 1: Get current S&P 500 list (survivorship bias acknowledged)
+    # Step 1: Generate rebalance dates
+    rebalance_dates = _generate_rebalance_dates(years)
+    console.print(f"Rebalance dates: {len(rebalance_dates)} quarters ({rebalance_dates[0]} to {rebalance_dates[-1]})")
+
+    # Step 2: Get stock universe
     console.print("[dim]Fetching S&P 500 list...[/dim]")
     sp500_df = fetch_sp500_list()
     info = sp500_info_dict(sp500_df)
-    tickers = list(info.keys())
+
+    if survivorship_free:
+        from data.sp500_historical import get_sp500_at_date, get_all_historical_tickers
+
+        # Get ALL tickers that were ever in S&P 500 during the backtest period
+        all_historical = get_all_historical_tickers(rebalance_dates[0], rebalance_dates[-1])
+        # Merge with current info (for sector/name data where available)
+        tickers = list(all_historical | set(info.keys()))
+        console.print(f"[green]Survivorship-free universe: {len(tickers)} tickers ({len(all_historical - set(info.keys()))} historical-only)[/green]")
+
+        # Build basic info entries for historical tickers not in current list
+        for t in tickers:
+            if t not in info:
+                info[t] = {"company_name": t, "sector": "Unknown", "sub_industry": "Unknown"}
+    else:
+        tickers = list(info.keys())
+
     sp500_entries = [
-        {"ticker": t, "company_name": v["company_name"], "sector": v["sector"], "sub_industry": v["sub_industry"]}
+        {"ticker": t, "company_name": v.get("company_name", t), "sector": v.get("sector", "Unknown"), "sub_industry": v.get("sub_industry", "Unknown")}
         for t, v in info.items()
     ]
-
-    # Step 2: Generate rebalance dates + momentum lookback dates
-    rebalance_dates = _generate_rebalance_dates(years)
-    console.print(f"Rebalance dates: {len(rebalance_dates)} quarters ({rebalance_dates[0]} to {rebalance_dates[-1]})")
 
     # Add momentum lookback dates (12m and 1m before each rebalance) for price fetching
     from dateutil.relativedelta import relativedelta
@@ -149,7 +174,15 @@ def run_backtest(
             task = progress.add_task("[cyan]Screening quarters...", total=len(rebalance_dates))
 
             for rebal_date in rebalance_dates:
-                qr = _screen_quarter(rebal_date, tickers, info, cache, not include_financials, verbose)
+                # Point-in-time universe: only stocks that were in S&P 500 at this date
+                if survivorship_free:
+                    pit_tickers = get_sp500_at_date(rebal_date)
+                    pit_info = {t: info.get(t, {"company_name": t, "sector": "Unknown", "sub_industry": "Unknown"}) for t in pit_tickers}
+                else:
+                    pit_tickers = tickers
+                    pit_info = info
+
+                qr = _screen_quarter(rebal_date, pit_tickers, pit_info, cache, not include_financials, verbose)
                 if qr is not None:
                     quarter_results.append(qr)
                     quarterly_picks.append((rebal_date, qr.picks))

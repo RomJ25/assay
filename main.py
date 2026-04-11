@@ -234,6 +234,8 @@ def main():
                         help="Years to backtest (default: 4)")
     parser.add_argument("--tcost-bps", type=int, default=TCOST_BPS_ROUNDTRIP,
                         help=f"Transaction cost in basis points per rebalance (default: {TCOST_BPS_ROUNDTRIP}, suggest 10)")
+    parser.add_argument("--survivorship-free", action="store_true",
+                        help="Use point-in-time S&P 500 constituents (eliminates survivorship bias)")
     args = parser.parse_args()
 
     if args.backtest:
@@ -242,7 +244,8 @@ def main():
         run_backtest(years=args.backtest_years,
                      include_financials=args.include_financials,
                      verbose=args.verbose,
-                     tcost_bps=args.tcost_bps)
+                     tcost_bps=args.tcost_bps,
+                     survivorship_free=args.survivorship_free)
     else:
         run_screener(ticker=args.ticker, top_n=args.top, verbose=args.verbose,
                      refresh=args.refresh, wide=args.wide, breakdown=args.breakdown,
