@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { useScreenData } from "../hooks/useScreenData";
 import { StockSheet } from "../components/stock/StockSheet";
 import { classificationColors } from "../lib/colors";
@@ -156,6 +157,9 @@ export function Universe() {
         </div>
       </div>
 
+      {/* V vs Q Scatter Plot */}
+      <VQScatter stocks={data.stocks} onSelectStock={setSelectedTicker} />
+
       {/* Search + Stock Table */}
       <div className="mb-4">
         <input
@@ -231,6 +235,109 @@ export function Universe() {
       {selectedStock && (
         <StockSheet stock={selectedStock} allStocks={data.stocks} onClose={() => setSelectedTicker(null)} />
       )}
+    </div>
+  );
+}
+
+/* ── V vs Q Scatter Plot ── */
+
+function VQScatter({ stocks, onSelectStock }: { stocks: ScreenStock[]; onSelectStock: (t: string) => void }) {
+  const [showScatter, setShowScatter] = useState(false);
+
+  // Group stocks by classification for colored dots
+  const scatterData = useMemo(() => {
+    const groups: Record<string, { x: number; y: number; ticker: string; company: string; cl: string }[]> = {};
+    for (const s of stocks) {
+      const cl = s.classification;
+      if (!groups[cl]) groups[cl] = [];
+      groups[cl].push({
+        x: s.value_score,
+        y: s.quality_score,
+        ticker: s.ticker,
+        company: s.company,
+        cl,
+      });
+    }
+    return groups;
+  }, [stocks]);
+
+  if (!showScatter) {
+    return (
+      <div className="mb-8 text-center">
+        <button className="text-[11px] rounded-md px-3 py-1.5 transition-colors hover:opacity-80"
+                style={{ backgroundColor: "var(--color-surface-1)", border: "1px solid var(--color-border)", color: "var(--color-text-secondary)" }}
+                onClick={() => setShowScatter(true)}>
+          Show V vs Q Scatter Plot
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg p-5 mb-8" style={{ backgroundColor: "var(--color-surface-1)", border: "1px solid var(--color-border)" }}>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-[11px] font-medium uppercase tracking-[0.06em]" style={{ color: "var(--color-text-muted)" }}>
+            Value Score vs Quality Score — All {stocks.length} Stocks
+          </h3>
+          <p className="text-[10px] mt-1" style={{ color: "var(--color-text-muted)" }}>
+            Each dot is a stock. Dashed lines at 40 and 70 mark the classification thresholds.
+          </p>
+        </div>
+        <button className="text-[11px] hover:opacity-80" style={{ color: "var(--color-text-muted)" }}
+                onClick={() => setShowScatter(false)}>Hide</button>
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-3 mb-4 text-[10px]">
+        {(Object.keys(SHORT_LABELS) as Classification[]).map((cl) => (
+          <span key={cl} className="flex items-center gap-1">
+            <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: classificationColors[cl] }} />
+            {SHORT_LABELS[cl]}
+          </span>
+        ))}
+      </div>
+
+      <ResponsiveContainer width="100%" height={400}>
+        <ScatterChart margin={{ top: 10, right: 20, bottom: 30, left: 10 }}>
+          <XAxis type="number" dataKey="x" domain={[0, 100]} name="Value"
+                 tick={{ fontSize: 10, fill: "#71717a" }} tickLine={false}
+                 axisLine={{ stroke: "#27272a" }}
+                 label={{ value: "Value Score →", position: "bottom", offset: 10, fontSize: 11, fill: "#71717a" }} />
+          <YAxis type="number" dataKey="y" domain={[0, 100]} name="Quality"
+                 tick={{ fontSize: 10, fill: "#71717a" }} tickLine={false}
+                 axisLine={{ stroke: "#27272a" }}
+                 label={{ value: "Quality Score →", angle: -90, position: "insideLeft", offset: 0, fontSize: 11, fill: "#71717a" }} />
+
+          {/* Threshold lines */}
+          <ReferenceLine x={40} stroke="#27272a" strokeDasharray="4 4" />
+          <ReferenceLine x={70} stroke="#3f3f46" strokeDasharray="4 4" />
+          <ReferenceLine y={40} stroke="#27272a" strokeDasharray="4 4" />
+          <ReferenceLine y={70} stroke="#3f3f46" strokeDasharray="4 4" />
+
+          <Tooltip
+            cursor={false}
+            contentStyle={{ backgroundColor: "#18181b", border: "1px solid #27272a", borderRadius: "8px", fontSize: "12px" }}
+            formatter={(_: any, __: any, props: any) => {
+              const p = props.payload;
+              return [`V=${Math.round(p.x)} Q=${Math.round(p.y)}`, `${p.ticker} (${p.cl})`];
+            }}
+          />
+
+          {/* Plot each classification group with its color */}
+          {Object.entries(scatterData).map(([cl, points]) => (
+            <Scatter
+              key={cl}
+              data={points}
+              fill={classificationColors[cl as Classification] || "#71717a"}
+              fillOpacity={0.7}
+              r={3}
+              cursor="pointer"
+              onClick={(data: any) => onSelectStock(data.ticker)}
+            />
+          ))}
+        </ScatterChart>
+      </ResponsiveContainer>
     </div>
   );
 }
