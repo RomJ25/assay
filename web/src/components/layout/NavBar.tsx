@@ -10,13 +10,13 @@ const links = [
 
 export function NavBar() {
   return (
-    <nav className="sticky top-0 z-50 flex h-14 items-center border-b px-8"
+    <nav className="sticky top-0 z-50 flex h-14 items-center border-b px-4 sm:px-8"
          style={{ backgroundColor: "var(--color-surface-0)", borderColor: "var(--color-border)" }}>
-      <NavLink to="/" className="font-mono text-base font-medium tracking-widest mr-10"
+      <NavLink to="/" className="font-mono text-base font-medium tracking-widest mr-4 sm:mr-10"
                style={{ color: "var(--color-text-primary)" }}>
         ASSAY
       </NavLink>
-      <div className="flex gap-6 flex-1">
+      <div className="flex gap-3 sm:gap-6 flex-1 overflow-x-auto">
         {links.map((l) => (
           <NavLink
             key={l.to}

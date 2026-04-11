@@ -83,7 +83,7 @@ export function ConvictionTable({ stocks, onSelectStock }: Props) {
   }
 
   return (
-    <div className="px-8 pb-8">
+    <div className="px-4 sm:px-8 pb-8">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-[11px] font-medium uppercase tracking-[0.06em]"
             style={{ color: "var(--color-text-muted)" }}>
@@ -128,7 +128,55 @@ export function ConvictionTable({ stocks, onSelectStock }: Props) {
         />
       )}
 
-      <div className="overflow-x-auto">
+      {/* Mobile card view (< 768px) */}
+      <div className="block sm:hidden space-y-2 mb-4">
+        {sorted.map((s, i) => {
+          const confColor = s.confidence ? confidenceColors[s.confidence] : null;
+          return (
+            <div
+              key={s.ticker}
+              className="rounded-lg p-3 cursor-pointer transition-colors duration-100"
+              style={{ backgroundColor: "var(--color-surface-1)", border: "1px solid var(--color-border)" }}
+              onClick={() => onSelectStock(s.ticker)}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm font-semibold">{s.ticker}</span>
+                  <span className="text-[12px] truncate max-w-[140px]" style={{ color: "var(--color-text-secondary)" }}>{s.company}</span>
+                </div>
+                {s.confidence && (
+                  <span className="text-[10px] rounded-full px-1.5 py-0.5 font-medium"
+                        style={{ backgroundColor: `${confColor}26`, color: confColor! }}>
+                    {confidenceIcons[s.confidence]} {s.confidence}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-lg font-semibold" style={{ color: scoreColor(s.conviction_score) }}>
+                  {s.conviction_score.toFixed(1)}
+                </span>
+                <span className="font-mono text-[12px] rounded px-1 py-0.5"
+                      style={{ backgroundColor: `${scoreColor(s.value_score)}0f` }}>
+                  V {Math.round(s.value_score)}
+                </span>
+                <span className="font-mono text-[12px] rounded px-1 py-0.5"
+                      style={{ backgroundColor: `${scoreColor(s.quality_score)}0f` }}>
+                  Q {Math.round(s.quality_score)}
+                </span>
+                <span className="font-mono text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+                  F={s.piotroski_f}/9
+                </span>
+                <span className="ml-auto font-mono text-[12px]" style={{ color: "var(--color-text-secondary)" }}>
+                  {fmtPrice(s.price)}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop table view (≥ 768px) */}
+      <div className="hidden sm:block overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b" style={{ borderColor: "var(--color-surface-3)" }}>

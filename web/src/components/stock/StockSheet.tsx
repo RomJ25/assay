@@ -29,7 +29,7 @@ export function StockSheet({ stock, allStocks, onClose }: Props) {
 
       {/* Panel */}
       <div
-        className="relative w-full max-w-[680px] h-full overflow-y-auto border-l"
+        className="relative w-full sm:max-w-[680px] h-full overflow-y-auto sm:border-l"
         style={{ backgroundColor: "var(--color-surface-0)", borderColor: "var(--color-border)" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -77,7 +77,7 @@ export function StockSheet({ stock, allStocks, onClose }: Props) {
 
           {/* ── Score gauges ── */}
           <SectionLabel>Scores</SectionLabel>
-          <div className="flex gap-3 mb-6">
+          <div className="grid grid-cols-3 gap-3 mb-6">
             {([
               { label: "Value", score: stock.value_score, sub: `${Math.round(stock.value_score)}th percentile by earnings yield` },
               { label: "Quality", score: stock.quality_score, sub: `Piotroski ${stock.piotroski_f}/9 + gross profitability` },
@@ -397,7 +397,7 @@ function SectionLabel({ children, className = "" }: { children: React.ReactNode;
 
 function MetricsGrid({ metrics }: { metrics: { label: string; value: string | null }[] }) {
   return (
-    <div className="grid grid-cols-3 gap-2 mb-6">
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-6">
       {metrics.map((m) => (
         <div key={m.label} className="rounded-md p-3"
              style={{ backgroundColor: "var(--color-surface-1)", border: "1px solid var(--color-border)" }}>

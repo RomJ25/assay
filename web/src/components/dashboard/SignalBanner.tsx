@@ -31,7 +31,7 @@ export function SignalBanner({ stocks, universe, date, screened }: Props) {
   }
 
   return (
-    <div className="flex flex-col items-center pt-16 pb-10 px-8">
+    <div className="flex flex-col items-center pt-10 sm:pt-16 pb-8 sm:pb-10 px-4 sm:px-8">
       {/* Logotype */}
       <span className="font-mono text-sm font-medium tracking-[0.12em] uppercase mb-1"
             style={{ color: "var(--color-text-muted)" }}>
@@ -43,7 +43,7 @@ export function SignalBanner({ stocks, universe, date, screened }: Props) {
 
       {/* Hero number */}
       <span
-        className="font-mono text-[80px] leading-none font-semibold mb-1"
+        className="font-mono text-[56px] sm:text-[80px] leading-none font-semibold mb-1"
         style={{ color: isZero ? "#eab308" : "var(--color-text-primary)" }}
       >
         {count}
