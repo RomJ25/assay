@@ -113,13 +113,18 @@ export function Universe() {
                 {row.map((cl, ci) => {
                   // Handle AVOID appearing twice
                   const key = `${ri}-${ci}`;
-                  const stocks = ri === 2 && ci === 2
-                    ? (bucketMap.get("AVOID") || []).filter((s) => s.value_score < 40 && s.quality_score < 40)
-                    : ri === 1 && ci === 2
-                    ? (bucketMap.get("AVOID") || []).filter((s) => s.value_score >= 40)
-                    : (bucketMap.get(cl) || []);
-                  const count = cl === "AVOID" ? stocks.length : (bucketMap.get(cl) || []).length;
-                  const displayCount = stocks.length;
+                  // AVOID appears in two cells: v_mid+q_low (row 1, col 2) and v_low+q_low (row 2, col 2)
+                  let cellStocks: ScreenStock[];
+                  if (cl === "AVOID" && ri === 1) {
+                    // v_mid + q_low: value 40-70
+                    cellStocks = (bucketMap.get("AVOID") || []).filter((s) => s.value_score >= 40);
+                  } else if (cl === "AVOID" && ri === 2) {
+                    // v_low + q_low: value < 40
+                    cellStocks = (bucketMap.get("AVOID") || []).filter((s) => s.value_score < 40);
+                  } else {
+                    cellStocks = bucketMap.get(cl) || [];
+                  }
+                  const displayCount = cellStocks.length;
                   const color = classificationColors[cl];
                   const isSelected = selectedCell === cl;
 
@@ -137,7 +142,7 @@ export function Universe() {
                         {SHORT_LABELS[cl]}
                       </div>
                       <div className="font-mono text-lg font-semibold" style={{ color: "var(--color-text-primary)" }}>
-                        {cl === "AVOID" ? displayCount : count}
+                        {displayCount}
                       </div>
                       <div className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>
                         stocks

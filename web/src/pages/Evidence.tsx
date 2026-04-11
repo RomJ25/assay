@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, Fragment } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceDot, Label } from "recharts";
 import { useBacktestData, type BacktestQuarter } from "../hooks/useBacktestData";
 
@@ -327,5 +327,4 @@ function SmallCard({ label, value, color, sub }: { label: string; value: string;
   );
 }
 
-// Need Fragment import for the drill-down rows
-import { Fragment } from "react";
+// Fragment imported at top of file

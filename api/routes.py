@@ -41,8 +41,11 @@ async def get_screen():
     if path is None:
         raise HTTPException(status_code=404, detail="No screen data found. Run the screener first.")
 
-    with open(path) as f:
-        stocks = json.load(f)
+    try:
+        with open(path, encoding="utf-8") as f:
+            stocks = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read screen data: {e}")
 
     # Extract date from filename
     date_str = path.stem.replace("screen_", "")
@@ -323,11 +326,12 @@ _run_status: dict = {"running": False, "phase": "", "progress": 0}
 @router.post("/screen/run")
 async def run_screen(config: ScreenConfig):
     """Run the screener. Returns SSE stream with progress updates."""
-    if _run_status["running"]:
-        raise HTTPException(status_code=409, detail="Screener is already running.")
+    with _run_lock:
+        if _run_status["running"]:
+            raise HTTPException(status_code=409, detail="Screener is already running.")
+        _run_status["running"] = True
 
     async def event_stream():
-        _run_status["running"] = True
         _run_status["phase"] = "Starting..."
         _run_status["progress"] = 0
 

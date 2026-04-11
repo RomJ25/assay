@@ -17,6 +17,7 @@ export function ConvictionTable({ stocks, onSelectStock }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>("conviction_score");
   const [compareMode, setCompareMode] = useState(false);
   const [compareSet, setCompareSet] = useState<Set<string>>(new Set());
+  const [showCompare, setShowCompare] = useState(false);
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   const cbPicks = useMemo(
@@ -95,7 +96,7 @@ export function ConvictionTable({ stocks, onSelectStock }: Props) {
             <button
               className="text-[11px] rounded-md px-2.5 py-1 font-medium transition-colors"
               style={{ backgroundColor: "var(--color-cb)", color: "#000" }}
-              onClick={() => setCompareMode(false)}
+              onClick={() => setShowCompare(true)}
             >
               Compare {compareSet.size} →
             </button>
@@ -122,10 +123,10 @@ export function ConvictionTable({ stocks, onSelectStock }: Props) {
       </div>
 
       {/* Compare view overlay */}
-      {!compareMode && compareSet.size >= 2 && (
+      {showCompare && compareSet.size >= 2 && (
         <CompareView
           stocks={sorted.filter((s) => compareSet.has(s.ticker))}
-          onClose={() => { setCompareSet(new Set()); }}
+          onClose={() => { setShowCompare(false); setCompareMode(false); setCompareSet(new Set()); }}
         />
       )}
 

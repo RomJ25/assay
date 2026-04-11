@@ -48,8 +48,9 @@ if FRONTEND_DIR.exists():
     # SPA fallback: any non-API route returns index.html for React Router
     @app.get("/{path:path}")
     async def spa_fallback(path: str):
-        file_path = FRONTEND_DIR / path
-        if file_path.is_file():
+        file_path = (FRONTEND_DIR / path).resolve()
+        # Prevent path traversal — file must be within FRONTEND_DIR
+        if file_path.is_file() and str(file_path).startswith(str(FRONTEND_DIR.resolve())):
             return FileResponse(file_path)
         return FileResponse(FRONTEND_DIR / "index.html")
 

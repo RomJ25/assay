@@ -39,24 +39,28 @@ export function RunScreener({ onComplete }: Props) {
       const decoder = new TextDecoder();
 
       if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const text = decoder.decode(value);
-          const lines = text.split("\n").filter((l) => l.startsWith("data: "));
-          for (const line of lines) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              setPhase(data.phase || "");
-              setProgress(data.progress || 0);
-              if (data.done) {
-                setRunning(false);
-                if (data.progress === 100) {
-                  onComplete();
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const text = decoder.decode(value);
+            const lines = text.split("\n").filter((l) => l.startsWith("data: "));
+            for (const line of lines) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                setPhase(data.phase || "");
+                setProgress(data.progress || 0);
+                if (data.done) {
+                  setRunning(false);
+                  if (data.progress === 100) {
+                    onComplete();
+                  }
                 }
-              }
-            } catch {}
+              } catch {}
+            }
           }
+        } catch {
+          setPhase("Connection lost during run. Refresh to check results.");
         }
       }
     } catch (e: any) {
