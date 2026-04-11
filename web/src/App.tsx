@@ -1,6 +1,8 @@
 import { Routes, Route } from "react-router-dom";
 import { NavBar } from "./components/layout/NavBar";
 import { Home } from "./pages/Home";
+import { Universe } from "./pages/Universe";
+import { Evidence } from "./pages/Evidence";
 
 export function App() {
   return (
@@ -9,8 +11,8 @@ export function App() {
       <main className="max-w-7xl mx-auto">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/universe" element={<Placeholder title="Universe" />} />
-          <Route path="/evidence" element={<Placeholder title="Evidence" />} />
+          <Route path="/universe" element={<Universe />} />
+          <Route path="/evidence" element={<Evidence />} />
           <Route path="/methodology" element={<Placeholder title="How It Works" />} />
         </Routes>
       </main>
