@@ -478,11 +478,7 @@ The 20 CONVICTION BUYs returned +2.29% (-26 bps vs SPY). This is not a hero resu
 3. **The confidence gradient was monotonic**: HIGH +3.22%, MODERATE +2.66%, LOW +1.37%. A single-scalar formula produced a clean ordering on live market data.
 4. **The AVOID and WATCH LIST buckets lagged by -79 and -108 bps** — concentrating the day's losses into exactly the classifications the engine was warning about.
 
-The README frames this asymmetry explicitly:
-
-> *"The edge is in the asymmetry (wins are bigger than losses), not the hit rate."* — [`README.md`](../../README.md)
-
-On 04-08, the engine's best pick (UHS +3.41%) dominated its worst pick (DLTR -0.75%) by a factor of more than 4. The full CB portfolio's dispersion was positive-skewed. Meanwhile, the engine's refusal set (AVOID) was the worst-performing bucket in the universe. Both sides of the asymmetry showed up. Neither was large enough in magnitude to prove anything on its own — but both are consistent with the direction the system is designed to move on a day like this.
+On 04-08, the engine's best pick (UHS +3.41%) dominated its worst pick (DLTR -0.75%) by a factor of more than 4. The full CB portfolio's dispersion was positive-skewed. Meanwhile, the engine's refusal set (AVOID) was the worst-performing bucket in the universe. Both sides of the asymmetry showed up on this single day. A subsequent 12-quarter component investigation (see `docs/DESIGN_DECISIONS.md`, April 2026 empirical section) found that the aggregate win/loss ratio across all CB stock-quarter observations was 1.05× at a 52% hit rate — no meaningful asymmetry at the portfolio level. The single-day result here is consistent with the mechanism but is not representative of the general case.
 
 A one-day observation is not evidence. It is an illustration of the mechanism the backtest tries to measure over quarters. The backtest is the thing that matters for evidence; see `results/backtest_*.csv`. This document exists to make the mechanism visible in concrete terms.
 
