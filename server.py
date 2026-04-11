@@ -37,10 +37,22 @@ async def health():
 # API routes
 app.include_router(router)
 
-# Serve built React frontend (if it exists) — MUST be last (catches all unmatched routes)
+# Serve built React frontend with SPA fallback
 FRONTEND_DIR = Path(__file__).parent / "web" / "dist"
 if FRONTEND_DIR.exists():
-    app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
+    from fastapi.responses import FileResponse
+
+    # Serve static assets (JS, CSS, fonts)
+    app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIR / "assets")), name="assets")
+
+    # SPA fallback: any non-API route returns index.html for React Router
+    @app.get("/{path:path}")
+    async def spa_fallback(path: str):
+        file_path = FRONTEND_DIR / path
+        if file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(FRONTEND_DIR / "index.html")
+
     logger.info(f"Serving frontend from {FRONTEND_DIR}")
 else:
     logger.info("No frontend build found at web/dist/. Run 'cd web && pnpm build' to build.")
