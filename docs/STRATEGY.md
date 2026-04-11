@@ -72,13 +72,16 @@ From the empirical investigation (10 quarters of data):
 
 ```
     ┌───────────────────────────────────────────────────────────────┐
-    │  Where dropped CB stocks went        Return next quarter     │
-    │  ─────────────────────────────       ────────────────────     │
-    │  QUALITY GROWTH PREMIUM (19)              +9.8%  ← winners   │
-    │  WATCH LIST (27)                          +5.7%  ← solid     │
-    │  HOLD (3)                                -25.0%  ← sell      │
-    │  AVOID (1)                                -3.8%  ← sell      │
+    │  Where dropped CB stocks went    N     Return next quarter   │
+    │  ─────────────────────────────  ───    ────────────────────   │
+    │  QUALITY GROWTH PREMIUM          19         +9.8%  ← hold    │
+    │  WATCH LIST                      27         +5.7%  ← hold    │
+    │  HOLD                             3        -25.0%  ← sell    │
+    │  AVOID                            1         -3.8%  ← sell    │
+    │  VALUE TRAP                       0            —   (no data) │
     └───────────────────────────────────────────────────────────────┘
+    Hold signals (QGP, WL): n=46, well-supported.
+    Sell signals (HOLD, AVOID, VT): n=4, directional only.
 ```
 
 Stocks that moved to QGP (price went up, quality stayed high) returned **+9.8%** the next quarter. Selling them would have been the single most expensive mistake.
@@ -95,7 +98,9 @@ Sell **only** when the classification drops to one of these three buckets:
 | **VALUE TRAP** | Cheap but low quality (Q < 40) | Fundamentals are genuinely weak |
 | **AVOID** | Neither cheap nor quality | Nothing to justify holding |
 
-These represent real fundamental deterioration — the business weakened, not just the stock price moved. In our data, stocks that dropped to HOLD or AVOID averaged **-25.0%** the next quarter.
+These represent real fundamental deterioration — the business weakened, not just the stock price moved. In our data, the 4 stocks that dropped to HOLD or AVOID averaged **-25.0%** the next quarter.
+
+**Sample size caveat:** The sell signal evidence is thin — n=3 for HOLD, n=1 for AVOID, n=0 for VALUE TRAP. The -25% figure is directional, not statistically significant. The sell rule is based primarily on LOGIC (no fundamental reason to hold a stock that's neither cheap nor quality) supported by limited empirical data. As more quarters accumulate, this evidence will strengthen or need revision.
 
 **Do NOT sell because:**
 - The stock left CONVICTION BUY (it probably appreciated)
@@ -138,7 +143,9 @@ Academic research comparing sell strategies found that fundamental stop-losses (
     └───────────────────────────────────────────────────────────────┘
 ```
 
-The selective sell strategy beat quarterly rebalancing by **+4.0%/yr** and SPY by **+4.3%/yr**. The advantage comes entirely from not selling winners.
+The selective sell strategy beat quarterly rebalancing by **+4.0%/yr** and SPY by **+4.3%/yr** over 11 quarters. The advantage comes entirely from not selling winners.
+
+**Caveat:** 11 quarters is below the 30-quarter minimum for statistical significance. The directional evidence is strong (holding appreciated stocks > selling them), but the magnitude (+4.0%/yr) may not persist exactly. The LOGIC is robust regardless of sample size — selling stocks that went up is selling winners by definition.
 
 ### 62 Years of Factor Evidence (1963-2025)
 
