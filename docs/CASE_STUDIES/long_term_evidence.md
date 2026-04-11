@@ -95,24 +95,24 @@ The academic data can be extended to a year-by-year view for the recent period. 
 
 ```
     +-------------------------------------------------------------------+
-    |  Year    V+Q Premium    Cumulative $100                            |
-    |  ----    -----------    ---------------                            |
-    |  2014       -1.4%           $98.60                                 |
-    |  2015       -9.3%           $89.43                                 |
-    |  2016      +24.0%          $110.90                                 |
-    |  2017       -7.0%          $103.14                                 |
-    |  2018      -12.4%           $90.35                                 |
-    |  2019       -5.1%           $85.74                                 |
-    |  2020      -32.9%           $57.53                                 |
-    |  2021      +46.7%           $84.39                                 |
-    |  2022      +40.0%          $118.15                                 |
-    |  2023       -7.2%          $109.64                                 |
-    |  2024       -3.1%          $106.24                                 |
-    |  2025       -3.8%          $102.20                                 |
+    |  Year    Market    Value    Quality   V+Q Prem    $100 Mkt  $100 V+Q|
+    |  ----    ------    -----    -------   --------    --------  --------|
+    |  2014    +11.8%    -2.0%     +0.6%     -1.4%        $112      $110 |
+    |  2015     +0.3%    -9.8%     +0.5%     -9.3%        $112      $100 |
+    |  2016    +13.6%   +20.7%     +3.4%    +24.0%        $127      $138 |
+    |  2017    +22.3%   -10.7%     +3.8%     -7.0%        $156      $159 |
+    |  2018     -5.0%   -10.5%     -2.0%    -12.4%        $148      $131 |
+    |  2019    +30.5%    -8.1%     +2.9%     -5.1%        $193      $165 |
+    |  2020    +24.1%   -30.7%     -2.3%    -32.9%        $239      $150 |
+    |  2021    +23.9%   +22.2%    +24.5%    +46.7%        $297      $256 |
+    |  2022    -19.9%   +31.7%     +8.3%    +40.0%        $238      $308 |
+    |  2023    +26.7%   -11.1%     +3.8%     -7.2%        $301      $368 |
+    |  2024    +25.1%    -7.2%     +4.1%     -3.1%        $376      $448 |
+    |  2025    +17.6%    +6.4%    -10.1%     -3.8%        $443      $510 |
     +-------------------------------------------------------------------+
 ```
 
-Over 12 years, $100 invested in the market grew to approximately $443. $100 in Market + Value + Quality grew to approximately $510. The excess was +$68, or roughly +15.3%.
+Over 12 years, $100 invested in the market grew to approximately **$443**. $100 in Market + Value + Quality grew to approximately **$510**. The excess was +$68, or roughly +15.3%.
 
 That is a positive result. It is also a modest one. A +15.3% cumulative excess over 12 years is roughly +1.2% per year — far below the 62-year average of +7.1%.
 
@@ -130,15 +130,16 @@ The 62-year record reveals a clear pattern: the value+quality premium is **real 
     +-------------------------------------------------------------------+
     |  Holding Period       % of Periods with Positive V+Q Premium      |
     |  --------------       ------------------------------------------  |
-    |  1 year                          ~58%                              |
-    |  3 years                         ~67%                              |
-    |  5 years                         ~78%                              |
-    |  10 years                        ~88%                              |
-    |  20 years                        ~97%                              |
+    |  1 year                          63%  (40/63)                      |
+    |  3 years                         87%  (53/61)                      |
+    |  5 years                         90%  (53/59)                      |
+    |  10 years                        94%  (51/54)                      |
+    |  20 years                       100%  (44/44)                      |
     +-------------------------------------------------------------------+
+    Computed from all rolling periods in the 1963-2025 dataset.
 ```
 
-At any given year, the V+Q premium is roughly a coin flip with a slight edge. Over five years, the odds shift meaningfully. Over twenty years, the premium has been positive in nearly every overlapping period since 1963.
+At any given year, the V+Q premium is positive about 63% of the time — better than a coin flip but far from guaranteed. Over five years, the odds shift meaningfully. Over twenty years, the premium has been positive in nearly every overlapping period since 1963.
 
 The implication for Assay users: **a minimum five-year holding period is required to have reasonable confidence that the factor premium will manifest.** One year is noise. Three years is suggestive. Five years begins to separate signal from noise. This is not a trading strategy. It is a long-duration bet on the persistence of a well-documented anomaly.
 
