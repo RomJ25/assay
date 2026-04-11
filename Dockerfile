@@ -58,14 +58,18 @@ COPY docs/ ./docs/
 # Copy built frontend from Stage 1
 COPY --from=frontend /app/web/dist ./web/dist
 
+# Copy entrypoint
+COPY entrypoint.sh ./
+RUN chmod +x entrypoint.sh
+
 # Create data directories
 RUN mkdir -p /app/data/results /app/storage/logos
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+# Health check (longer start period for initial screen run ~90s)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 EXPOSE 8000
 
-# Production server (no reload)
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
+# Entrypoint: initial screen → daily scheduler → web server
+CMD ["./entrypoint.sh"]
