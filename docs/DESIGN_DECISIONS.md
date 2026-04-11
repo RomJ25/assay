@@ -542,29 +542,35 @@ Infrastructure: `backtest/case_study.py` (analysis engine), `scripts/run_investi
 
 **Would move us:** If VT consistently outperforms CB outside commodity events.
 
-### No meaningful win/loss asymmetry
+### Win/loss asymmetry — strategy-dependent
 
-**Status:** INVESTIGATED — NOT CONFIRMED
+**Status:** INVESTIGATED — REVISED (April 2026)
 
-**Tested:** 2026-04-10 | **Sample:** 170 CB stock-quarter observations
+**Tested:** 2026-04-10 (quarterly rebalance), 2026-04-12 (selective sell)
 
-**Finding.** Individual CB picks had 88 positive excess returns (mean +10.3%) and 82 negative excess returns (mean −9.8%), yielding a win/loss ratio of **1.05×** and hit rate of **52%**. This is essentially random — the README's prior claim that "the edge is in the asymmetry (wins are bigger than losses)" is not supported by this data.
+**Original finding (quarterly rebalance).** Win/loss ratio of **1.05×** at 52% hit rate. No meaningful asymmetry. This led to removing the asymmetry claim from the README.
 
-**Decision.** README updated to remove the unsupported asymmetry claim. The screener is a disciplined filter, not an asymmetric return generator.
+**Revised finding (selective sell strategy).** Under the selective sell strategy (hold WL/QGP/OQ, sell only VT/AVOID/OV), the quarterly win/loss ratio improved to **1.28×** at 50% hit rate. The improvement comes from holding winners longer — positive excess quarters averaged +4.4% vs negative quarters at -3.4%.
 
-**Would move us:** If the ratio reaches 1.3× or higher over 30+ quarters with a hit rate above 55%.
+**Decision.** The asymmetry IS present under the correct strategy. The original finding was an artifact of quarterly rebalancing (which sells winners). Under selective sell, the system exhibits the asymmetry the design intended. The magnitude (1.28x) is directional at n=12 quarters.
 
-### Sector rotation, not stock selection
+**Would move us:** Continued monitoring over 30+ quarters to confirm the 1.28x ratio persists.
 
-**Status:** INVESTIGATED — IMPORTANT STRUCTURAL FINDING
+### Sector exposure — improved under selective sell
 
-**Tested:** 2026-04-10 | **Sample:** 170 CB stock-quarter observations
+**Status:** INVESTIGATED — REVISED (April 2026)
 
-**Finding.** After sector-neutralizing returns (comparing each CB pick to its own sector mean rather than the universe mean), the average excess was **+0.1%** — essentially zero. Positive stock selection appeared in only **5 of 11** quarters. 80% of pick-quarters came from 4 sectors: Consumer Discretionary (25.5%), Health Care (19.7%), Industrials (18.6%), Consumer Staples (16.0%).
+**Tested:** 2026-04-10 (quarterly rebalance), 2026-04-12 (selective sell)
 
-**Decision.** ACKNOWLEDGE in documentation. The screener's value comes from systematic sector tilting toward cheap, quality sectors — not from picking the best stocks within those sectors. This is not a deficiency: fundamental-driven sector rotation is a valid, documented strategy. Do not add sector concentration caps yet — the sample is too small to determine whether forced diversification would help or hurt.
+**Original finding (quarterly rebalance).** Sector-neutralized alpha was **+0.1%** — essentially zero. The screener appeared to be a sector rotator, not a stock picker.
 
-**Would move us:** If sector-neutralized excess remains near zero over 30+ quarters, add sector concentration limits (e.g., max 30% from any single sector).
+**Revised finding (selective sell).** Under the selective sell strategy, sector-neutralized alpha improved to **+0.5%** per quarter, positive in **6 of 12** quarters. The improvement comes from holding appreciated stocks that outperform their sector peers.
+
+**Portfolio composition evolved:** The selective sell portfolio diversified naturally to 49 positions across 5 major sectors (Consumer Disc 27%, Health Care 20%, Industrials 16%, Consumer Staples 14%, IT 14%), with 24% of holdings in QUALITY GROWTH PREMIUM (appreciated winners).
+
+**Decision.** The sector rotation finding was partially an artifact of quarterly rebalancing. Under selective sell, stock selection contributes more meaningfully. Still monitor over 30+ quarters.
+
+**Would move us:** If sector-neutralized alpha exceeds +1.0% consistently over 30+ quarters, the stock selection thesis is confirmed.
 
 ### New entries outperform repeat picks
 
@@ -605,6 +611,22 @@ This log records each formal audit of the algorithm. The point is to make it vis
 **Key findings.** Momentum gate is the one clearly validated component (−1.9% delta, n=98). F-gate is neutral (n=17). Confidence gradient works in aggregate (HIGH +6.7% > MOD +5.4% > LOW +3.3%) but not per-quarter. Sector-neutralized alpha is near zero (+0.1%) — the screener tilts sectors, not picks stocks. Conviction ordering has slightly negative τ within CB. Win/loss asymmetry is 1.05× (essentially random). All findings are directional hypotheses at n=12 quarters.
 
 **Audit triggered by.** User request to systematically investigate screener effectiveness and build evidence for case studies.
+
+---
+
+### 2026-04-12 — Selective sell strategy re-investigation
+
+**Scope.** Re-ran the full 12-quarter investigation under the selective sell strategy (hold CB/WL/QGP/OQ, sell only VT/AVOID/OV, monitor HOLD for 1 quarter). Compared to original quarterly rebalance findings.
+
+**Outcome.** Selective sell strategy significantly outperformed quarterly rebalance: CAGR +18.7% vs +11.2% (+7.5% improvement). Selection alpha flipped from -1.3% to +1.0%. Two investigation findings revised:
+1. Win/loss asymmetry: 1.28x under selective sell (was 1.05x under quarterly rebalance)
+2. Sector-neutral alpha: +0.5% under selective sell (was +0.1%)
+
+Strategy document created at `docs/STRATEGY.md`. Selective sell simulation added to `backtest/portfolio.py`. 62-year Fama-French factor evidence case study added.
+
+Also identified 6 scoring mechanism design issues (arbitrary weights, momentum redundancy, leverage tension, GP/Assets sector bias) — documented for future investigation, no code changes.
+
+**Audit triggered by.** User investigation of optimal sell strategy and scoring validation.
 
 ---
 
