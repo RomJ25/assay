@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import type { ScreenStock } from "../../lib/types";
 import { classificationColors, confidenceColors, confidenceIcons, scoreColor, scoreBgOpacity } from "../../lib/colors";
 import { fmtScore, fmtPercent, fmtPrice, fmtFScore, fmtAnalyst } from "../../lib/format";
+import { CompareView } from "./CompareView";
 
 interface Props {
   stocks: ScreenStock[];
@@ -13,6 +14,8 @@ type SortDir = "asc" | "desc";
 
 export function ConvictionTable({ stocks, onSelectStock }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>("conviction_score");
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareSet, setCompareSet] = useState<Set<string>>(new Set());
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   const cbPicks = useMemo(
@@ -86,14 +89,44 @@ export function ConvictionTable({ stocks, onSelectStock }: Props) {
             style={{ color: "var(--color-text-muted)" }}>
           All {cbPicks.length} Conviction Buys
         </h2>
-        <button
-          className="text-[11px] rounded-md px-2.5 py-1 transition-colors hover:opacity-80"
-          style={{ backgroundColor: "var(--color-surface-1)", border: "1px solid var(--color-border)", color: "var(--color-text-secondary)" }}
-          onClick={exportCSV}
-        >
-          Export CSV
-        </button>
+        <div className="flex items-center gap-2">
+          {compareMode && compareSet.size >= 2 && (
+            <button
+              className="text-[11px] rounded-md px-2.5 py-1 font-medium transition-colors"
+              style={{ backgroundColor: "var(--color-cb)", color: "#000" }}
+              onClick={() => setCompareMode(false)}
+            >
+              Compare {compareSet.size} →
+            </button>
+          )}
+          <button
+            className="text-[11px] rounded-md px-2.5 py-1 transition-colors hover:opacity-80"
+            style={{
+              backgroundColor: compareMode ? "var(--color-surface-2)" : "var(--color-surface-1)",
+              border: "1px solid var(--color-border)",
+              color: "var(--color-text-secondary)",
+            }}
+            onClick={() => { setCompareMode(!compareMode); setCompareSet(new Set()); }}
+          >
+            {compareMode ? "Cancel" : "Compare"}
+          </button>
+          <button
+            className="text-[11px] rounded-md px-2.5 py-1 transition-colors hover:opacity-80"
+            style={{ backgroundColor: "var(--color-surface-1)", border: "1px solid var(--color-border)", color: "var(--color-text-secondary)" }}
+            onClick={exportCSV}
+          >
+            Export CSV
+          </button>
+        </div>
       </div>
+
+      {/* Compare view overlay */}
+      {!compareMode && compareSet.size >= 2 && (
+        <CompareView
+          stocks={sorted.filter((s) => compareSet.has(s.ticker))}
+          onClose={() => { setCompareSet(new Set()); }}
+        />
+      )}
 
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -134,13 +167,35 @@ export function ConvictionTable({ stocks, onSelectStock }: Props) {
                 style={{
                   borderColor: "rgba(39, 39, 42, 0.5)",
                 }}
-                onClick={() => onSelectStock(s.ticker)}
+                onClick={() => {
+                  if (compareMode) {
+                    setCompareSet((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(s.ticker)) next.delete(s.ticker);
+                      else if (next.size < 4) next.add(s.ticker);
+                      return next;
+                    });
+                  } else {
+                    onSelectStock(s.ticker);
+                  }
+                }}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--color-surface-1)")}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
               >
-                {/* # */}
+                {/* # or checkbox */}
                 <td className="font-mono text-[13px] py-3 px-2 text-right" style={{ color: "var(--color-text-muted)" }}>
-                  {i + 1}
+                  {compareMode ? (
+                    <span className="inline-flex w-4 h-4 rounded border items-center justify-center text-[10px]"
+                          style={{
+                            borderColor: compareSet.has(s.ticker) ? "var(--color-cb)" : "var(--color-border)",
+                            backgroundColor: compareSet.has(s.ticker) ? "var(--color-cb)" : "transparent",
+                            color: compareSet.has(s.ticker) ? "#000" : "transparent",
+                          }}>
+                      ✓
+                    </span>
+                  ) : (
+                    i + 1
+                  )}
                 </td>
                 {/* Ticker */}
                 <td className="font-mono text-sm font-semibold py-3 px-2" style={{ color: "var(--color-text-primary)" }}>

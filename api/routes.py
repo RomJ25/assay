@@ -153,6 +153,58 @@ async def get_stock_peers(ticker: str):
     return {"ticker": ticker_upper, "sector": sector, "peers": peers}
 
 
+@router.get("/stock/{ticker}/history")
+async def get_stock_history(ticker: str):
+    """Return a stock's scores across all backtest quarters."""
+    import csv
+
+    _, detail_path = _find_latest_backtest()
+    if detail_path is None:
+        raise HTTPException(status_code=404, detail="No backtest detail data found.")
+
+    ticker_upper = ticker.upper()
+    history = []
+
+    with open(detail_path) as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row.get("ticker") == ticker_upper:
+                history.append({
+                    "quarter": row["quarter"],
+                    "value_score": float(row["value_score"]) if row.get("value_score") else None,
+                    "quality_score": float(row["quality_score"]) if row.get("quality_score") else None,
+                    "piotroski_f": int(row["piotroski_f"]) if row.get("piotroski_f") else None,
+                    "momentum_pct": float(row["momentum_pct"]) if row.get("momentum_pct") else None,
+                    "sector": row.get("sector", ""),
+                })
+
+    # Also check all screen JSONs for the current and recent classifications
+    for screen_path in sorted(RESULTS_DIR.glob("screen_*.json"), reverse=True)[:5]:
+        if screen_path.stat().st_size < 10000:
+            continue
+        with open(screen_path) as f:
+            stocks = json.load(f)
+        screen_date = screen_path.stem.replace("screen_", "")
+        match = next((s for s in stocks if s["ticker"] == ticker_upper), None)
+        if match:
+            # Only add if we don't already have this date from backtest
+            if not any(h["quarter"] == screen_date for h in history):
+                history.append({
+                    "quarter": screen_date,
+                    "value_score": match.get("value_score"),
+                    "quality_score": match.get("quality_score"),
+                    "piotroski_f": match.get("piotroski_f"),
+                    "momentum_pct": None,
+                    "sector": match.get("sector", ""),
+                    "classification": match.get("classification"),
+                    "confidence": match.get("confidence"),
+                })
+
+    history.sort(key=lambda h: h["quarter"])
+
+    return {"ticker": ticker_upper, "history": history}
+
+
 @router.get("/backtest")
 async def get_backtest():
     """Return the latest backtest results."""

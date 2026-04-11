@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { ScreenStock, Classification, Confidence } from "../../lib/types";
 import { classificationColors, confidenceColors, confidenceIcons, scoreColor } from "../../lib/colors";
 import { fmtPrice, fmtMarketCap } from "../../lib/format";
@@ -152,6 +152,9 @@ export function StockSheet({ stock, allStocks, onClose }: Props) {
             { label: "Gross Profitability", value: stock.gross_profitability?.toFixed(3) ?? null },
             { label: "Growth Score", value: stock.growth_score?.toFixed(0) ?? null },
           ]} />
+
+          {/* ── Historical Context ── */}
+          <StockHistory ticker={stock.ticker} />
 
           {/* ── Sector Peers ── */}
           {allStocks && <SectorPeers stock={stock} allStocks={allStocks} />}
@@ -406,6 +409,100 @@ function MetricsGrid({ metrics }: { metrics: { label: string; value: string | nu
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+/* ── Historical Context ── */
+
+interface HistoryEntry {
+  quarter: string;
+  value_score: number | null;
+  quality_score: number | null;
+  piotroski_f: number | null;
+  momentum_pct: number | null;
+  classification?: string;
+  confidence?: string;
+}
+
+function StockHistory({ ticker }: { ticker: string }) {
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/v1/stock/${ticker}/history`)
+      .then((r) => { if (r.ok) return r.json(); throw new Error(); })
+      .then((d) => setHistory(d.history || []))
+      .catch(() => setHistory([]))
+      .finally(() => setLoading(false));
+  }, [ticker]);
+
+  if (loading) return null;
+  if (history.length === 0) return null;
+
+  return (
+    <div>
+      <SectionLabel className="mt-6">Score History ({history.length} quarters)</SectionLabel>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b" style={{ borderColor: "var(--color-surface-3)" }}>
+              {["Quarter", "Class", "V", "Q", "F", "Mom"].map((h) => (
+                <th key={h} className={`text-[9px] font-medium uppercase tracking-[0.06em] py-2 px-1.5 ${
+                  ["V", "Q", "F", "Mom"].includes(h) ? "text-right" : "text-left"
+                }`} style={{ color: "var(--color-text-muted)" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {history.map((h, i) => {
+              const cl = h.classification;
+              const clColor = cl ? (classificationColors as any)[cl] || "#71717a" : "#71717a";
+              const prevV = i > 0 ? history[i - 1].value_score : null;
+              const prevQ = i > 0 ? history[i - 1].quality_score : null;
+              const vDelta = h.value_score != null && prevV != null ? h.value_score - prevV : null;
+              const qDelta = h.quality_score != null && prevQ != null ? h.quality_score - prevQ : null;
+
+              return (
+                <tr key={h.quarter} className="border-b" style={{ borderColor: "rgba(39,39,42,0.3)" }}>
+                  <td className="font-mono text-[11px] py-1.5 px-1.5">{h.quarter}</td>
+                  <td className="py-1.5 px-1.5">
+                    {cl && (
+                      <span className="text-[9px] font-mono font-medium rounded px-1 py-0.5"
+                            style={{ backgroundColor: `${clColor}20`, color: clColor }}>
+                        {cl === "CONVICTION BUY" ? "CB" : cl === "WATCH LIST" ? "WL" : cl === "QUALITY GROWTH PREMIUM" ? "QGP" : cl}
+                      </span>
+                    )}
+                  </td>
+                  <td className="font-mono text-[11px] py-1.5 px-1.5 text-right">
+                    {h.value_score != null ? Math.round(h.value_score) : "—"}
+                    {vDelta != null && (
+                      <span className="text-[9px] ml-0.5" style={{ color: vDelta > 0 ? "#22c55e" : vDelta < 0 ? "#ef4444" : "var(--color-text-muted)" }}>
+                        {vDelta > 0 ? "↑" : vDelta < 0 ? "↓" : ""}
+                      </span>
+                    )}
+                  </td>
+                  <td className="font-mono text-[11px] py-1.5 px-1.5 text-right">
+                    {h.quality_score != null ? Math.round(h.quality_score) : "—"}
+                    {qDelta != null && (
+                      <span className="text-[9px] ml-0.5" style={{ color: qDelta > 0 ? "#22c55e" : qDelta < 0 ? "#ef4444" : "var(--color-text-muted)" }}>
+                        {qDelta > 0 ? "↑" : qDelta < 0 ? "↓" : ""}
+                      </span>
+                    )}
+                  </td>
+                  <td className="font-mono text-[11px] py-1.5 px-1.5 text-right" style={{ color: "var(--color-text-muted)" }}>
+                    {h.piotroski_f != null ? `${h.piotroski_f}/9` : "—"}
+                  </td>
+                  <td className="font-mono text-[11px] py-1.5 px-1.5 text-right" style={{ color: "var(--color-text-muted)" }}>
+                    {h.momentum_pct != null ? h.momentum_pct.toFixed(0) : "—"}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
