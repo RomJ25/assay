@@ -437,11 +437,12 @@ def test_conviction_ordering(
     if len(pairs) < 3:
         return {"n": len(pairs), "rank_correlation": None, "insufficient_data": True}
 
-    # Spearman rank correlation (simplified: count concordant vs discordant pairs)
+    # Kendall's tau-a: count concordant vs discordant pairs over ALL pairs
     concordant = 0
     discordant = 0
-    for i in range(len(pairs)):
-        for j in range(i + 1, len(pairs)):
+    n = len(pairs)
+    for i in range(n):
+        for j in range(i + 1, n):
             conv_diff = pairs[i][0] - pairs[j][0]
             ret_diff = pairs[i][1] - pairs[j][1]
             if conv_diff * ret_diff > 0:
@@ -449,8 +450,8 @@ def test_conviction_ordering(
             elif conv_diff * ret_diff < 0:
                 discordant += 1
 
-    total = concordant + discordant
-    tau = (concordant - discordant) / total if total > 0 else 0
+    total_pairs = n * (n - 1) // 2  # C(n, 2) — all possible pairs
+    tau = (concordant - discordant) / total_pairs if total_pairs > 0 else 0
 
     return {
         "n": len(pairs),

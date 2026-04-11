@@ -224,8 +224,10 @@ def _compute_individual_returns(
 
 def _cagr(final_value: float, years: float) -> float:
     """Compound Annual Growth Rate."""
-    if years <= 0 or final_value <= 0:
+    if years <= 0:
         return 0.0
+    if final_value <= 0:
+        return -1.0  # Total loss
     return final_value ** (1 / years) - 1
 
 
