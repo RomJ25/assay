@@ -9,3 +9,6 @@ dist/
 build/
 .venv/
 .pytest_cache/
+storage/logos/
+web/node_modules/
+web/dist/

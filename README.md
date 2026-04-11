@@ -65,6 +65,34 @@ python main.py --sector-relative
 python main.py --refresh
 ```
 
+## Web Interface
+
+A full web dashboard is available alongside the CLI. Dark theme, Geist typography, stock logos, interactive charts.
+
+```bash
+# Build the frontend (one-time)
+cd web && pnpm install && pnpm build && cd ..
+
+# Start the server
+python server.py
+# Open http://localhost:8000
+```
+
+**Pages:**
+- **Home** — Hero conviction count, "What Changed" diff vs previous screen, sortable conviction table with logos and score heat-map cells, click any stock for deep dive
+- **Universe** — Interactive 3x3 classification matrix, V vs Q scatter plot (all stocks color-coded), searchable full stock table
+- **Evidence** — Backtest performance chart (Recharts), clickable quarterly drill-down, 8 empirical investigation findings as Q&A cards
+- **How It Works** — Complete methodology with academic references
+
+**Features:**
+- **Cmd+K / Ctrl+K** — Global stock search from any page
+- **Stock Deep Dive** — "WHY THIS QUALIFIES" narrative, score gauges, Piotroski 3x3 grid, gate status, DCF range bar, sector peers, historical scores
+- **Stock Comparison** — Select 2-4 stocks for side-by-side analysis (24 metrics + Piotroski visual)
+- **Run Screener** — Settings drawer + SSE progress bar, configurable (include financials, sector-relative, refresh)
+- **Export CSV** — Download conviction buys from the table
+
+For development (hot-reload): run `python server.py` in one terminal and `cd web && pnpm dev` in another (Vite proxies API calls to port 8000).
+
 ## CLI Reference
 
 | Flag | Description |
@@ -104,7 +132,7 @@ This is not a prediction engine. It does not forecast prices, estimate fair valu
 
 Financials (banks, insurance, REITs) are excluded by default because the EBIT/EV model is structurally wrong for them. Use `--include-financials` to override, understanding that these stocks use a 1/PE fallback for value scoring.
 
-**131 tests. No API keys required. All data sources free.**
+**146 tests. No API keys required. All data sources free.**
 
 ## Case Studies
 
