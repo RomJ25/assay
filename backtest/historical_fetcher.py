@@ -172,12 +172,12 @@ def _fetch_prices(
         return
 
     all_symbols = list(set(tickers + ["SPY"]))
-    logger.info(f"Downloading prices for {len(all_symbols)} symbols (10y history)...")
+    logger.info(f"Downloading prices for {len(all_symbols)} symbols (max history)...")
 
     try:
         df = yf.download(
             all_symbols,
-            period="10y",
+            period="max",
             auto_adjust=False,
             threads=True,
             progress=False,
