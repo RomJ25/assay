@@ -55,7 +55,9 @@ Using value (HML — high book-to-market minus low) and quality (RMW — robust 
     +-------------------------------------------------------------------+
 ```
 
-The +7.1% annual premium compounded $100 into roughly 47 times more wealth than the market alone over 62 years. This is not a backtest of a proprietary strategy. It is the raw academic factor data that thousands of researchers have studied and hundreds of papers have confirmed.
+Read those numbers again. An investor who tilted toward cheap, profitable stocks — the exact approach Assay formalizes — would have turned $100 into roughly **47 times more wealth** than the market alone. Not by timing the market. Not by picking individual winners. By systematically buying stocks that were cheap and profitable, rebalancing annually, and waiting.
+
+This is not a backtest of a proprietary strategy. It is the raw academic factor data that thousands of researchers have studied and hundreds of papers have confirmed. The data is free, public, and downloadable from Kenneth French's website.
 
 The magnitude matters less than the persistence. A +7.1% premium that appeared in one decade and vanished in the next would be a fluke. The question is whether it persisted. Section 3 answers that.
 
@@ -91,7 +93,11 @@ Three observations:
 
 ## 4. The Last 12 Years (2014-2025)
 
-The academic data can be extended to a year-by-year view for the recent period. This is the stretch most relevant to anyone evaluating Assay today: it covers the worst of the value drawdown, the recovery, and the current environment.
+The academic data can be extended to a year-by-year view for the recent period. This is the stretch most relevant to anyone evaluating Assay today — and it is the most difficult stretch for a value+quality investor in recorded history.
+
+Consider what it was like. In 2020, while Tesla gained +743%, NVIDIA gained +122%, and the NASDAQ surged +43%, the value+quality premium was **-32.9%**. A screener like Assay would have pointed you toward stocks like energy companies and banks while the market was being led by technology mega-caps. Every financial headline, every cocktail party conversation, every brokerage statement would have confirmed: you were on the wrong side. Value was dead.
+
+Then 2021-2022 happened. Value surged +22% and +32% as interest rates rose, inflation returned, and growth multiples compressed. The premium that had been absent for years arrived all at once — in two violent years that erased the entire 2015-2020 deficit and then some.
 
 ```
     +-------------------------------------------------------------------+
@@ -139,7 +145,9 @@ The 62-year record reveals a clear pattern: the value+quality premium is **real 
     Computed from all rolling periods in the 1963-2025 dataset.
 ```
 
-At any given year, the V+Q premium is positive about 63% of the time — better than a coin flip but far from guaranteed. Over five years, the odds shift meaningfully. Over twenty years, the premium has been positive in nearly every overlapping period since 1963.
+At any given year, the V+Q premium is positive about 63% of the time — better than a coin flip but far from guaranteed. Over five years, the odds rise to 90%. Over ten years, 94%.
+
+And over twenty years: **100%.** Every single twenty-year rolling window since 1963 — all 44 of them, including windows that contained the dot-com crash, the financial crisis, the worst value decade on record — produced a positive value+quality premium. Not most of them. All of them.
 
 The implication for Assay users: **a minimum five-year holding period is required to have reasonable confidence that the factor premium will manifest.** One year is noise. Three years is suggestive. Five years begins to separate signal from noise. This is not a trading strategy. It is a long-duration bet on the persistence of a well-documented anomaly.
 
