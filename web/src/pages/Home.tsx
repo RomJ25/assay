@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useScreenData } from "../hooks/useScreenData";
 import { SignalBanner } from "../components/dashboard/SignalBanner";
+import { WhatChanged } from "../components/dashboard/WhatChanged";
 import { ConvictionTable } from "../components/picks/ConvictionTable";
 import { StockSheet } from "../components/stock/StockSheet";
 
@@ -43,6 +44,8 @@ export function Home() {
         date={data.date}
         screened={data.screened}
       />
+
+      <WhatChanged />
 
       <ConvictionTable stocks={data.stocks} onSelectStock={setSelectedTicker} />
 
