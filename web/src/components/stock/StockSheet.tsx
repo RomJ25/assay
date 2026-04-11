@@ -12,11 +12,15 @@ interface Props {
 
 export function StockSheet({ stock, allStocks, onClose }: Props) {
   const [tab, setTab] = useState<"detail" | "peers">("detail");
-  // Close on Escape
+  // Close on Escape + lock body scroll
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", handler);
+      document.body.style.overflow = "";
+    };
   }, [onClose]);
 
   const clColor = classificationColors[stock.classification] || "#71717a";

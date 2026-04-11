@@ -11,6 +11,7 @@ interface DiffData {
 
 export function WhatChanged() {
   const [diff, setDiff] = useState<DiffData | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     fetch("/api/v1/screen/diff")
@@ -56,9 +57,9 @@ export function WhatChanged() {
         {diff.dropped_picks.length > 0 && (
           <div className="mb-4">
             <div className="text-[12px] font-medium mb-2" style={{ color: "#ef4444" }}>
-              Dropped from Conviction Buy
+              Dropped from Conviction Buy ({diff.dropped_picks.length})
             </div>
-            {diff.dropped_picks.map((s: any) => {
+            {(expanded ? diff.dropped_picks : diff.dropped_picks.slice(0, 5)).map((s: any) => {
               const newCl = s.new_classification;
               const clColor = newCl ? (classificationColors as any)[newCl] || "#71717a" : "#71717a";
               return (
@@ -75,6 +76,13 @@ export function WhatChanged() {
                 </div>
               );
             })}
+            {!expanded && diff.dropped_picks.length > 5 && (
+              <button className="text-[11px] mt-1 hover:opacity-80"
+                      style={{ color: "var(--color-text-muted)" }}
+                      onClick={() => setExpanded(true)}>
+                Show {diff.dropped_picks.length - 5} more...
+              </button>
+            )}
           </div>
         )}
 
