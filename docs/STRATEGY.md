@@ -19,25 +19,31 @@
 ```
     ┌───────────────────────────────────────────────────────────────┐
     │                                                               │
-    │   BUY     when a stock enters CONVICTION BUY                  │
+    │   BUY       when a stock enters CONVICTION BUY                │
     │                                                               │
-    │   HOLD    as long as it stays in:                              │
-    │             • CONVICTION BUY                                  │
-    │             • WATCH LIST                                      │
-    │             • QUALITY GROWTH PREMIUM                          │
+    │   HOLD      as long as it stays in:                            │
+    │               • CONVICTION BUY                                │
+    │               • WATCH LIST                                    │
+    │               • QUALITY GROWTH PREMIUM                        │
+    │               • OVERVALUED QUALITY                            │
     │                                                               │
-    │   SELL    only when it drops to:                              │
-    │             • HOLD                                            │
-    │             • VALUE TRAP                                      │
-    │             • AVOID                                           │
+    │   MONITOR   if it drops to:                                   │
+    │               • HOLD (wait one quarter — sell if no recovery) │
     │                                                               │
-    │   ADD     new CONVICTION BUY entries each quarter             │
-    │           (the portfolio grows over time)                     │
+    │   SELL      when it drops to:                                 │
+    │               • VALUE TRAP                                    │
+    │               • AVOID                                         │
+    │               • Unscorable (delisted, missing data)           │
+    │                                                               │
+    │   ADD       new CONVICTION BUY entries each quarter           │
+    │             (the portfolio grows over time)                   │
     │                                                               │
     └───────────────────────────────────────────────────────────────┘
 ```
 
-The portfolio accumulates winners. Stocks that appreciate and leave CB (because their value score dropped as the price rose) stay in the portfolio — they moved to WATCH LIST or QUALITY GROWTH PREMIUM, which are HOLD classifications. You only exit when the business itself deteriorates.
+The portfolio accumulates winners. Stocks that appreciate and leave CB (because their value score dropped as the price rose) stay in the portfolio — they moved to WATCH LIST or QUALITY GROWTH PREMIUM, which are hold classifications. You only exit when the business itself deteriorates.
+
+**In-sample warning:** This strategy was designed from the same 11-quarter dataset used to evaluate it. The +4.0%/yr advantage over quarterly rebalancing may not persist out of sample. The LOGIC is sound (don't sell winners, cut losers) and supported by decades of academic research, but the specific rules (which classifications to hold/sell) need validation over 30+ quarters before the exact magnitude should be trusted.
 
 ---
 
@@ -90,17 +96,23 @@ Stocks that moved to QGP (price went up, quality stayed high) returned **+9.8%**
 
 ## 4. When to Sell
 
-Sell **only** when the classification drops to one of these three buckets:
+Sell when the classification drops to one of these buckets:
 
-| Classification | Meaning | Why Sell |
+| Classification | Meaning | Action |
 |---|---|---|
-| **HOLD** | Both value and quality are mid-range | No conviction in either direction |
-| **VALUE TRAP** | Cheap but low quality (Q < 40) | Fundamentals are genuinely weak |
-| **AVOID** | Neither cheap nor quality | Nothing to justify holding |
+| **VALUE TRAP** | Cheap but low quality (Q < 40) | **SELL** — fundamentals are genuinely weak |
+| **AVOID** | Neither cheap nor quality | **SELL** — nothing to justify holding |
+| **HOLD** | Both value and quality are mid-range | **MONITOR** — see below |
 
-These represent real fundamental deterioration — the business weakened, not just the stock price moved. In our data, the 4 stocks that dropped to HOLD or AVOID averaged **-25.0%** the next quarter.
+**VALUE TRAP and AVOID are clear sell signals.** The business has deteriorated on at least one dimension below the 40th percentile. These are not temporary dips.
 
-**Sample size caveat:** The sell signal evidence is thin — n=3 for HOLD, n=1 for AVOID, n=0 for VALUE TRAP. The -25% figure is directional, not statistically significant. The sell rule is based primarily on LOGIC (no fundamental reason to hold a stock that's neither cheap nor quality) supported by limited empirical data. As more quarters accumulate, this evidence will strengthen or need revision.
+**HOLD is ambiguous.** In our data (n=3), stocks that dropped to HOLD averaged -25.0% the next quarter. But tracking individual stock journeys reveals that some stocks (TPR, CSCO) hit HOLD temporarily and then recovered to QUALITY GROWTH PREMIUM within 1-2 quarters. Selling at the first HOLD classification risks false sells.
+
+**Recommended approach for HOLD:** Monitor for one additional quarter. If the stock remains in HOLD or drops further (to VT/AVOID), sell. If it recovers to WL/QGP/CB, continue holding. This avoids selling temporary dips while still cutting genuine deterioration.
+
+**Also sell:** Stocks that become **unscorable** (removed from the screened universe due to missing data, delisting, or merger).
+
+**Sample size caveat:** The sell signal evidence is thin — n=3 for HOLD, n=1 for AVOID, n=0 for VALUE TRAP. The sell rules are based primarily on LOGIC (no fundamental reason to hold a stock with broken quality) supported by limited empirical data and the academic principle that fundamental sell discipline adds value. As more quarters accumulate, these rules should be validated or revised.
 
 **Do NOT sell because:**
 - The stock left CONVICTION BUY (it probably appreciated)
