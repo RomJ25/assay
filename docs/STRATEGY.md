@@ -33,6 +33,7 @@
     │   SELL      when it drops to:                                 │
     │               • VALUE TRAP                                    │
     │               • AVOID                                         │
+    │               • OVERVALUED (expensive + moderate quality)     │
     │               • Unscorable (delisted, missing data)           │
     │                                                               │
     │   ADD       new CONVICTION BUY entries each quarter           │
@@ -102,6 +103,7 @@ Sell when the classification drops to one of these buckets:
 |---|---|---|
 | **VALUE TRAP** | Cheap but low quality (Q < 40) | **SELL** — fundamentals are genuinely weak |
 | **AVOID** | Neither cheap nor quality | **SELL** — nothing to justify holding |
+| **OVERVALUED** | Expensive + moderate quality (V < 40, Q 40-70) | **SELL** — both dimensions weakened |
 | **HOLD** | Both value and quality are mid-range | **MONITOR** — see below |
 
 **VALUE TRAP and AVOID are clear sell signals.** The business has deteriorated on at least one dimension below the 40th percentile. These are not temporary dips.
