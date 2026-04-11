@@ -124,7 +124,7 @@ That is a positive result. It is also a modest one. A +15.3% cumulative excess o
 
 **The year-by-year volatility is the real story.** In 2020, the V+Q premium was -32.9% — value+quality stocks underperformed the market by a third. In 2021, the premium was +46.7%. These are not small fluctuations. They are violent swings that would test the conviction of any investor.
 
-Eight of the twelve years had negative premiums. The premium was positive in only four years (2016, 2021, 2022, and — barely — the cumulative outcome). The positive years were large enough to more than offset the negative ones, but living through eight losing years out of twelve requires extraordinary patience.
+Nine of the twelve years had negative premiums. The premium was positive in only three years (2016, 2021, 2022). The positive years were large enough to more than offset the nine negative ones, but living through nine losing years out of twelve requires extraordinary patience.
 
 ---
 
@@ -196,7 +196,7 @@ The evidence supports three claims and refutes one:
 
 1. **Value+quality is the most documented anomaly in finance.** Sixty-two years of survivorship-free, peer-reviewed data across multiple countries and time periods. The premium is real.
 
-2. **The premium requires patience.** The 2010s were the worst decade for value in recorded history. Eight of the last twelve years had negative V+Q premiums. Despite this, the cumulative result over both 12 and 62 years is positive. Minimum holding period: five years.
+2. **The premium requires patience.** The 2010s were the worst decade for value in recorded history. Nine of the last twelve years had negative V+Q premiums. Despite this, the cumulative result over both 12 and 62 years is positive. Minimum holding period: five years.
 
 3. **The screener is a disciplined application of proven factors, not a proprietary signal.** Assay buys cheap, profitable, financially healthy stocks. The academic literature says this works. The 62-year record confirms it. The screener is one implementation of a well-understood idea.
 

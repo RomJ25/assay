@@ -163,7 +163,7 @@ The academic premium is earned through annual rebalancing — not quarterly, not
 
 **Do not sell because a stock appreciated.** This is the most common and most expensive mistake. If TPR (Tapestry) enters CB at V=92, Q=93 and the stock gains 30%, the value score will drop (it's no longer as cheap). TPR may move to QUALITY GROWTH PREMIUM. This is the strategy WORKING. Hold it.
 
-**Do not sell because of a bad quarter.** The value+quality premium is negative in 37% of individual years. Eight of the last twelve years had negative annual premiums. The positive years are large enough to overcome the negative ones — but only if you hold through them.
+**Do not sell because of a bad quarter.** The value+quality premium is negative in 37% of individual years. Nine of the last twelve years had negative annual premiums. The positive years are large enough to overcome the negative ones — but only if you hold through them.
 
 **Do not rebalance monthly.** AQR and Vanguard research shows monthly rebalancing adds negligible value over annual, while increasing transaction costs. Quarterly monitoring with selective action is the sweet spot.
 
