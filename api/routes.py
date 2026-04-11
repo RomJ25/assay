@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import threading
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Response
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from config import RESULTS_DIR
 
@@ -219,6 +222,68 @@ async def search_stocks(q: str = ""):
     ))
 
     return {"results": results[:20]}
+
+
+class ScreenConfig(BaseModel):
+    include_financials: bool = False
+    sector_relative: bool = False
+    refresh: bool = False
+
+
+_run_lock = threading.Lock()
+_run_status: dict = {"running": False, "phase": "", "progress": 0}
+
+
+@router.post("/screen/run")
+async def run_screen(config: ScreenConfig):
+    """Run the screener. Returns SSE stream with progress updates."""
+    if _run_status["running"]:
+        raise HTTPException(status_code=409, detail="Screener is already running.")
+
+    async def event_stream():
+        _run_status["running"] = True
+        _run_status["phase"] = "Starting..."
+        _run_status["progress"] = 0
+
+        def send_event(phase: str, progress: int):
+            _run_status["phase"] = phase
+            _run_status["progress"] = progress
+
+        def run_in_thread():
+            try:
+                send_event("Importing screener...", 5)
+                from main import run_screener
+                send_event("Running screener pipeline...", 10)
+                run_screener(
+                    include_financials=config.include_financials,
+                    sector_relative=config.sector_relative,
+                    refresh=config.refresh,
+                )
+                send_event("Complete", 100)
+            except Exception as e:
+                send_event(f"Error: {e}", -1)
+                logger.error(f"Screener run failed: {e}", exc_info=True)
+            finally:
+                _run_status["running"] = False
+
+        thread = threading.Thread(target=run_in_thread, daemon=True)
+        thread.start()
+
+        # Stream progress events
+        while thread.is_alive():
+            yield f"data: {json.dumps({'phase': _run_status['phase'], 'progress': _run_status['progress']})}\n\n"
+            await asyncio.sleep(1)
+
+        # Final event
+        yield f"data: {json.dumps({'phase': _run_status['phase'], 'progress': _run_status['progress'], 'done': True})}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+@router.get("/screen/status")
+async def screen_status():
+    """Check if the screener is currently running."""
+    return _run_status
 
 
 def _parse_num(val: str) -> str | float | int | None:

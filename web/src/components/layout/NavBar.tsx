@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { RunScreener } from "./RunScreener";
 
 const links = [
   { to: "/", label: "Home" },
@@ -15,7 +16,7 @@ export function NavBar() {
                style={{ color: "var(--color-text-primary)" }}>
         ASSAY
       </NavLink>
-      <div className="flex gap-6">
+      <div className="flex gap-6 flex-1">
         {links.map((l) => (
           <NavLink
             key={l.to}
@@ -23,9 +24,7 @@ export function NavBar() {
             end={l.to === "/"}
             className={({ isActive }) =>
               `text-[13px] pb-0.5 transition-colors duration-150 ${
-                isActive
-                  ? "border-b-2 font-medium"
-                  : "hover:opacity-80"
+                isActive ? "border-b-2 font-medium" : "hover:opacity-80"
               }`
             }
             style={({ isActive }) => ({
@@ -36,6 +35,16 @@ export function NavBar() {
             {l.label}
           </NavLink>
         ))}
+      </div>
+
+      {/* Right side: search hint + run button */}
+      <div className="flex items-center gap-4">
+        <kbd className="hidden sm:flex items-center gap-1 text-[10px] rounded px-2 py-1 font-mono cursor-pointer hover:opacity-80"
+             style={{ backgroundColor: "var(--color-surface-1)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)" }}
+             onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}>
+          ⌘K
+        </kbd>
+        <RunScreener onComplete={() => window.location.reload()} />
       </div>
     </nav>
   );
