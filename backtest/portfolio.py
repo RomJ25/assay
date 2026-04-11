@@ -155,6 +155,150 @@ def simulate_portfolio(
     return records, metrics
 
 
+def simulate_selective_sell(
+    quarterly_snapshots: list[tuple[date, dict[str, str]]],
+    quarterly_universe: list[tuple[date, list[str]]],
+    cache: HistoricalCache,
+    rebalance_dates: list[date],
+    tcost_bps: int = 0,
+) -> tuple[list[dict], BacktestMetrics]:
+    """Simulate selective-sell portfolio: hold unless HOLD/VT/AVOID.
+
+    Instead of selling everything that leaves CB each quarter, this strategy:
+    - BUYS when a stock enters CONVICTION BUY
+    - HOLDS if it moves to WATCH LIST or QUALITY GROWTH PREMIUM
+    - SELLS ONLY when it drops to HOLD, VALUE TRAP, or AVOID
+
+    Args:
+        quarterly_snapshots: list of (date, {ticker: classification}) for all stocks
+        quarterly_universe: list of (date, [tickers]) for benchmark
+        cache: price data
+        rebalance_dates: all quarter-end dates
+        tcost_bps: transaction cost per rebalance
+    """
+    SELL_CLASSIFICATIONS = {"HOLD", "VALUE TRAP", "AVOID", "INSUFFICIENT DATA"}
+
+    records = []
+    portfolio = set()  # accumulates over time
+    portfolio_values = [1.0]
+    universe_values = [1.0]
+    spy_values = [1.0]
+    hits = 0
+    total_stock_quarters = 0
+    excess_returns_sum = 0.0
+    turnovers = []
+    picks_counts = []
+    prev_portfolio = set()
+
+    for rebal_date, classifications in quarterly_snapshots:
+        next_date = _find_next_date(rebal_date, rebalance_dates)
+        if next_date is None:
+            continue
+
+        # Find matching universe
+        universe_tickers = []
+        for ud, ut in quarterly_universe:
+            if ud == rebal_date:
+                universe_tickers = ut
+                break
+
+        # Add new CB entries
+        new_cb = {t for t, cl in classifications.items() if cl == "CONVICTION BUY"}
+        portfolio.update(new_cb)
+
+        # Remove stocks that dropped to HOLD/VT/AVOID
+        to_remove = {t for t in portfolio if classifications.get(t) in SELL_CLASSIFICATIONS}
+        portfolio -= to_remove
+
+        # Also remove stocks no longer in the screened universe (delisted, etc.)
+        portfolio = {t for t in portfolio if t in classifications}
+
+        active = list(portfolio)
+
+        # Compute returns
+        portfolio_ret = _compute_equal_weight_return(active, rebal_date, next_date, cache)
+        universe_ret = _compute_equal_weight_return(universe_tickers, rebal_date, next_date, cache)
+        spy_ret = _compute_ticker_return("SPY", rebal_date, next_date, cache)
+
+        if portfolio_ret is None or universe_ret is None or spy_ret is None:
+            continue
+
+        # Turnover
+        current_set = set(active)
+        quarter_turnover = None
+        if prev_portfolio:
+            sym_diff = len(prev_portfolio.symmetric_difference(current_set))
+            total = len(prev_portfolio.union(current_set))
+            quarter_turnover = sym_diff / total * 100 if total > 0 else 0
+            turnovers.append(quarter_turnover)
+        prev_portfolio = current_set
+        picks_counts.append(len(active))
+
+        # Transaction costs
+        if tcost_bps > 0 and quarter_turnover is not None:
+            portfolio_ret -= (quarter_turnover / 100) * (tcost_bps / 10000)
+
+        # Cumulative
+        portfolio_values.append(portfolio_values[-1] * (1 + portfolio_ret))
+        universe_values.append(universe_values[-1] * (1 + universe_ret))
+        spy_values.append(spy_values[-1] * (1 + spy_ret))
+
+        # Hit rate
+        individual_rets = _compute_individual_returns(active, rebal_date, next_date, cache)
+        for _, ret in individual_rets:
+            total_stock_quarters += 1
+            if ret > universe_ret:
+                hits += 1
+            excess_returns_sum += ret - universe_ret
+
+        records.append({
+            "date": rebal_date.isoformat(),
+            "next_date": next_date.isoformat(),
+            "num_picks": len(active),
+            "portfolio_return": round(portfolio_ret * 100, 2),
+            "universe_return": round(universe_ret * 100, 2),
+            "spy_return": round(spy_ret * 100, 2),
+            "excess_return": round((portfolio_ret - universe_ret) * 100, 2),
+            "turnover": round(quarter_turnover, 1) if quarter_turnover is not None else None,
+            "added": len(new_cb - prev_portfolio),
+            "removed": len(to_remove),
+        })
+
+    # Aggregate metrics
+    n_quarters = len(records)
+    if n_quarters == 0:
+        return records, _empty_metrics()
+
+    total_return = portfolio_values[-1] - 1
+    universe_total = universe_values[-1] - 1
+    spy_total = spy_values[-1] - 1
+    years = n_quarters / 4.0
+    cagr_val = _cagr(portfolio_values[-1], years)
+    universe_cagr = _cagr(universe_values[-1], years)
+    spy_cagr_val = _cagr(spy_values[-1], years)
+
+    quarterly_rets = [portfolio_values[i] / portfolio_values[i - 1] - 1 for i in range(1, len(portfolio_values))]
+
+    metrics = BacktestMetrics(
+        total_return=total_return,
+        universe_total_return=universe_total,
+        spy_total_return=spy_total,
+        cagr=cagr_val,
+        universe_cagr=universe_cagr,
+        spy_cagr=spy_cagr_val,
+        selection_alpha=cagr_val - universe_cagr,
+        max_drawdown=_max_drawdown(portfolio_values),
+        sharpe_ratio=_sharpe(quarterly_rets),
+        hit_rate=hits / total_stock_quarters * 100 if total_stock_quarters > 0 else 0,
+        avg_excess_return=excess_returns_sum / total_stock_quarters * 100 if total_stock_quarters > 0 else 0,
+        avg_turnover=sum(turnovers) / len(turnovers) if turnovers else 0,
+        total_quarters=n_quarters,
+        avg_picks_per_quarter=sum(picks_counts) / len(picks_counts) if picks_counts else 0,
+    )
+
+    return records, metrics
+
+
 def _find_next_date(current: date, all_dates: list[date]) -> date | None:
     """Find the next rebalance date after current."""
     for d in all_dates:

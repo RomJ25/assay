@@ -19,7 +19,7 @@ from config import (
 from backtest.cache import HistoricalCache
 from backtest.historical_fetcher import fetch_historical_data
 from backtest.snapshot_builder import build_snapshot
-from backtest.portfolio import simulate_portfolio, BacktestMetrics
+from backtest.portfolio import simulate_portfolio, simulate_selective_sell, BacktestMetrics
 from backtest.report import print_backtest_report, save_backtest_csv
 from data.sp500 import fetch_sp500_list, sp500_info_dict
 from scoring.value_scorer import compute_value_scores
@@ -76,6 +76,8 @@ class BacktestResult:
     effective_start: date
     effective_end: date
     top_n_metrics: dict[int, BacktestMetrics] | None = None
+    selective_sell_metrics: BacktestMetrics | None = None
+    selective_sell_returns: list[dict] | None = None
 
 
 _include_stock = include_stock  # local alias
@@ -169,6 +171,7 @@ def run_backtest(
         quarter_results = []
         quarterly_picks = []   # list of (date, [tickers])
         quarterly_universe = []  # list of (date, [tickers])
+        quarterly_classifications = []  # list of (date, {ticker: classification}) for selective sell
 
         with Progress(console=console) as progress:
             task = progress.add_task("[cyan]Screening quarters...", total=len(rebalance_dates))
@@ -182,11 +185,39 @@ def run_backtest(
                     pit_tickers = tickers
                     pit_info = info
 
-                qr = _screen_quarter(rebal_date, pit_tickers, pit_info, cache, not include_financials, verbose)
-                if qr is not None:
+                # Use full replay to get ALL classifications (for selective sell)
+                full = _screen_quarter_full(rebal_date, pit_tickers, pit_info, cache, not include_financials, verbose)
+                if full is not None:
+                    # Extract CB picks for backward-compatible quarterly rebalance
+                    picks = [(sd.conviction_score, sd.ticker) for sd in full.stock_details
+                             if sd.final_classification == "CONVICTION BUY"]
+                    picks.sort(reverse=True)
+                    sorted_tickers = [t for _, t in picks]
+                    universe = [sd.ticker for sd in full.stock_details]
+
+                    qr = QuarterResult(
+                        date=rebal_date,
+                        picks=sorted_tickers,
+                        universe=universe,
+                        num_screened=full.num_screened,
+                        classifications=full.classifications,
+                        pick_details=[{
+                            "ticker": sd.ticker, "sector": sd.sector,
+                            "value_score": sd.value_score, "quality_score": sd.quality_score,
+                            "piotroski_f": sd.piotroski_f,
+                            "momentum_pct": sd.momentum_pct if sd.momentum_pct is not None else 0.0,
+                        } for sd in full.stock_details if sd.final_classification == "CONVICTION BUY"],
+                    )
+                    # Sort pick_details by conviction
+                    ticker_order = {t: i for i, t in enumerate(sorted_tickers)}
+                    qr.pick_details.sort(key=lambda p: ticker_order.get(p["ticker"], 999))
+
                     quarter_results.append(qr)
-                    quarterly_picks.append((rebal_date, qr.picks))
-                    quarterly_universe.append((rebal_date, qr.universe))
+                    quarterly_picks.append((rebal_date, sorted_tickers))
+                    quarterly_universe.append((rebal_date, universe))
+                    quarterly_classifications.append((rebal_date, {
+                        sd.ticker: sd.final_classification for sd in full.stock_details
+                    }))
                 progress.advance(task)
 
         if not quarter_results:
@@ -201,7 +232,21 @@ def run_backtest(
             tcost_bps=tcost_bps,
         )
 
-        # Step 5b: Top-N simulations (picks are already sorted by conviction)
+        # Step 5b: Selective sell simulation (hold unless HOLD/VT/AVOID)
+        console.print("[dim]Simulating selective-sell strategy...[/dim]")
+        ss_returns, ss_metrics = simulate_selective_sell(
+            quarterly_classifications, quarterly_universe, cache, rebalance_dates,
+            tcost_bps=tcost_bps,
+        )
+
+        # Print comparison
+        console.print(f"\n[bold]STRATEGY COMPARISON[/bold]")
+        console.print(f"  {'Quarterly rebalance:':30s} CAGR {metrics.cagr*100:+.1f}%  Alpha {metrics.selection_alpha*100:+.1f}%  Avg {metrics.avg_picks_per_quarter:.0f} picks")
+        console.print(f"  {'Selective sell (recommended):':30s} CAGR {ss_metrics.cagr*100:+.1f}%  Alpha {ss_metrics.selection_alpha*100:+.1f}%  Avg {ss_metrics.avg_picks_per_quarter:.0f} picks")
+        delta = ss_metrics.cagr - metrics.cagr
+        console.print(f"  {'Selective sell advantage:':30s} [{'green' if delta > 0 else 'red'}]{delta*100:+.1f}%/yr[/{'green' if delta > 0 else 'red'}]")
+
+        # Step 5c: Top-N simulations (picks are already sorted by conviction)
         top_n_metrics = {}
         for n in (1, 3, 5):
             top_n_picks = [(d, picks[:n]) for d, picks in quarterly_picks]
@@ -218,6 +263,8 @@ def run_backtest(
             effective_start=quarter_results[0].date,
             effective_end=quarter_results[-1].date,
             top_n_metrics=top_n_metrics,
+            selective_sell_metrics=ss_metrics,
+            selective_sell_returns=ss_returns,
         )
 
         elapsed = time.time() - start_time

@@ -61,6 +61,20 @@ def print_backtest_report(result) -> None:
     console.print(f"  [dim]Measures whether the conviction matrix adds value beyond\n"
                   f"  equal-weight S&P 500 stock picking, controlling for biases.[/dim]")
 
+    # Selective sell comparison
+    ss = result.selective_sell_metrics
+    if ss is not None:
+        console.print(f"\n[bold]SELECTIVE SELL STRATEGY (recommended)[/bold]")
+        console.print(f"  [dim]Hold CB/WL/QGP stocks, sell only on HOLD/VT/AVOID.[/dim]")
+        ss_alpha_style = "green" if ss.selection_alpha > 0 else "red"
+        console.print(f"  CAGR:            {_pct(ss.cagr)}")
+        console.print(f"  Selection Alpha: [{ss_alpha_style}]{_pct(ss.selection_alpha)}[/{ss_alpha_style}]")
+        console.print(f"  Avg positions:   {ss.avg_picks_per_quarter:.0f}")
+        console.print(f"  Avg turnover:    {ss.avg_turnover:.1f}%")
+        delta = ss.cagr - m.cagr
+        delta_style = "green" if delta > 0 else "red"
+        console.print(f"  vs Quarterly:    [{delta_style}]{_pct(delta)}[/{delta_style}] advantage")
+
     # Pick analysis
     console.print(f"\n[bold]PICK ANALYSIS[/bold]")
     console.print(f"  Avg picks/quarter     {m.avg_picks_per_quarter:.1f}")
