@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import type { ScreenStock, Classification, Confidence } from "../../lib/types";
 import { classificationColors, confidenceColors, confidenceIcons, scoreColor } from "../../lib/colors";
 import { fmtPrice, fmtMarketCap } from "../../lib/format";
+import { StockLogo } from "../ui/StockLogo";
 
 interface Props {
   stock: ScreenStock;
@@ -45,10 +46,15 @@ export function StockSheet({ stock, allStocks, onClose }: Props) {
 
           {/* Header */}
           <div className="mb-6">
-            <h2 className="font-mono text-3xl font-semibold mb-1">{stock.ticker}</h2>
-            <p className="text-[13px] mb-3" style={{ color: "var(--color-text-secondary)" }}>
-              {stock.company} · {stock.sector}
-            </p>
+            <div className="flex items-center gap-3 mb-2">
+              <StockLogo ticker={stock.ticker} company={stock.company} size={48} />
+              <div>
+                <h2 className="font-mono text-3xl font-semibold">{stock.ticker}</h2>
+                <p className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
+                  {stock.company} · {stock.sector}
+                </p>
+              </div>
+            </div>
             <p className="font-mono text-sm mb-4" style={{ color: "var(--color-text-secondary)" }}>
               {fmtPrice(stock.price)} · {fmtMarketCap(stock.market_cap)}
             </p>

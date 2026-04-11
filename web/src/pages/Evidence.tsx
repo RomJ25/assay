@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceDot, Label } from "recharts";
 import { useBacktestData, type BacktestQuarter } from "../hooks/useBacktestData";
 
 export function Evidence() {
@@ -149,6 +149,13 @@ function CumulativeChart({ quarters }: { quarters: BacktestQuarter[] }) {
           <Line type="monotone" dataKey="portfolio" stroke="#d4a832" strokeWidth={2} dot={false} />
           <Line type="monotone" dataKey="universe" stroke="#71717a" strokeWidth={1.5} dot={false} />
           <Line type="monotone" dataKey="spy" stroke="#a1a1aa" strokeWidth={1} strokeDasharray="4 4" dot={false} />
+          {/* Annotated events */}
+          {chartData.map((d, i) => {
+            if (d.picks === 0 && i > 0) {
+              return <ReferenceDot key={`zero-${i}`} x={d.date} y={d.portfolio} r={3} fill="#eab308" stroke="none" />;
+            }
+            return null;
+          })}
         </LineChart>
       </ResponsiveContainer>
     </div>

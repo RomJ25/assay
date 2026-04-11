@@ -276,6 +276,40 @@ async def search_stocks(q: str = ""):
     return {"results": results[:20]}
 
 
+@router.get("/logo/{ticker}")
+async def get_logo(ticker: str):
+    """Proxy logo from companiesmarketcap.com with local caching."""
+    import requests
+    from fastapi.responses import Response as FastResponse
+
+    ticker_upper = ticker.upper()
+    # Ticker overrides for edge cases
+    overrides = {"GOOGL": "GOOG", "BRK.B": "BRK-B"}
+    logo_ticker = overrides.get(ticker_upper, ticker_upper)
+
+    cache_dir = Path(__file__).parent.parent / "storage" / "logos"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_path = cache_dir / f"{ticker_upper}.webp"
+
+    # Return from cache
+    if cache_path.exists():
+        return FastResponse(content=cache_path.read_bytes(), media_type="image/webp",
+                           headers={"Cache-Control": "public, max-age=2592000"})
+
+    # Fetch from source
+    try:
+        url = f"https://companiesmarketcap.com/img/company-logos/64/{logo_ticker}.webp"
+        r = requests.get(url, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
+        if r.status_code == 200 and "image" in r.headers.get("content-type", ""):
+            cache_path.write_bytes(r.content)
+            return FastResponse(content=r.content, media_type="image/webp",
+                               headers={"Cache-Control": "public, max-age=2592000"})
+    except Exception:
+        pass
+
+    raise HTTPException(status_code=404, detail="Logo not available")
+
+
 class ScreenConfig(BaseModel):
     include_financials: bool = False
     sector_relative: bool = False

@@ -29,21 +29,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Health check (must be before static mount)
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 # API routes
 app.include_router(router)
 
-# Serve built React frontend (if it exists)
+# Serve built React frontend (if it exists) — MUST be last (catches all unmatched routes)
 FRONTEND_DIR = Path(__file__).parent / "web" / "dist"
 if FRONTEND_DIR.exists():
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
     logger.info(f"Serving frontend from {FRONTEND_DIR}")
 else:
     logger.info("No frontend build found at web/dist/. Run 'cd web && pnpm build' to build.")
-
-
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
 
 
 if __name__ == "__main__":

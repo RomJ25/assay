@@ -3,6 +3,7 @@ import type { ScreenStock } from "../../lib/types";
 import { classificationColors, confidenceColors, confidenceIcons, scoreColor, scoreBgOpacity } from "../../lib/colors";
 import { fmtScore, fmtPercent, fmtPrice, fmtFScore, fmtAnalyst } from "../../lib/format";
 import { CompareView } from "./CompareView";
+import { StockLogo } from "../ui/StockLogo";
 
 interface Props {
   stocks: ScreenStock[];
@@ -245,9 +246,14 @@ export function ConvictionTable({ stocks, onSelectStock }: Props) {
                     i + 1
                   )}
                 </td>
-                {/* Ticker */}
-                <td className="font-mono text-sm font-semibold py-3 px-2" style={{ color: "var(--color-text-primary)" }}>
-                  {s.ticker}
+                {/* Ticker + Logo */}
+                <td className="py-3 px-2">
+                  <div className="flex items-center gap-2">
+                    <StockLogo ticker={s.ticker} company={s.company} size={20} />
+                    <span className="font-mono text-sm font-semibold" style={{ color: "var(--color-text-primary)" }}>
+                      {s.ticker}
+                    </span>
+                  </div>
                 </td>
                 {/* Company */}
                 <td className="text-[13px] py-3 px-2 truncate max-w-[176px]" style={{ color: "var(--color-text-secondary)" }}>
