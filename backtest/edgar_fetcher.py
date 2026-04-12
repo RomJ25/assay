@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import date as dt
 from datetime import date
 
 import requests
@@ -32,6 +33,11 @@ _INCOME_CONCEPTS = {
         "SalesRevenueGoodsNet",
     ],
     "GrossProfit": ["GrossProfit"],
+    "_CostOfRevenue": [  # Internal: used to compute GrossProfit when not directly available
+        "CostOfGoodsAndServicesSold",
+        "CostOfRevenue",
+        "CostOfGoodsSold",
+    ],
     "OperatingIncome": ["OperatingIncomeLoss"],
     "NetIncome": ["NetIncomeLoss"],
     "DilutedEPS": ["EarningsPerShareDiluted"],
@@ -65,13 +71,15 @@ _BALANCE_CONCEPTS = {
     "OrdinarySharesNumber": [
         "CommonStockSharesOutstanding",
         "EntityCommonStockSharesOutstanding",
+        "WeightedAverageNumberOfDilutedSharesOutstanding",
     ],
 }
 
 _CASHFLOW_CONCEPTS = {
     "OperatingCashFlow": [
+        "NetCashProvidedByUsedInOperatingActivities",
+        "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations",
         "NetCashProvidedByOperatingActivities",
-        "NetCashProvidedByOperatingActivitiesContinuingOperations",
     ],
     "CapitalExpenditure": [
         "PaymentsToAcquirePropertyPlantAndEquipment",
@@ -166,8 +174,13 @@ def _fetch_single_edgar(ticker: str, cik: str) -> dict | None:
     balance_rows = _build_statement_rows(gaap, _BALANCE_CONCEPTS, "balance")
     cashflow_rows = _build_statement_rows(gaap, _CASHFLOW_CONCEPTS, "cashflow")
 
-    # Compute FreeCashFlow = OperatingCashFlow - CapitalExpenditure
+    # Compute derived fields
+    _compute_gross_profit(income_rows)
     _compute_free_cash_flow(cashflow_rows)
+
+    # Remove internal fields
+    for row in income_rows:
+        row.pop("_CostOfRevenue", None)
 
     if not income_rows:
         return None
@@ -196,23 +209,33 @@ def _build_statement_rows(
             if concept not in gaap:
                 continue
 
-            # Try USD first, then USD/shares for per-share metrics
+            # Try USD first, then specialized units
             entries = gaap[concept].get("units", {}).get("USD", [])
-            if not entries and field_name in ("DilutedEPS",):
+            if not entries:
                 entries = gaap[concept].get("units", {}).get("USD/shares", [])
-            if not entries and field_name in ("OrdinarySharesNumber",):
+            if not entries:
                 entries = gaap[concept].get("units", {}).get("shares", [])
 
-            # Filter to annual 10-K filings, full fiscal year only
+            # Filter to annual 10-K filings, full fiscal year only.
+            # fp=FY is unreliable — quarterly figures are sometimes tagged FY.
+            # Use actual period length: end - start >= 300 days.
             for entry in entries:
                 if entry.get("form") != "10-K":
                     continue
-                if entry.get("fp") != "FY":
-                    continue
 
                 end_date = entry.get("end", "")
+                start_date = entry.get("start", "")
                 if not end_date:
                     continue
+
+                # Verify this is actually a full-year figure
+                if start_date:
+                    try:
+                        days = (dt.fromisoformat(end_date) - dt.fromisoformat(start_date)).days
+                        if days < 300:  # quarterly or semi-annual, not full year
+                            continue
+                    except ValueError:
+                        continue
 
                 if end_date not in date_facts:
                     date_facts[end_date] = {}
@@ -236,6 +259,17 @@ def _build_statement_rows(
         rows.append(row)
 
     return rows
+
+
+def _compute_gross_profit(income_rows: list[dict]) -> None:
+    """Add GrossProfit = TotalRevenue - CostOfRevenue when not directly available."""
+    for row in income_rows:
+        if row.get("GrossProfit") is not None:
+            continue
+        rev = row.get("TotalRevenue")
+        cogs = row.get("_CostOfRevenue")
+        if rev is not None and cogs is not None:
+            row["GrossProfit"] = rev - cogs
 
 
 def _compute_free_cash_flow(cashflow_rows: list[dict]) -> None:
