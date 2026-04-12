@@ -162,12 +162,13 @@ def simulate_selective_sell(
     rebalance_dates: list[date],
     tcost_bps: int = 0,
 ) -> tuple[list[dict], BacktestMetrics]:
-    """Simulate selective-sell portfolio: hold unless HOLD/VT/AVOID.
+    """Simulate selective-sell portfolio aligned with STRATEGY.md.
 
     Instead of selling everything that leaves CB each quarter, this strategy:
     - BUYS when a stock enters CONVICTION BUY
     - HOLDS if it moves to WATCH LIST or QUALITY GROWTH PREMIUM
-    - SELLS ONLY when it drops to HOLD, VALUE TRAP, or AVOID
+    - SELLS on VALUE TRAP, AVOID, OVERVALUED, or INSUFFICIENT DATA
+    - MONITORS HOLD for one quarter; sells if HOLD persists 2+ consecutive quarters
 
     Args:
         quarterly_snapshots: list of (date, {ticker: classification}) for all stocks
@@ -176,7 +177,7 @@ def simulate_selective_sell(
         rebalance_dates: all quarter-end dates
         tcost_bps: transaction cost per rebalance
     """
-    SELL_CLASSIFICATIONS = {"HOLD", "VALUE TRAP", "AVOID", "INSUFFICIENT DATA"}
+    SELL_CLASSIFICATIONS = {"VALUE TRAP", "AVOID", "OVERVALUED", "INSUFFICIENT DATA"}
 
     records = []
     portfolio = set()  # accumulates over time
@@ -189,6 +190,7 @@ def simulate_selective_sell(
     turnovers = []
     picks_counts = []
     prev_portfolio = set()
+    hold_quarters: dict[str, int] = {}  # ticker -> consecutive quarters in HOLD
 
     for rebal_date, classifications in quarterly_snapshots:
         next_date = _find_next_date(rebal_date, rebalance_dates)
@@ -204,10 +206,19 @@ def simulate_selective_sell(
 
         # Add new CB entries
         new_cb = {t for t, cl in classifications.items() if cl == "CONVICTION BUY"}
+        added_count = len(new_cb - prev_portfolio)  # compute BEFORE updating prev_portfolio
         portfolio.update(new_cb)
 
-        # Remove stocks that dropped to HOLD/VT/AVOID
+        # Track consecutive HOLD quarters — sell after 2+ consecutive
+        current_hold = {t for t in portfolio if classifications.get(t) == "HOLD"}
+        new_hold_quarters: dict[str, int] = {}
+        for t in current_hold:
+            new_hold_quarters[t] = hold_quarters.get(t, 0) + 1
+        hold_quarters = new_hold_quarters
+
+        # Remove stocks that hit sell classifications or stayed in HOLD too long
         to_remove = {t for t in portfolio if classifications.get(t) in SELL_CLASSIFICATIONS}
+        to_remove |= {t for t in portfolio if hold_quarters.get(t, 0) >= 2}
         portfolio -= to_remove
 
         # Also remove stocks no longer in the screened universe (delisted, etc.)
@@ -260,7 +271,7 @@ def simulate_selective_sell(
             "spy_return": round(spy_ret * 100, 2),
             "excess_return": round((portfolio_ret - universe_ret) * 100, 2),
             "turnover": round(quarter_turnover, 1) if quarter_turnover is not None else None,
-            "added": len(new_cb - prev_portfolio),
+            "added": added_count,
             "removed": len(to_remove),
         })
 
@@ -335,19 +346,26 @@ def _compute_ticker_return(
     end_date: date,
     cache: HistoricalCache,
 ) -> float | None:
-    """Compute total return for a single ticker using Adj Close."""
-    start_data = cache.get_price(ticker, start_date.isoformat())
-    end_data = cache.get_price(ticker, end_date.isoformat())
+    """Compute total return for a single ticker using Adj Close.
 
-    if start_data is None or end_data is None:
-        return None
+    If start price exists but end price is missing (delisting, acquisition),
+    assumes 0% return rather than silently dropping the ticker.
+    """
+    start_data = cache.get_price(ticker, start_date.isoformat())
+    if start_data is None:
+        return None  # never had this stock
 
     _, adj_start = start_data
-    _, adj_end = end_data
-
     if adj_start <= 0:
         return None
 
+    end_data = cache.get_price(ticker, end_date.isoformat())
+    if end_data is None:
+        # Stock existed at start but has no end price — likely delisted/acquired.
+        # Conservative assumption: 0% return (better than silently dropping).
+        return 0.0
+
+    _, adj_end = end_data
     return (adj_end - adj_start) / adj_start
 
 

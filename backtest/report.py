@@ -65,7 +65,7 @@ def print_backtest_report(result) -> None:
     ss = result.selective_sell_metrics
     if ss is not None:
         console.print(f"\n[bold]SELECTIVE SELL STRATEGY (recommended)[/bold]")
-        console.print(f"  [dim]Hold CB/WL/QGP stocks, sell only on HOLD/VT/AVOID.[/dim]")
+        console.print(f"  [dim]Hold CB/WL/QGP stocks. Sell on VT/AVOID/OVERVALUED. Monitor HOLD (sell after 2 quarters).[/dim]")
         ss_alpha_style = "green" if ss.selection_alpha > 0 else "red"
         console.print(f"  CAGR:            {_pct(ss.cagr)}")
         console.print(f"  Selection Alpha: [{ss_alpha_style}]{_pct(ss.selection_alpha)}[/{ss_alpha_style}]")

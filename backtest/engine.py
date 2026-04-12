@@ -234,7 +234,7 @@ def run_backtest(
             tcost_bps=tcost_bps,
         )
 
-        # Step 5b: Selective sell simulation (hold unless HOLD/VT/AVOID)
+        # Step 5b: Selective sell simulation (sell on VT/AVOID/OV, monitor HOLD)
         console.print("[dim]Simulating selective-sell strategy...[/dim]")
         ss_returns, ss_metrics = simulate_selective_sell(
             quarterly_classifications, quarterly_universe, cache, rebalance_dates,
