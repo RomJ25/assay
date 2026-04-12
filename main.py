@@ -260,7 +260,8 @@ def main():
                      include_financials=args.include_financials,
                      verbose=args.verbose,
                      tcost_bps=args.tcost_bps,
-                     survivorship_free=args.survivorship_free)
+                     survivorship_free=args.survivorship_free,
+                     universe_name=args.universe)
     else:
         custom = args.tickers.split(",") if args.tickers else None
         universe = "custom" if custom else args.universe
