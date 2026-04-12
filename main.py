@@ -26,7 +26,7 @@ from models.relative import RelativeModel
 from quality.growth import GrowthModel
 from scoring.value_scorer import compute_value_scores, get_yield_metrics
 from scoring.quality_scorer import compute_quality_scores
-from scoring.conviction import conviction_score, classify, confidence_level, apply_min_fscore
+from scoring.conviction import conviction_score, classify, confidence_level, apply_min_fscore, apply_revenue_gate
 from scoring.momentum_scorer import compute_momentum_percentiles, apply_momentum_gate
 from scoring.trajectory import compute_trajectory_scores
 from scoring.filters import passes_data_quality, include_stock
@@ -128,6 +128,7 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
             cl = classify(v_score, q_score)
             cl = apply_min_fscore(cl, piotroski_raw.get(t, 0))
             cl = apply_momentum_gate(cl, momentum_pcts.get(t))
+            cl, rev_gate_fired = apply_revenue_gate(cl, d.revenue)
             conf = confidence_level(v_score, q_score) if cl == "CONVICTION BUY" else None
 
             # Yield metrics
@@ -196,6 +197,7 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
                 "beta": d.beta,
                 "market_cap": d.market_cap,
                 "momentum_12m": d.momentum_12m,
+                "revenue_gate_fired": rev_gate_fired,
             })
             progress.advance(task)
 

@@ -24,7 +24,7 @@ from backtest.report import print_backtest_report, save_backtest_csv
 from data.sp500 import fetch_sp500_list, sp500_info_dict
 from scoring.value_scorer import compute_value_scores
 from scoring.quality_scorer import compute_quality_scores
-from scoring.conviction import conviction_score, classify, apply_min_fscore, confidence_level
+from scoring.conviction import conviction_score, classify, apply_min_fscore, apply_revenue_gate, confidence_level
 from scoring.momentum_scorer import compute_momentum_percentiles, apply_momentum_gate
 from scoring.filters import passes_data_quality, include_stock
 
@@ -376,7 +376,8 @@ def _screen_quarter_full(
         raw_cl = classify(v, q)
         pf = piotroski_raw.get(t, 0)
         post_f = apply_min_fscore(raw_cl, pf)
-        final = apply_momentum_gate(post_f, momentum_pcts.get(t))
+        post_mom = apply_momentum_gate(post_f, momentum_pcts.get(t))
+        final, rev_gate = apply_revenue_gate(post_mom, filtered[t].revenue)
 
         classifications[final] = classifications.get(final, 0) + 1
 
@@ -395,7 +396,7 @@ def _screen_quarter_full(
             raw_classification=raw_cl,
             final_classification=final,
             f_gate_fired=(raw_cl == "CONVICTION BUY" and raw_cl != post_f),
-            momentum_gate_fired=(post_f == "CONVICTION BUY" and post_f != final),
+            momentum_gate_fired=(post_f == "CONVICTION BUY" and post_f != post_mom),
             confidence=conf,
         ))
 

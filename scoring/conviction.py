@@ -56,6 +56,35 @@ def apply_min_fscore(classification: str, piotroski_f: int) -> str:
     return classification
 
 
+def apply_revenue_gate(classification: str, revenue: list[float | None] | None) -> tuple[str, bool]:
+    """Downgrade CONVICTION BUY to WATCH LIST if revenue declined 2+ consecutive years.
+
+    Chen, Chen, Hsin & Lee (2014): revenue momentum carries exclusive predictive
+    information beyond earnings and price momentum. Persistent revenue decline
+    (2+ consecutive years) is the clearest value trap signal.
+
+    Returns: (classification, gate_fired)
+    """
+    if classification != "CONVICTION BUY":
+        return classification, False
+    if not revenue or len(revenue) < 3:
+        return classification, False  # insufficient data, don't penalize
+
+    r0, r1, r2 = revenue[0], revenue[1], revenue[2]
+
+    # Need valid positive values for all 3 years
+    if r0 is None or r1 is None or r2 is None:
+        return classification, False
+    if r0 <= 0 or r1 <= 0 or r2 <= 0:
+        return classification, False
+
+    # Revenue declined in both of the last 2 years
+    if r0 < r1 and r1 < r2:
+        return "WATCH LIST", True
+
+    return classification, False
+
+
 def classify(value_score: float | None, quality_score: float | None) -> str:
     """Classify stock into conviction matrix bucket."""
     if value_score is None or quality_score is None:
