@@ -47,7 +47,12 @@ def fetch_historical_data(
 
 
 def _fetch_financials(tickers: list[str], cache: HistoricalCache) -> None:
-    """Fetch raw financial statements via yahooquery and cache as JSON."""
+    """Fetch raw financial statements and cache as JSON.
+
+    Two-phase approach for deep history:
+    1. SEC EDGAR (free, 15+ years) — primary source for backtest depth
+    2. yahooquery (4-5 years) — fills any gaps
+    """
     cached = cache.get_all_cached_financial_tickers()
     missing = [t for t in tickers if t not in cached]
 
@@ -55,21 +60,37 @@ def _fetch_financials(tickers: list[str], cache: HistoricalCache) -> None:
         logger.info("All financials cached")
         return
 
-    logger.info(f"Fetching financials for {len(missing)} tickers...")
-    batches = [missing[i:i + BATCH_SIZE] for i in range(0, len(missing), BATCH_SIZE)]
+    # Phase 1: SEC EDGAR for deep history
+    from backtest.edgar_fetcher import fetch_cik_mapping, fetch_edgar_financials
 
-    for i, batch in enumerate(batches, 1):
-        logger.info(f"Financials batch {i}/{len(batches)}: {len(batch)} tickers...")
-        try:
-            data = _fetch_financials_batch(batch)
-            for ticker, raw in data.items():
-                cache.set_financials(ticker, raw)
-            logger.info(f"  Cached {len(data)}/{len(batch)} tickers")
-        except Exception as e:
-            logger.error(f"  Batch {i} failed: {e}")
+    logger.info(f"Fetching financials for {len(missing)} tickers (EDGAR + yahooquery)...")
 
-        if i < len(batches):
-            time.sleep(BATCH_DELAY_SECONDS)
+    cik_map = fetch_cik_mapping()
+    edgar_data = fetch_edgar_financials(missing, cik_map)
+
+    # Merge EDGAR data into cache
+    for ticker, raw in edgar_data.items():
+        cache.set_financials(ticker, raw)
+    logger.info(f"EDGAR: cached {len(edgar_data)}/{len(missing)} tickers")
+
+    # Phase 2: yahooquery for tickers EDGAR missed
+    still_missing = [t for t in missing if t not in edgar_data]
+    if still_missing:
+        logger.info(f"yahooquery fallback for {len(still_missing)} tickers...")
+        batches = [still_missing[i:i + BATCH_SIZE] for i in range(0, len(still_missing), BATCH_SIZE)]
+
+        for i, batch in enumerate(batches, 1):
+            logger.info(f"Financials batch {i}/{len(batches)}: {len(batch)} tickers...")
+            try:
+                data = _fetch_financials_batch(batch)
+                for ticker, raw in data.items():
+                    cache.set_financials(ticker, raw)
+                logger.info(f"  Cached {len(data)}/{len(batch)} tickers")
+            except Exception as e:
+                logger.error(f"  Batch {i} failed: {e}")
+
+            if i < len(batches):
+                time.sleep(BATCH_DELAY_SECONDS)
 
 
 def _fetch_financials_batch(batch: list[str]) -> dict[str, dict]:
