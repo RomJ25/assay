@@ -10,6 +10,9 @@ TOP_N="${ASSAY_TOP_N:-30}"
 MODE="${ASSAY_MODE:-server}"
 RESULTS_DIR="${ASSAY_RESULTS:-/app/data/results}"
 
+# Ensure results directory exists
+mkdir -p "$RESULTS_DIR"
+
 # Build scan command from environment
 SCAN_CMD="python main.py --universe ${UNIVERSE} --top ${TOP_N}"
 [ -n "${ASSAY_INCLUDE_FINANCIALS}" ] && SCAN_CMD="${SCAN_CMD} --include-financials"
@@ -30,8 +33,37 @@ fi
 # Run screener if no data exists
 if ! ls "$RESULTS_DIR"/screen_*.json 1>/dev/null 2>&1; then
     echo "$(date '+%Y-%m-%d %H:%M:%S') No screen data found. Running initial screen..."
-    $SCAN_CMD || echo "Initial screen failed (will retry on schedule)"
-    echo "$(date '+%Y-%m-%d %H:%M:%S') Initial screen complete."
+
+    # Retry up to 3 times with increasing delay
+    ATTEMPT=1
+    MAX_ATTEMPTS=3
+    while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+        echo "$(date '+%Y-%m-%d %H:%M:%S') Scan attempt $ATTEMPT/$MAX_ATTEMPTS..."
+        if $SCAN_CMD; then
+            # Verify JSON was actually saved
+            if ls "$RESULTS_DIR"/screen_*.json 1>/dev/null 2>&1; then
+                echo "$(date '+%Y-%m-%d %H:%M:%S') Initial screen complete — data saved."
+                break
+            else
+                echo "$(date '+%Y-%m-%d %H:%M:%S') Scan exited OK but no JSON saved."
+            fi
+        else
+            echo "$(date '+%Y-%m-%d %H:%M:%S') Scan attempt $ATTEMPT failed."
+        fi
+
+        if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+            DELAY=$((ATTEMPT * 30))
+            echo "$(date '+%Y-%m-%d %H:%M:%S') Retrying in ${DELAY}s..."
+            sleep $DELAY
+        fi
+        ATTEMPT=$((ATTEMPT + 1))
+    done
+
+    # Final check
+    if ! ls "$RESULTS_DIR"/screen_*.json 1>/dev/null 2>&1; then
+        echo "$(date '+%Y-%m-%d %H:%M:%S') WARNING: All scan attempts failed. Server will start without data."
+        echo "$(date '+%Y-%m-%d %H:%M:%S') Use the web UI 'Run Scan' button or wait for the daily scheduler."
+    fi
 else
     LATEST=$(ls -t "$RESULTS_DIR"/screen_*.json 2>/dev/null | head -1)
     echo "$(date '+%Y-%m-%d %H:%M:%S') Found existing data: $(basename "$LATEST")"

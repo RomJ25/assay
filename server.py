@@ -32,7 +32,9 @@ app.add_middleware(
 # Health check (must be before static mount)
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    from api.routes import _find_latest_screen
+    has_data = _find_latest_screen() is not None
+    return {"status": "ok", "has_data": has_data}
 
 # API routes
 app.include_router(router)

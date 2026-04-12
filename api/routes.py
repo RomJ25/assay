@@ -342,12 +342,15 @@ async def run_screen(config: ScreenConfig):
         def run_in_thread():
             try:
                 send_event("Importing screener...", 5)
+                import os
                 from main import run_screener
-                send_event("Running screener pipeline...", 10)
+                universe = os.environ.get("ASSAY_UNIVERSE", "sp500")
+                send_event(f"Running screener ({universe})...", 10)
                 run_screener(
                     include_financials=config.include_financials,
                     sector_relative=config.sector_relative,
                     refresh=config.refresh,
+                    universe_name=universe,
                 )
                 send_event("Complete", 100)
             except Exception as e:
