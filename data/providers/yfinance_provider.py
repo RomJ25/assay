@@ -44,30 +44,44 @@ class YFinanceProvider(DataProvider):
     """
 
     def fetch_prices(self, tickers: list[str]) -> dict[str, float]:
-        """Batch download latest prices for all tickers."""
+        """Batch download latest prices, chunked for reliability.
+
+        Uses batches of 200 tickers to avoid Yahoo rate limiting.
+        """
+        import time
+
+        PRICE_BATCH = 200
         logger.info(f"Fetching prices for {len(tickers)} tickers via yfinance...")
-        try:
-            df = yf.download(tickers, period="1d", threads=True, progress=False)
-            if df.empty:
-                logger.warning("yfinance returned empty price data")
-                return {}
 
-            prices = {}
-            if "Close" in df.columns:
-                if hasattr(df["Close"], "columns"):
-                    for ticker in df["Close"].columns:
-                        val = df["Close"][ticker].dropna()
-                        if not val.empty:
-                            prices[ticker] = float(val.iloc[-1])
-                else:
-                    if not df["Close"].dropna().empty:
-                        prices[tickers[0]] = float(df["Close"].dropna().iloc[-1])
+        prices = {}
+        batches = [tickers[i:i + PRICE_BATCH] for i in range(0, len(tickers), PRICE_BATCH)]
 
-            logger.info(f"Got prices for {len(prices)}/{len(tickers)} tickers")
-            return prices
-        except Exception as e:
-            logger.error(f"yfinance price download failed: {e}")
-            return {}
+        for i, batch in enumerate(batches, 1):
+            try:
+                df = yf.download(batch, period="1d", threads=True, progress=False)
+                if df.empty:
+                    continue
+
+                if "Close" in df.columns:
+                    if hasattr(df["Close"], "columns"):
+                        for ticker in df["Close"].columns:
+                            val = df["Close"][ticker].dropna()
+                            if not val.empty:
+                                prices[ticker] = float(val.iloc[-1])
+                    else:
+                        if not df["Close"].dropna().empty:
+                            prices[batch[0]] = float(df["Close"].dropna().iloc[-1])
+
+                if len(batches) > 1:
+                    logger.info(f"  Price batch {i}/{len(batches)}: {len(prices)} total")
+            except Exception as e:
+                logger.warning(f"Price batch {i}/{len(batches)} failed: {e}")
+
+            if i < len(batches):
+                time.sleep(1)
+
+        logger.info(f"Got prices for {len(prices)}/{len(tickers)} tickers")
+        return prices
 
     def fetch_financial_data(
         self, tickers: list[str], sp500_info: dict[str, dict]

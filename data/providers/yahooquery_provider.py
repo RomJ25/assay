@@ -107,16 +107,16 @@ class YahooQueryProvider(DataProvider):
             return default
 
         income_df = _fetch_with_retry(lambda: t.income_statement(frequency="a", trailing=True), "income_statement", pd.DataFrame())
-        time.sleep(1)
+        time.sleep(0.5)
         balance_df = _fetch_with_retry(lambda: t.balance_sheet(frequency="a"), "balance_sheet", pd.DataFrame())
-        time.sleep(1)
+        time.sleep(0.5)
         cashflow_df = _fetch_with_retry(lambda: t.cash_flow(frequency="a", trailing=True), "cash_flow", pd.DataFrame())
-        time.sleep(1)
+        time.sleep(0.5)
 
         summary = _fetch_with_retry(lambda: t.summary_detail, "summary_detail", {})
-        time.sleep(1)
+        time.sleep(0.5)
         key_stats = _fetch_with_retry(lambda: t.key_stats, "key_stats", {})
-        time.sleep(1)
+        time.sleep(0.5)
 
         try:
             fin_data = t.financial_data

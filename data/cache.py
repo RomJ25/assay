@@ -49,12 +49,20 @@ CREATE TABLE IF NOT EXISTS sp500_cache (
     fetched_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS momentum_cache (
+    ticker TEXT PRIMARY KEY,
+    momentum REAL NOT NULL,
+    fetched_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_ticker_cache_lookup
     ON ticker_cache (ticker, data_type, fetched_at);
 CREATE INDEX IF NOT EXISTS idx_price_cache_fetched
     ON price_cache (fetched_at);
 CREATE INDEX IF NOT EXISTS idx_sp500_cache_fetched
     ON sp500_cache (fetched_at);
+CREATE INDEX IF NOT EXISTS idx_momentum_cache_fetched
+    ON momentum_cache (fetched_at);
 """
 
 
@@ -67,6 +75,8 @@ class Cache:
         self._conn = sqlite3.connect(str(self.db_path))
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA synchronous=NORMAL")
+        self._conn.execute("PRAGMA cache_size=-64000")  # 64MB page cache
+        self._conn.execute("PRAGMA temp_store=MEMORY")
         self._conn.executescript(_SCHEMA)
         self._evict_stale()
 
@@ -78,6 +88,7 @@ class Cache:
         for table, ttl_h in [
             ("ticker_cache", FUNDAMENTALS_CACHE_TTL_HOURS * 2),
             ("price_cache", PRICE_CACHE_TTL_HOURS * 2),
+            ("momentum_cache", PRICE_CACHE_TTL_HOURS * 2),
         ]:
             cutoff = (_utcnow() - timedelta(hours=ttl_h)).isoformat()
             self._conn.execute(f"DELETE FROM {table} WHERE fetched_at < ?", (cutoff,))
@@ -133,6 +144,21 @@ class Cache:
         )
         self._conn.commit()
 
+    def set_fundamentals_batch(self, items: list[tuple[str, str, str]], provider: str = "yahooquery"):
+        """Cache multiple fundamental data entries in one transaction.
+
+        Args:
+            items: List of (ticker, data_type, data_json) tuples.
+        """
+        now = _utcnow().isoformat()
+        self._conn.executemany(
+            "INSERT OR REPLACE INTO ticker_cache "
+            "(ticker, data_type, data_json, provider, fetched_at, ttl_hours) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            [(t, dt, dj, provider, now, FUNDAMENTALS_CACHE_TTL_HOURS) for t, dt, dj in items],
+        )
+        self._conn.commit()
+
     # ── Prices ────────────────────────────────────────────────────────
 
     def get_prices(self) -> dict[str, float]:
@@ -150,6 +176,26 @@ class Cache:
         self._conn.executemany(
             "INSERT OR REPLACE INTO price_cache (ticker, price, fetched_at) VALUES (?, ?, ?)",
             [(t, p, now) for t, p in prices.items()],
+        )
+        self._conn.commit()
+
+    # ── Momentum ──────────────────────────────────────────────────────
+
+    def get_momentum(self) -> dict[str, float]:
+        """Return all cached momentum values that are still fresh."""
+        cutoff = (_utcnow() - timedelta(hours=PRICE_CACHE_TTL_HOURS)).isoformat()
+        rows = self._conn.execute(
+            "SELECT ticker, momentum FROM momentum_cache WHERE fetched_at > ?",
+            (cutoff,),
+        ).fetchall()
+        return {r[0]: r[1] for r in rows}
+
+    def set_momentum(self, momentum: dict[str, float]):
+        """Cache momentum values."""
+        now = _utcnow().isoformat()
+        self._conn.executemany(
+            "INSERT OR REPLACE INTO momentum_cache (ticker, momentum, fetched_at) VALUES (?, ?, ?)",
+            [(t, m, now) for t, m in momentum.items()],
         )
         self._conn.commit()
 

@@ -98,10 +98,13 @@ class DataFetcher:
                     time.sleep(BATCH_DELAY_SECONDS)
                     batch_data = self.primary.fetch_financial_data(batch, sp500_info)
 
-                # Cache successful results
+                # Cache successful results (batch commit for performance)
+                cache_items = []
                 for ticker, fd in batch_data.items():
-                    self.cache.set_fundamentals(ticker, "financial_data", _serialize_fd(fd))
+                    cache_items.append((ticker, "financial_data", _serialize_fd(fd)))
                     all_data[ticker] = fd
+                if cache_items:
+                    self.cache.set_fundamentals_batch(cache_items)
 
                 batch_failed = [t for t in batch if t not in batch_data]
                 failed_tickers.extend(batch_failed)
@@ -137,10 +140,25 @@ class DataFetcher:
                     # Fallback: derive shares from cached market_cap
                     fd.shares_outstanding = fd.market_cap / fd.current_price
 
-        # Step 6: Compute 12-1 month momentum
-        momentum = self._compute_momentum(list(all_data.keys()))
+        # Step 6: Compute 12-1 month momentum (cached, 24h TTL)
+        all_tickers = list(all_data.keys())
+        if self.force_refresh:
+            cached_momentum = {}
+        else:
+            cached_momentum = self.cache.get_momentum()
+        missing_momentum = [t for t in all_tickers if t not in cached_momentum]
+
+        if missing_momentum:
+            logger.info(f"Computing momentum for {len(missing_momentum)} tickers ({len(cached_momentum)} cached)...")
+            fresh_momentum = self._compute_momentum(missing_momentum)
+            if fresh_momentum:
+                self.cache.set_momentum(fresh_momentum)
+                cached_momentum.update(fresh_momentum)
+        else:
+            logger.info(f"Momentum: all {len(cached_momentum)} tickers cached")
+
         for ticker, fd in all_data.items():
-            fd.momentum_12m = momentum.get(ticker)
+            fd.momentum_12m = cached_momentum.get(ticker)
 
         total = len(all_data)
         skipped = len(tickers) - total
@@ -167,45 +185,50 @@ class DataFetcher:
         return cached_prices
 
     def _compute_momentum(self, tickers: list[str]) -> dict[str, float]:
-        """Compute 12-1 month momentum from yfinance historical prices."""
+        """Compute 12-1 month momentum from yfinance historical prices.
+
+        Downloads in batches of 500 to avoid silent drops in yfinance
+        when downloading thousands of tickers at once.
+        """
         import yfinance as yf
         from datetime import datetime, timedelta
         from scoring.momentum_scorer import compute_momentum
 
-        try:
-            end = datetime.now()
-            start = end - timedelta(days=400)  # ~13 months of data
-            df = yf.download(tickers, start=start.strftime("%Y-%m-%d"),
-                             auto_adjust=True, threads=True, progress=False)
-            if df.empty:
-                return {}
+        MOMENTUM_BATCH = 500
+        end = datetime.now()
+        start = end - timedelta(days=400)  # ~13 months of data
+        start_str = start.strftime("%Y-%m-%d")
 
-            # Resample to monthly closes
-            close = df["Close"] if "Close" in df.columns else df
-            monthly = close.resample("ME").last()
+        price_histories = {}
+        batches = [tickers[i:i + MOMENTUM_BATCH] for i in range(0, len(tickers), MOMENTUM_BATCH)]
 
-            price_histories = {}
-
-            for t in tickers:
-                try:
-                    # Handle both single-ticker (Series) and multi-ticker (DataFrame) cases
-                    if hasattr(monthly, "columns") and t in monthly.columns:
-                        col = monthly[t]
-                    elif len(tickers) == 1:
-                        # Single ticker: monthly may be a Series or 1-column DataFrame
-                        col = monthly.squeeze() if hasattr(monthly, "squeeze") else monthly
-                    else:
-                        continue
-                    vals = col.dropna().values.tolist()
-                    if len(vals) >= 2:
-                        price_histories[t] = [float(v) for v in vals[-13:]]
-                except Exception:
+        for i, batch in enumerate(batches, 1):
+            try:
+                df = yf.download(batch, start=start_str,
+                                 auto_adjust=True, threads=True, progress=False)
+                if df.empty:
                     continue
 
-            return compute_momentum(price_histories)
-        except Exception as e:
-            logger.warning(f"Momentum computation failed: {e}")
-            return {}
+                close = df["Close"] if "Close" in df.columns else df
+                monthly = close.resample("ME").last()
+
+                for t in batch:
+                    try:
+                        if hasattr(monthly, "columns") and t in monthly.columns:
+                            col = monthly[t]
+                        elif len(batch) == 1:
+                            col = monthly.squeeze() if hasattr(monthly, "squeeze") else monthly
+                        else:
+                            continue
+                        vals = col.dropna().values.tolist()
+                        if len(vals) >= 2:
+                            price_histories[t] = [float(v) for v in vals[-13:]]
+                    except Exception:
+                        continue
+            except Exception as e:
+                logger.warning(f"Momentum batch {i}/{len(batches)} failed: {e}")
+
+        return compute_momentum(price_histories)
 
     def close(self):
         self.cache.close()
