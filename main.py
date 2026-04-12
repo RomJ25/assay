@@ -51,30 +51,41 @@ _include_stock = include_stock  # backward compat alias
 
 def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = False,
                  refresh: bool = False, wide: bool = False, breakdown: bool = False,
-                 include_financials: bool = False, sector_relative: bool = False):
+                 include_financials: bool = False, sector_relative: bool = False,
+                 universe_name: str = "sp500", custom_tickers: list[str] | None = None):
     """Main screener pipeline."""
     setup_logging(verbose)
     today = date.today()
     start_time = time.time()
 
-    console.print(f"\n[bold blue]Assay — S&P 500 Value + Quality[/bold blue]")
+    # Step 1: Get universe
+    from data.universe import get_universe
+    universe = get_universe(universe_name, custom_tickers)
 
-    # Step 1: Fetch S&P 500 list
+    console.print(f"\n[bold blue]Assay — {universe.description} Value + Quality[/bold blue]")
+
     fetcher = DataFetcher(force_refresh=refresh)
-    tickers, sp500_info = fetcher.get_sp500()
+    tickers, universe_info = universe.fetch()
 
     single_ticker = None
     if ticker:
-        single_ticker = ticker.upper().replace(".", "-")
-        if single_ticker not in sp500_info:
-            console.print(f"[red]{single_ticker} not found in S&P 500[/red]")
-            return
+        single_ticker = ticker.upper()
+        # Don't replace dots for international tickers (.TA, .T, .L)
+        if "." not in ticker or ticker.endswith((".TA", ".T", ".L", ".DE")):
+            pass  # Keep as-is for international tickers
+        else:
+            single_ticker = single_ticker.replace(".", "-")  # BRK.B → BRK-B
+
+        if single_ticker not in universe_info:
+            # Try adding to universe on the fly for single-ticker mode
+            universe_info[single_ticker] = {"company_name": single_ticker, "sector": "Unknown", "sub_industry": "Unknown"}
+            tickers.append(single_ticker)
         console.print(f"Single stock mode: {single_ticker}")
     else:
-        console.print(f"Loaded {len(tickers)} S&P 500 constituents")
+        console.print(f"Loaded {len(tickers)} {universe.description} constituents")
 
     # Step 2: Fetch data (always full universe for accurate percentile ranking)
-    all_data = fetcher.fetch_all(tickers, sp500_info)
+    all_data = fetcher.fetch_all(tickers, universe_info)
     console.print(f"Fetched data for {len(all_data)} stocks")
 
     if not all_data:
@@ -236,6 +247,10 @@ def main():
                         help=f"Transaction cost in basis points per rebalance (default: {TCOST_BPS_ROUNDTRIP}, suggest 10)")
     parser.add_argument("--survivorship-free", action="store_true",
                         help="Use point-in-time S&P 500 constituents (eliminates survivorship bias)")
+    parser.add_argument("--universe", default="sp500",
+                        help="Stock universe: sp500, tase, sp500+tase, custom (default: sp500)")
+    parser.add_argument("--tickers", type=str, default=None,
+                        help="Custom ticker list (comma-separated, e.g., AAPL,MSFT,TEVA.TA)")
     args = parser.parse_args()
 
     if args.backtest:
@@ -247,10 +262,13 @@ def main():
                      tcost_bps=args.tcost_bps,
                      survivorship_free=args.survivorship_free)
     else:
+        custom = args.tickers.split(",") if args.tickers else None
+        universe = "custom" if custom else args.universe
         run_screener(ticker=args.ticker, top_n=args.top, verbose=args.verbose,
                      refresh=args.refresh, wide=args.wide, breakdown=args.breakdown,
                      include_financials=args.include_financials,
-                     sector_relative=args.sector_relative)
+                     sector_relative=args.sector_relative,
+                     universe_name=universe, custom_tickers=custom)
 
 
 if __name__ == "__main__":
