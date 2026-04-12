@@ -65,13 +65,21 @@ def save_csv(today: date, results: list[dict]):
     return path
 
 
-def save_json(today: date, results: list[dict]):
-    """Save results to JSON."""
+def save_json(today: date, results: list[dict], universe_name: str = "sp500", universe_description: str = "S&P 500"):
+    """Save results to JSON with metadata."""
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     path = RESULTS_DIR / f"screen_{today.isoformat()}.json"
 
+    output = {
+        "universe": universe_name,
+        "universe_description": universe_description,
+        "date": today.isoformat(),
+        "screened": len(results),
+        "stocks": results,
+    }
+
     with open(path, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2, default=str)
+        json.dump(output, f, indent=2, default=str)
 
     logger.info(f"JSON saved: {path}")
     return path

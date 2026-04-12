@@ -221,7 +221,7 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
     print_report(today, results, top_n=top_n, wide=wide, breakdown=breakdown,
                  include_financials=include_financials)
     csv_path = save_csv(today, results)
-    save_json(today, results)
+    save_json(today, results, universe_name=universe_name, universe_description=universe.description)
 
     console.print(f"\n[green]Reports saved to {csv_path.parent}/[/green]")
     fetcher.close()

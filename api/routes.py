@@ -18,6 +18,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1")
 
 
+def _load_stocks(path: Path) -> list[dict]:
+    """Load stock list from a screen JSON file (handles both old and new format)."""
+    with open(path, encoding="utf-8") as f:
+        raw = json.load(f)
+    if isinstance(raw, dict) and "stocks" in raw:
+        return raw["stocks"]
+    return raw  # legacy bare list
+
+
 def _find_latest_screen() -> Path | None:
     """Find the most recent full screen JSON file (skip single-ticker runs)."""
     for path in sorted(RESULTS_DIR.glob("screen_*.json"), reverse=True):
@@ -43,18 +52,26 @@ async def get_screen():
 
     try:
         with open(path, encoding="utf-8") as f:
-            stocks = json.load(f)
+            raw = json.load(f)
     except (json.JSONDecodeError, OSError) as e:
         raise HTTPException(status_code=500, detail=f"Failed to read screen data: {e}")
 
-    # Extract date from filename
-    date_str = path.stem.replace("screen_", "")
+    # Support both old format (bare list) and new format (dict with metadata)
+    if isinstance(raw, dict) and "stocks" in raw:
+        return {
+            "universe": raw.get("universe_description", raw.get("universe", "Unknown")),
+            "date": raw.get("date", path.stem.replace("screen_", "")),
+            "screened": raw.get("screened", len(raw["stocks"])),
+            "stocks": raw["stocks"],
+        }
 
+    # Legacy format: bare list of stocks
+    date_str = path.stem.replace("screen_", "")
     return {
         "universe": "S&P 500",
         "date": date_str,
-        "screened": len(stocks),
-        "stocks": stocks,
+        "screened": len(raw),
+        "stocks": raw,
     }
 
 
@@ -65,10 +82,8 @@ async def get_screen_diff():
     if len(files) < 2:
         raise HTTPException(status_code=404, detail="Need at least 2 screens to compute diff.")
 
-    with open(files[0]) as f:
-        current = json.load(f)
-    with open(files[1]) as f:
-        previous = json.load(f)
+    current = _load_stocks(files[0])
+    previous = _load_stocks(files[1])
 
     current_date = files[0].stem.replace("screen_", "")
     previous_date = files[1].stem.replace("screen_", "")
@@ -123,8 +138,7 @@ async def get_stock(ticker: str):
     if path is None:
         raise HTTPException(status_code=404, detail="No screen data found.")
 
-    with open(path) as f:
-        stocks = json.load(f)
+    stocks = _load_stocks(path)
 
     ticker_upper = ticker.upper()
     stock = next((s for s in stocks if s["ticker"] == ticker_upper), None)
@@ -141,8 +155,7 @@ async def get_stock_peers(ticker: str):
     if path is None:
         raise HTTPException(status_code=404, detail="No screen data found.")
 
-    with open(path) as f:
-        stocks = json.load(f)
+    stocks = _load_stocks(path)
 
     ticker_upper = ticker.upper()
     stock = next((s for s in stocks if s["ticker"] == ticker_upper), None)
@@ -185,8 +198,7 @@ async def get_stock_history(ticker: str):
     for screen_path in sorted(RESULTS_DIR.glob("screen_*.json"), reverse=True)[:5]:
         if screen_path.stat().st_size < 10000:
             continue
-        with open(screen_path) as f:
-            stocks = json.load(f)
+        stocks = _load_stocks(screen_path)
         screen_date = screen_path.stem.replace("screen_", "")
         match = next((s for s in stocks if s["ticker"] == ticker_upper), None)
         if match:
@@ -251,8 +263,7 @@ async def search_stocks(q: str = ""):
     if path is None:
         return {"results": []}
 
-    with open(path) as f:
-        stocks = json.load(f)
+    stocks = _load_stocks(path)
 
     q_lower = q.lower()
     results = []
