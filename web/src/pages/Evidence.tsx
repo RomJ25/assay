@@ -272,12 +272,12 @@ function InvestigationSummary() {
       detail: "HIGH +6.7% > MOD +5.4% > LOW +3.3% in aggregate. But monotonic in only 1/11 quarters." },
     { question: "Are VALUE TRAPs actually traps?", signal: "YES", color: "#22c55e",
       detail: "Underperform CB in 7/11 quarters. Fail during commodity booms." },
-    { question: "Is this stock selection or sector rotation?", signal: "SECTOR", color: "#f97316",
-      detail: "Sector-neutralized alpha: +0.1%. The screener tilts toward cheap, quality sectors." },
+    { question: "Is this stock selection or sector rotation?", signal: "IMPROVED", color: "#3b82f6",
+      detail: "Under quarterly rebalance: +0.1% sector-neutral alpha. Under selective sell strategy: +0.5%. Holding winners improves stock selection." },
     { question: "Does conviction ordering predict returns?", signal: "NO", color: "#ef4444",
-      detail: "Kendall τ = -0.038. Higher conviction scores do not predict higher returns." },
-    { question: "Are wins bigger than losses?", signal: "NO", color: "#ef4444",
-      detail: "Win/loss ratio: 1.05× at 52% hit rate. No meaningful asymmetry." },
+      detail: "Kendall τ = -0.038. Higher conviction scores do not predict higher returns within CB." },
+    { question: "Are wins bigger than losses?", signal: "WITH STRATEGY", color: "#22c55e",
+      detail: "Under quarterly rebalance: 1.05× (no asymmetry). Under selective sell: 1.28× (meaningful). Holding winners creates asymmetry." },
   ];
 
   return (

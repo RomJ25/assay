@@ -272,15 +272,15 @@ The April 2026 empirical investigation ([`docs/DESIGN_DECISIONS.md`](../DESIGN_D
 
 1. **Classification gradient:** CB beat AVOID in only 6 of 11 quarters. Average CB-AVOID spread was -0.8%. Q1 2024 was the worst single quarter at -7.7%.
 
-2. **Sector rotation, not stock selection:** Sector-neutralized CB excess averaged +0.1% across 170 observations. Q1 2024 was the worst at -3.6%. When the screener's favored sectors lag, there is no stock-selection alpha to cushion the blow.
+2. **Sector exposure:** Under quarterly rebalancing, sector-neutralized alpha was +0.1% (near zero). Under the selective sell strategy, this improved to +0.5% — holding appreciated stocks that outperform their sectors contributes genuine stock selection. Q1 2024 was still the worst quarter regardless of strategy.
 
 3. **Confidence gradient:** Aggregate returns across 12 quarters were monotonic (HIGH +6.7% > MOD +5.4% > LOW +3.3%), but per-quarter monotonicity held in only 1 of 11 quarters. Q1 2024's inverted gradient (HIGH worst, MOD best) is ugly but not unusual.
 
-4. **Win/loss asymmetry:** The investigation found a 1.05x win/loss ratio at 52% hit rate -- essentially random. Q1 2024 (26% hit rate) is the lower tail of a distribution with no positive skew.
+4. **Win/loss asymmetry:** Under quarterly rebalancing, the win/loss ratio was 1.05x (essentially random). Under the selective sell strategy, it improved to 1.28x — holding winners longer creates meaningful asymmetry. Q1 2024 remains a losing quarter under both strategies.
 
 5. **Momentum gate:** The investigation's most validated component (victims averaged +2.6% vs CB +4.5%, underperforming in 7 of 10 quarters). Q1 2024 was one of the quarters where the gate worked well.
 
-The investigation concluded with zero code changes to the algorithm. These are structural features, not bugs.
+The investigation led to the selective sell strategy (see `docs/STRATEGY.md`) — the single largest improvement to the system's performance.
 
 ---
 

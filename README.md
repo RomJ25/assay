@@ -128,7 +128,7 @@ For development (hot-reload): run `python server.py` in one terminal and `cd web
 
 ## What This Is Not
 
-This is not a prediction engine. It does not forecast prices, estimate fair value for ranking, or use machine learning. The conviction score tells you where cheapness and quality overlap — it does not tell you which stock will outperform the most. In our 12-quarter component investigation (Q1 2023–Q1 2026), individual CB picks beat the universe mean 52% of the time with a win/loss magnitude ratio of 1.05×. The screener's value appears to come from systematic sector tilting toward cheap, quality sectors rather than individual stock selection within sectors. It is a disciplined filter — not an alpha engine.
+This is not a prediction engine. It does not forecast prices, estimate fair value for ranking, or use machine learning. The conviction score tells you where cheapness and quality overlap — it does not tell you which stock will outperform the most. Under the recommended selective sell strategy (hold winners, sell only when fundamentals break), the screener returned +18.7% CAGR over 12 quarters vs +18.2% for SPY — a modest edge that comes from buying cheap+quality stocks and not selling them when they appreciate. See `docs/STRATEGY.md` for the complete investment strategy.
 
 Financials (banks, insurance, REITs) are excluded by default because the EBIT/EV model is structurally wrong for them. Use `--include-financials` to override, understanding that these stocks use a 1/PE fallback for value scoring.
 

@@ -184,7 +184,9 @@ This is not a contradiction with the academic evidence. The gap between +7.1% th
 
 **5. The period tested included the tail end of the worst value decade on record.** The 2021-2024 investigation period overlapped with the aftermath of the 2010s value drawdown. A screener that tilts toward value during a value headwind will underperform.
 
-The honest summary: Assay captures a fraction of the theoretical premium. The gap is expected and explainable. Whether the screener will converge toward the academic premium over longer periods is an open question that only time can answer.
+The honest summary: Assay captures a fraction of the theoretical premium under quarterly rebalancing. The gap is expected and explainable. However, switching from quarterly rebalancing to a selective sell strategy (hold winners, sell only when fundamentals break) improved selection alpha from -1.3% to +1.0% over the same period. The selective sell strategy returned +18.7% CAGR vs the quarterly rebalance's +15.2%. See `docs/STRATEGY.md` for the recommended approach.
+
+Whether the screener will converge further toward the academic premium over longer periods is an open question that only time can answer.
 
 ---
 
