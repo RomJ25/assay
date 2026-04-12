@@ -39,6 +39,8 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV ASSAY_RESULTS=/app/data/results
 ENV ASSAY_CACHE_DB=/app/data/cache.db
+ENV ASSAY_UNIVERSE=sp500
+ENV ASSAY_MODE=server
 
 # Python dependencies (cached layer)
 COPY requirements.txt ./

@@ -9,6 +9,9 @@ services:
       - PYTHONUNBUFFERED=1
       - ASSAY_RESULTS=/app/data/results
       - ASSAY_CACHE_DB=/app/data/cache.db
+      - ASSAY_UNIVERSE=${ASSAY_UNIVERSE:-sp500}
+      - ASSAY_TOP_N=${ASSAY_TOP_N:-30}
+      - ASSAY_MODE=server
       # Daily auto-refresh schedule (24h format, container timezone)
       - ASSAY_SCHEDULE_HOUR=06
       - ASSAY_SCHEDULE_MIN=00
@@ -22,6 +25,22 @@ services:
       timeout: 5s
       retries: 3
       start_period: 120s
+
+  scan:
+    build: .
+    container_name: assay-scan
+    profiles: ["scan"]
+    environment:
+      - TZ=America/New_York
+      - PYTHONUNBUFFERED=1
+      - ASSAY_RESULTS=/app/data/results
+      - ASSAY_CACHE_DB=/app/data/cache.db
+      - ASSAY_UNIVERSE=${ASSAY_UNIVERSE:-sp500}
+      - ASSAY_TOP_N=${ASSAY_TOP_N:-30}
+      - ASSAY_MODE=scan
+    volumes:
+      - assay_data:/app/data
+      - assay_logos:/app/storage/logos
 
 volumes:
   assay_data:
