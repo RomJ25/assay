@@ -138,7 +138,7 @@ Research on alpha decay (Di Mascio & Lines) shows that value stocks generate the
 
 **3. Sell Discipline Matters More Than Sell Method**
 
-Academic research comparing sell strategies found that fundamental stop-losses (sell when financial health declines) and price stop-losses (sell on 20% drawdown) both add approximately +12% value. Having NO sell discipline underperforms both. The key insight: any consistent, pre-committed sell rule beats ad hoc selling. Our rule — sell on HOLD/VT/AVOID — is simple, fundamental-based, and pre-committed.
+Academic research comparing sell strategies found that fundamental stop-losses (sell when financial health declines) and price stop-losses (sell on 20% drawdown) both add approximately +12% value. Having NO sell discipline underperforms both. The key insight: any consistent, pre-committed sell rule beats ad hoc selling. Our rule — sell on VT/AVOID/OVERVALUED, monitor HOLD for one quarter — is simple, fundamental-based, and pre-committed.
 
 ---
 

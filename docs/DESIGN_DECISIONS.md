@@ -251,17 +251,21 @@ These are the core choices that have survived at least one deep audit against pr
 
 ---
 
-### Current S&P 500 list (acknowledged survivorship bias)
+### Survivorship bias handling
 
-**Status:** KEPT · **Last reviewed:** 2026-04-09
+**Status:** MITIGATED · **Last reviewed:** 2026-04-12
 
-**Context.** A historically correct backtest would use the S&P 500 constituent list as it existed on each rebalance date (point-in-time data). Assay uses the current list and acknowledges the survivorship overstatement.
+**Context.** A historically correct backtest would use the S&P 500 constituent list as it existed on each rebalance date (point-in-time data). By default, Assay uses the current list and acknowledges the survivorship overstatement.
 
-**Decision.** Current list is used for all historical quarters. The overstatement is disclosed in `backtest/report.py:31-37` and `METHODOLOGY.md` §12.2.
+**Decision.** Two modes are available:
+- **Default:** Current list replayed backward. The overstatement is disclosed in `backtest/report.py:31-37` and `METHODOLOGY.md` §12.2.
+- **`--survivorship-free`:** Uses point-in-time constituents from `data/sp500_historical.py` for each quarter. Requires historical membership data (currently supported for S&P 500 only).
 
-**Why.** Point-in-time S&P 500 constituent data is not available in any free data source. Academic studies typically get this from CRSP/Compustat (paid). The alternative is to not run the backtest at all, which would eliminate the only empirical validation the engine has.
+Additionally, stocks with a start-of-quarter price but no end-of-quarter price (delisting, acquisition) are assigned a conservative 0% return rather than being silently dropped from the portfolio average.
 
-**Would move us:** Access to free or cheap point-in-time constituent data. This is the single biggest "if we could fix one thing, this" item in the backtest.
+**Why.** Point-in-time data from CRSP/Compustat is paid. The `--survivorship-free` flag provides a best-effort correction using available historical membership data. The 0% delisting assumption is conservative without being catastrophic — appropriate for large-cap universes where most delistings are acquisitions, not bankruptcies.
+
+**Would move us:** Access to free or cheap point-in-time constituent data with delisting returns. This remains the biggest methodological improvement opportunity.
 
 ---
 

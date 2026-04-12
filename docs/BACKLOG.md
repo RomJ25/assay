@@ -17,16 +17,17 @@
 - Quality drop (fundamentals weakened): -3.0% avg — THIS is the real sell signal
 
 **Hypothesis to validate:**
-- SELL only when classification drops to HOLD, VALUE TRAP, or AVOID
-- HOLD everything else (CB, WATCH LIST, QUALITY GROWTH PREMIUM)
+- SELL on VALUE TRAP, AVOID, OVERVALUED, or INSUFFICIENT DATA
+- MONITOR HOLD for one quarter; sell if HOLD persists 2+ consecutive quarters
+- HOLD everything else (CB, WATCH LIST, QUALITY GROWTH PREMIUM, OVERVALUED QUALITY)
 - The sell signal is quality deterioration, not classification change
 - Need 30+ quarters to validate
+- See `docs/STRATEGY.md` for the validated strategy
 
 **What to build:**
 - Portfolio tracking: user marks which stocks they own
-- Classification monitoring: alert when owned stock hits HOLD/VT/AVOID
+- Classification monitoring: alert when owned stock hits VT/AVOID/OVERVALUED
 - "What Changed for my portfolio" view distinct from the general screen diff
-- Backtest the sell strategy: compare "sell on CB exit" vs "sell on HOLD/AVOID only"
 
 ---
 
