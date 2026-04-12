@@ -44,16 +44,29 @@ def compute_value_scores(
                 ev = fd.market_cap + debt - cash
 
         if oi is not None and ev is not None and ev > 0:
-            # Include negative EBIT — it ranks low, not invisible
-            earnings_yields[ticker] = oi / ev
+            ey = oi / ev
+            # ADR currency guard: Yahoo reports financials in local currency
+            # (TWD, CNY, DKK) but price/market_cap in USD, making EBIT/EV
+            # meaningless. PE is currency-neutral (Yahoo converts EPS for ADRs).
+            # If EBIT/EV diverges from 1/PE by >3x, use 1/PE instead.
+            if fd.trailing_pe and fd.trailing_pe > 0 and ey > 0:
+                pe_yield = 1.0 / fd.trailing_pe
+                if ey / pe_yield > 3.0:
+                    ey = pe_yield
+            earnings_yields[ticker] = ey
         elif fd.trailing_pe and fd.trailing_pe > 0:
             # Fallback for financials: banks don't report Operating Income (oi is None),
             # so use 1/PE (net earnings yield) as proxy
             earnings_yields[ticker] = 1.0 / fd.trailing_pe
 
         if fcf is not None and ev is not None and ev > 0:
-            # Include negative FCF — it ranks low, not neutral 50
-            fcf_yields[ticker] = fcf / ev
+            fcf_y = fcf / ev
+            # Same ADR currency guard for FCF yield
+            if fd.trailing_pe and fd.trailing_pe > 0 and fcf_y > 0:
+                pe_yield = 1.0 / fd.trailing_pe
+                if fcf_y / pe_yield > 3.0:
+                    fcf_y = pe_yield * 0.8  # FCF typically ~80% of net income
+            fcf_yields[ticker] = fcf_y
 
     if not earnings_yields:
         return {}
@@ -118,8 +131,28 @@ def get_yield_metrics(fd: FinancialData) -> dict:
         if mktcap > 0:
             ev = mktcap + debt - cash
 
+    ey = None
+    if oi is not None and ev is not None and ev > 0:
+        ey = oi / ev * 100
+        # ADR currency guard (same logic as scoring)
+        if fd.trailing_pe and fd.trailing_pe > 0 and ey > 0:
+            pe_yield_pct = 100.0 / fd.trailing_pe
+            if ey / pe_yield_pct > 3.0:
+                ey = pe_yield_pct
+    elif fd.trailing_pe and fd.trailing_pe > 0:
+        # Fallback for financials without operating income (same as scoring)
+        ey = 100.0 / fd.trailing_pe
+
+    fcf_y = None
+    if fcf is not None and ev is not None and ev > 0:
+        fcf_y = fcf / ev * 100
+        if fd.trailing_pe and fd.trailing_pe > 0 and fcf_y > 0:
+            pe_yield_pct = 100.0 / fd.trailing_pe
+            if fcf_y / pe_yield_pct > 3.0:
+                fcf_y = pe_yield_pct * 0.8
+
     return {
-        "earnings_yield": (oi / ev * 100) if oi is not None and ev is not None and ev > 0 else None,
-        "fcf_yield": (fcf / ev * 100) if fcf is not None and ev is not None and ev > 0 else None,
+        "earnings_yield": ey,
+        "fcf_yield": fcf_y,
         "fcf_yield_mktcap": (fcf / mktcap * 100) if fcf is not None and mktcap is not None and mktcap > 0 else None,
     }

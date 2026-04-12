@@ -15,8 +15,8 @@ SP500_CACHE_TTL_HOURS = 168  # 7 days
 # ── Data Fetching ─────────────────────────────────────────────────────
 FUNDAMENTALS_CACHE_TTL_HOURS = 168  # 7 days (financials update quarterly)
 PRICE_CACHE_TTL_HOURS = 24  # 1 day
-BATCH_SIZE = 85  # tickers per yahooquery batch
-BATCH_DELAY_SECONDS = 5  # pause between batches to avoid 429s
+BATCH_SIZE = int(os.environ.get("ASSAY_BATCH_SIZE", 120))
+BATCH_DELAY_SECONDS = int(os.environ.get("ASSAY_BATCH_DELAY", 3))
 YAHOOQUERY_MAX_WORKERS = 8
 YAHOOQUERY_TIMEOUT = 10
 

@@ -207,6 +207,84 @@ def _fetch_tase_all() -> tuple[list[str], dict[str, dict]]:
     return tickers, info
 
 
+# ── US All (all NYSE + NASDAQ stocks via Twelve Data) ────────────────
+
+
+_TWELVE_DATA_US_EXCHANGES = ["NYSE", "NASDAQ"]
+_TWELVE_DATA_US_TYPES = ["Common Stock", "American Depositary Receipt", "REIT"]
+
+
+def _fetch_us_all() -> tuple[list[str], dict[str, dict]]:
+    """Fetch ALL US-listed stocks from Twelve Data (free API, no key).
+
+    Covers NYSE + NASDAQ (~6,200+ stocks). Includes everything available
+    on Interactive Brokers US: common stocks, ADRs (BABA, TSM, NVO), REITs.
+    SPACs and shells without financials will be filtered by data quality checks.
+    REITs are included in the fetch but excluded by default in scoring
+    (pass --include-financials to keep them).
+    """
+    logger.info("Fetching complete US stock listing from Twelve Data...")
+
+    tickers = []
+    info = {}
+    seen = set()
+
+    for exchange in _TWELVE_DATA_US_EXCHANGES:
+        for stock_type in _TWELVE_DATA_US_TYPES:
+            try:
+                url = f"https://api.twelvedata.com/stocks?exchange={exchange}&type={stock_type}"
+                r = requests.get(url, timeout=15)
+                r.raise_for_status()
+                data = r.json().get("data", [])
+            except Exception as e:
+                logger.warning(f"Twelve Data fetch failed for {exchange}/{stock_type}: {e}")
+                continue
+
+            added = 0
+            for stock in data:
+                symbol = stock.get("symbol", "").strip()
+                name = stock.get("name", "").strip()
+
+                if not symbol:
+                    continue
+
+                # Handle dot-symbols: warrants, units, rights, preferreds → skip
+                # Share classes (BRK.B, BF.A) → convert dot to hyphen for Yahoo
+                if "." in symbol:
+                    suffix = symbol.split(".")[-1]
+                    if suffix in ("WT", "WTA", "UN", "RI", "RT") or ".PR." in symbol:
+                        continue
+                    symbol = symbol.replace(".", "-")
+
+                if symbol in seen:
+                    continue
+                seen.add(symbol)
+
+                tickers.append(symbol)
+                info[symbol] = {
+                    "company_name": name if name else symbol,
+                    "sector": "Unknown",
+                    "sub_industry": "Unknown",
+                }
+                added += 1
+
+            logger.info(f"  {exchange} {stock_type}: {len(data)} raw → {added} added")
+
+    # Enrich S&P 500 members with sector data
+    try:
+        sp500_tickers, sp500_info = _fetch_sp500()
+        for t, i in sp500_info.items():
+            if t in info:
+                info[t]["sector"] = i.get("sector", "Unknown")
+                info[t]["sub_industry"] = i.get("sub_industry", "Unknown")
+                info[t]["company_name"] = i.get("company_name", info[t]["company_name"])
+    except Exception:
+        pass  # S&P 500 enrichment is optional
+
+    logger.info(f"Loaded {len(tickers)} US stocks (NYSE + NASDAQ, all Interactive Brokers US)")
+    return tickers, info
+
+
 # ── Custom Ticker List ─────────────────────────────────────────────────
 
 
@@ -276,6 +354,12 @@ UNIVERSES: dict[str, Universe] = {
         currency="ILS",
         fetch=_fetch_tase_all,
     ),
+    "us_all": Universe(
+        name="us_all",
+        description="All US Stocks (NYSE + NASDAQ, ~6,200)",
+        currency="USD",
+        fetch=_fetch_us_all,
+    ),
 }
 
 
@@ -284,7 +368,9 @@ def get_universe(name: str, custom_tickers: list[str] | None = None) -> Universe
 
     Supports:
         - "sp500" — S&P 500
+        - "us_all" — all NYSE + NASDAQ stocks (~6,200, incl. ADRs + REITs)
         - "tase" — Tel Aviv Stock Exchange TA-125
+        - "tase_all" — all TASE stocks (~500)
         - "sp500+tase" — combined
         - "custom" — requires custom_tickers list
     """
