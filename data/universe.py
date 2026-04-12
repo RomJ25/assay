@@ -55,6 +55,7 @@ def _fetch_tase() -> tuple[list[str], dict[str, dict]]:
     """Fetch TA-125 constituents from Wikipedia.
 
     Returns tickers with .TA suffix for yfinance compatibility.
+    Wikipedia TA-125 table has columns: Name, Symbol, Market Cap, Weight, Sector, Comments
     """
     logger.info("Fetching TA-125 list from Wikipedia...")
 
@@ -63,63 +64,48 @@ def _fetch_tase() -> tuple[list[str], dict[str, dict]]:
         resp.raise_for_status()
         tables = pd.read_html(io.StringIO(resp.text))
 
-        # Find the constituents table (has 'Ticker' or 'Symbol' column)
+        # Table 1 has the constituents (126 rows with Name, Symbol, Market Cap, Weight, Sector)
         df = None
         for table in tables:
-            cols_lower = [c.lower() for c in table.columns]
-            if any("ticker" in c or "symbol" in c for c in cols_lower):
+            if len(table) > 50 and any("symbol" in str(c).lower() for c in table.columns):
                 df = table
                 break
 
         if df is None:
-            # Fallback: use the largest table
-            df = max(tables, key=len)
-            logger.warning("Could not find ticker column, using largest table")
+            logger.warning("Could not find TA-125 table. Using fallback.")
+            return _fetch_tase_fallback()
 
     except Exception as e:
-        logger.warning(f"Wikipedia fetch failed: {e}. Using hardcoded TA-35 list.")
-        return _fetch_tase_fallback()
-
-    # Try to extract tickers and company names
-    ticker_col = None
-    name_col = None
-    sector_col = None
-
-    for col in df.columns:
-        cl = str(col).lower()
-        if "ticker" in cl or "symbol" in cl:
-            ticker_col = col
-        elif "company" in cl or "name" in cl or "security" in cl:
-            name_col = col
-        elif "sector" in cl or "industry" in cl:
-            sector_col = col
-
-    if ticker_col is None:
-        logger.warning("No ticker column found. Using fallback.")
+        logger.warning(f"Wikipedia fetch failed: {e}. Using fallback.")
         return _fetch_tase_fallback()
 
     tickers = []
     info = {}
 
     for _, row in df.iterrows():
-        raw_ticker = str(row[ticker_col]).strip()
-        if not raw_ticker or raw_ticker == "nan":
+        raw_symbol = str(row.get("Symbol", "")).strip()
+        name = str(row.get("Name", "")).strip()
+        sector = str(row.get("Sector", "Unknown")).strip()
+
+        if not raw_symbol or raw_symbol == "nan":
             continue
 
-        # Add .TA suffix if not present
-        ticker = raw_ticker if raw_ticker.endswith(".TA") else f"{raw_ticker}.TA"
+        # Skip dual-listed London tickers (DEDR.L, ISRA.L, RATI.L — don't work as .L.TA)
+        if ".L" in raw_symbol:
+            logger.debug(f"Skipping London dual-listing: {raw_symbol}")
+            continue
 
-        company = str(row[name_col]).strip() if name_col else ticker.replace(".TA", "")
-        sector = str(row[sector_col]).strip() if sector_col else "Unknown"
+        # Add .TA suffix for yfinance
+        ticker = f"{raw_symbol}.TA"
 
         tickers.append(ticker)
         info[ticker] = {
-            "company_name": company,
+            "company_name": name if name != "nan" else raw_symbol,
             "sector": sector if sector != "nan" else "Unknown",
             "sub_industry": "Unknown",
         }
 
-    logger.info(f"Loaded {len(tickers)} TASE constituents")
+    logger.info(f"Loaded {len(tickers)} TASE constituents (skipped London dual-listings)")
     return tickers, info
 
 
@@ -150,6 +136,74 @@ def _fetch_tase_fallback() -> tuple[list[str], dict[str, dict]]:
     tickers = [t for t, _, _ in stocks]
     info = {t: {"company_name": n, "sector": s, "sub_industry": "Unknown"} for t, n, s in stocks}
     logger.info(f"Using fallback TASE list: {len(tickers)} stocks")
+    return tickers, info
+
+
+# ── TASE All (complete TASE listing via Twelve Data) ───────────────────
+
+
+_TWELVE_DATA_TASE_URL = "https://api.twelvedata.com/stocks?exchange=XTAE"
+
+
+def _fetch_tase_all() -> tuple[list[str], dict[str, dict]]:
+    """Fetch ALL TASE-listed stocks from Twelve Data (free API, no key).
+
+    Returns ~500 stocks (vs ~125 for TA-125 index only).
+    Includes small/mid caps available on Interactive Brokers Israel.
+    Stocks without sufficient data will be filtered by Assay's quality checks.
+    """
+    logger.info("Fetching complete TASE listing from Twelve Data...")
+
+    try:
+        r = requests.get(_TWELVE_DATA_TASE_URL, timeout=15)
+        r.raise_for_status()
+        data = r.json().get("data", [])
+    except Exception as e:
+        logger.warning(f"Twelve Data fetch failed: {e}. Falling back to TA-125.")
+        return _fetch_tase()
+
+    tickers = []
+    info = {}
+
+    for stock in data:
+        symbol = stock.get("symbol", "").strip()
+        name = stock.get("name", "").strip()
+        stock_type = stock.get("type", "")
+
+        # Only common stocks and REITs (skip bond series, LPs)
+        if stock_type not in ("Common Stock", "REIT"):
+            continue
+
+        # Skip bond series (symbols like TEVA.B1, ICL.B13)
+        if "." in symbol:
+            continue
+
+        # Skip pure numeric tickers (usually bonds/derivatives)
+        if symbol.isdigit():
+            continue
+
+        if not symbol:
+            continue
+
+        ticker = f"{symbol}.TA"
+        tickers.append(ticker)
+        info[ticker] = {
+            "company_name": name if name else symbol,
+            "sector": "Unknown",  # Twelve Data doesn't provide sector
+            "sub_industry": "Unknown",
+        }
+
+    # Enrich with TA-125 sector data where available
+    try:
+        ta125_tickers, ta125_info = _fetch_tase()
+        for t, i in ta125_info.items():
+            if t in info and i.get("sector", "Unknown") != "Unknown":
+                info[t]["sector"] = i["sector"]
+                info[t]["company_name"] = i["company_name"]
+    except Exception:
+        pass  # TA-125 enrichment is optional
+
+    logger.info(f"Loaded {len(tickers)} TASE stocks (all Interactive Brokers Israel)")
     return tickers, info
 
 
@@ -215,6 +269,12 @@ UNIVERSES: dict[str, Universe] = {
         description="TASE TA-125 (Israel)",
         currency="ILS",
         fetch=_fetch_tase,
+    ),
+    "tase_all": Universe(
+        name="tase_all",
+        description="TASE All Stocks (Israel, ~500)",
+        currency="ILS",
+        fetch=_fetch_tase_all,
     ),
 }
 
