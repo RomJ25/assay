@@ -89,14 +89,22 @@ class DataFetcher:
             batches = [stale[i:i + BATCH_SIZE] for i in range(0, len(stale), BATCH_SIZE)]
             for i, batch in enumerate(batches, 1):
                 logger.info(f"Batch {i}/{len(batches)}: fetching {len(batch)} tickers...")
-                batch_data = self.primary.fetch_financial_data(batch, sp500_info)
+                try:
+                    batch_data = self.primary.fetch_financial_data(batch, sp500_info)
+                except Exception as e:
+                    logger.warning(f"Batch {i} primary provider crashed: {e}")
+                    batch_data = {}
 
                 # If entire batch failed (0 results), retry once after delay.
                 # Yahoo's "Invalid Crumb" error affects the first batch in a session.
                 if len(batch_data) == 0 and len(batch) > 1:
                     logger.warning(f"Batch {i} failed completely — retrying after {BATCH_DELAY_SECONDS}s...")
                     time.sleep(BATCH_DELAY_SECONDS)
-                    batch_data = self.primary.fetch_financial_data(batch, sp500_info)
+                    try:
+                        batch_data = self.primary.fetch_financial_data(batch, sp500_info)
+                    except Exception as e:
+                        logger.warning(f"Batch {i} retry also crashed: {e}")
+                        batch_data = {}
 
                 # Cache successful results (batch commit for performance)
                 cache_items = []

@@ -10,7 +10,7 @@ FROM node:22-slim AS frontend
 WORKDIR /app/web
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.14.0 --activate
 
 # Install dependencies (cached layer)
 COPY web/package.json web/pnpm-lock.yaml ./
@@ -64,8 +64,12 @@ COPY --from=frontend /app/web/dist ./web/dist
 COPY entrypoint.sh ./
 RUN chmod +x entrypoint.sh
 
-# Create data directories
-RUN mkdir -p /app/data/results /app/storage/logos
+# Create non-root user and data directories
+RUN useradd -m -u 1000 appuser && \
+    mkdir -p /app/data/results /app/storage/logos && \
+    chown -R appuser:appuser /app
+
+USER appuser
 
 # Health check (longer start period for initial screen run ~90s)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \

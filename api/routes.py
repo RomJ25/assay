@@ -315,7 +315,10 @@ async def get_logo(ticker: str):
         url = f"https://companiesmarketcap.com/img/company-logos/64/{logo_ticker}.webp"
         r = requests.get(url, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
         if r.status_code == 200 and "image" in r.headers.get("content-type", ""):
-            cache_path.write_bytes(r.content)
+            try:
+                cache_path.write_bytes(r.content)
+            except OSError:
+                logger.warning(f"Failed to cache logo for {ticker_upper}")
             return FastResponse(content=r.content, media_type="image/webp",
                                headers={"Cache-Control": "public, max-age=2592000"})
     except Exception:
@@ -331,7 +334,18 @@ class ScreenConfig(BaseModel):
 
 
 _run_lock = threading.Lock()
+_status_lock = threading.Lock()
 _run_status: dict = {"running": False, "phase": "", "progress": 0}
+
+
+def _get_status() -> dict:
+    with _status_lock:
+        return dict(_run_status)
+
+
+def _set_status(**kwargs: object) -> None:
+    with _status_lock:
+        _run_status.update(kwargs)
 
 
 @router.post("/screen/run")
@@ -340,46 +354,43 @@ async def run_screen(config: ScreenConfig):
     with _run_lock:
         if _run_status["running"]:
             raise HTTPException(status_code=409, detail="Screener is already running.")
-        _run_status["running"] = True
+        _set_status(running=True)
 
     async def event_stream():
-        _run_status["phase"] = "Starting..."
-        _run_status["progress"] = 0
-
-        def send_event(phase: str, progress: int):
-            _run_status["phase"] = phase
-            _run_status["progress"] = progress
+        _set_status(phase="Starting...", progress=0)
 
         def run_in_thread():
             try:
-                send_event("Importing screener...", 5)
+                _set_status(phase="Importing screener...", progress=5)
                 import os
                 from main import run_screener
                 universe = os.environ.get("ASSAY_UNIVERSE", "sp500")
-                send_event(f"Running screener ({universe})...", 10)
+                _set_status(phase=f"Running screener ({universe})...", progress=10)
                 run_screener(
                     include_financials=config.include_financials,
                     sector_relative=config.sector_relative,
                     refresh=config.refresh,
                     universe_name=universe,
                 )
-                send_event("Complete", 100)
+                _set_status(phase="Complete", progress=100)
             except Exception as e:
-                send_event(f"Error: {e}", -1)
+                _set_status(phase=f"Error: {e}", progress=-1)
                 logger.error(f"Screener run failed: {e}", exc_info=True)
             finally:
-                _run_status["running"] = False
+                _set_status(running=False)
 
         thread = threading.Thread(target=run_in_thread, daemon=True)
         thread.start()
 
         # Stream progress events
         while thread.is_alive():
-            yield f"data: {json.dumps({'phase': _run_status['phase'], 'progress': _run_status['progress']})}\n\n"
+            status = _get_status()
+            yield f"data: {json.dumps({'phase': status['phase'], 'progress': status['progress']})}\n\n"
             await asyncio.sleep(1)
 
         # Final event
-        yield f"data: {json.dumps({'phase': _run_status['phase'], 'progress': _run_status['progress'], 'done': True})}\n\n"
+        status = _get_status()
+        yield f"data: {json.dumps({'phase': status['phase'], 'progress': status['progress'], 'done': True})}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
@@ -387,7 +398,7 @@ async def run_screen(config: ScreenConfig):
 @router.get("/screen/status")
 async def screen_status():
     """Check if the screener is currently running."""
-    return _run_status
+    return _get_status()
 
 
 def _parse_num(val: str) -> str | float | int | None:

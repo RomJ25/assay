@@ -18,10 +18,7 @@
     "vite": "^8.0.4"
   },
   "dependencies": {
-    "@tanstack/react-table": "^8.21.3",
-    "framer-motion": "^12.38.0",
     "geist": "^1.7.0",
-    "lucide-react": "^1.8.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.0",

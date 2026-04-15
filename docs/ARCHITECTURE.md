@@ -111,8 +111,8 @@ Parses Wikipedia's "List of S&P 500 companies" table. Cached for 7 days (index c
     │                                                      │
     │   Ticker List ──►  1. Check cache (by ticker)        │
     │                    2. Identify stale entries          │
-    │                    3. Batch-fetch via yahooquery ───► │─── 85 tickers/batch
-    │                    4. Fallback to yfinance            │    5s between batches
+    │                    3. Batch-fetch via yahooquery ───► │─── 120 tickers/batch
+    │                    4. Fallback to yfinance            │    3s between batches
     │                    5. Merge fresh prices              │    8 parallel workers
     │                    6. Update cache                    │
     └──────────────────────────────────────────────────────┘

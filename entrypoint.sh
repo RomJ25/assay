@@ -97,6 +97,6 @@ echo "$(date '+%Y-%m-%d %H:%M:%S') Daily refresh scheduled at ${SCHEDULE_HOUR}:$
     done
 ) &
 
-# Start web server
+# Start web server (single worker — required for in-process screener state)
 echo "$(date '+%Y-%m-%d %H:%M:%S') Starting web server on port 8000..."
 exec uvicorn server:app --host 0.0.0.0 --port 8000

@@ -99,6 +99,32 @@ python server.py
 
 For development (hot-reload): run `python server.py` in one terminal and `cd web && pnpm dev` in another (Vite proxies API calls to port 8000).
 
+## Docker
+
+```bash
+# Start server (builds frontend, runs initial screen, starts scheduler + API)
+docker compose up -d
+
+# Run a one-off scan without starting the server
+docker compose run --rm scan
+
+# Custom universe
+ASSAY_UNIVERSE=russell1000 docker compose up -d
+```
+
+The container runs as a non-root user (`appuser`, UID 1000) with `init: true` for proper signal handling. Resource limits default to 2GB RAM / 2 CPUs.
+
+| Environment Variable | Default | Description |
+|---|---|---|
+| `ASSAY_UNIVERSE` | sp500 | Stock universe |
+| `ASSAY_TOP_N` | 30 | Number of results |
+| `ASSAY_SCHEDULE_HOUR` | 06 | Daily refresh hour (container TZ) |
+| `ASSAY_SCHEDULE_MIN` | 00 | Daily refresh minute |
+| `ASSAY_CORS_ORIGIN` | *(none)* | Additional CORS origin for production |
+| `ASSAY_MODE` | server | `server` or `scan` |
+
+Data persists in Docker volumes (`assay_data`, `assay_logos`).
+
 ## CLI Reference
 
 | Flag | Description |

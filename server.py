@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 
 import uvicorn
@@ -21,12 +22,15 @@ app = FastAPI(title="Assay", description="Value + Quality Stock Screener")
 # Gzip compression for large JSON responses (~1MB → ~100KB)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# CORS for Vite dev server (port 5173)
+# CORS — allow Vite dev server + any configured production origin
+_cors_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+if _extra := os.environ.get("ASSAY_CORS_ORIGIN"):
+    _cors_origins.append(_extra)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_cors_origins,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type"],
 )
 
 # Health check (must be before static mount)
@@ -52,8 +56,12 @@ if FRONTEND_DIR.exists():
     async def spa_fallback(path: str):
         file_path = (FRONTEND_DIR / path).resolve()
         # Prevent path traversal — file must be within FRONTEND_DIR
-        if file_path.is_file() and str(file_path).startswith(str(FRONTEND_DIR.resolve())):
-            return FileResponse(file_path)
+        try:
+            file_path.relative_to(FRONTEND_DIR.resolve())
+            if file_path.is_file():
+                return FileResponse(file_path)
+        except ValueError:
+            pass
         return FileResponse(FRONTEND_DIR / "index.html")
 
     logger.info(f"Serving frontend from {FRONTEND_DIR}")
