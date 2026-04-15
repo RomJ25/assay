@@ -247,10 +247,16 @@ def main():
                         help="Years to backtest (default: 4)")
     parser.add_argument("--tcost-bps", type=int, default=TCOST_BPS_ROUNDTRIP,
                         help=f"Transaction cost in basis points per rebalance (default: {TCOST_BPS_ROUNDTRIP}, suggest 10)")
+    parser.add_argument("--survivorship-naive", action="store_true",
+                        help="Use current constituent list for all quarters (introduces survivorship bias)")
     parser.add_argument("--survivorship-free", action="store_true",
-                        help="Use point-in-time S&P 500 constituents (eliminates survivorship bias)")
+                        help="(default) Use point-in-time constituents — kept for backward compat")
+    parser.add_argument("--min-picks", type=int, default=0,
+                        help="Minimum portfolio size; backfill from WATCH LIST if CB < this (0 = CB only)")
+    parser.add_argument("--semiannual", action="store_true",
+                        help="Rebalance every 6 months instead of quarterly (lower turnover)")
     parser.add_argument("--universe", default="sp500",
-                        help="Stock universe: sp500, tase, sp500+tase, custom (default: sp500)")
+                        help="Stock universe: sp500, russell1000, us_all, tase, sp500+tase, custom (default: sp500)")
     parser.add_argument("--tickers", type=str, default=None,
                         help="Custom ticker list (comma-separated, e.g., AAPL,MSFT,TEVA.TA)")
     args = parser.parse_args()
@@ -258,12 +264,16 @@ def main():
     if args.backtest:
         setup_logging(args.verbose)
         from backtest.engine import run_backtest
+        # Survivorship-free is now default; --survivorship-naive opts out
+        use_survivorship_free = not args.survivorship_naive
         run_backtest(years=args.backtest_years,
                      include_financials=args.include_financials,
                      verbose=args.verbose,
                      tcost_bps=args.tcost_bps,
-                     survivorship_free=args.survivorship_free,
-                     universe_name=args.universe)
+                     survivorship_free=use_survivorship_free,
+                     universe_name=args.universe,
+                     min_picks=args.min_picks,
+                     semiannual=args.semiannual)
     else:
         custom = args.tickers.split(",") if args.tickers else None
         universe = "custom" if custom else args.universe

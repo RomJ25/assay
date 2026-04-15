@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 _INCOME_FIELDS = [
     "TotalRevenue", "GrossProfit", "OperatingIncome", "NetIncome",
     "DilutedEPS", "EBITDA", "TaxProvision", "PretaxIncome", "InterestExpense",
+    "ResearchAndDevelopment",
 ]
 _BALANCE_FIELDS = [
     "TotalAssets", "CurrentAssets", "CurrentLiabilities", "TotalDebt",
@@ -220,6 +221,7 @@ class YahooQueryProvider(DataProvider):
             interest_expense=_col_list(inc, "InterestExpense"),
             tax_provision=_col_list(inc, "TaxProvision"),
             pretax_income=_col_list(inc, "PretaxIncome"),
+            research_development=_col_list(inc, "ResearchAndDevelopment"),
 
             total_assets=_col_list(bal, "TotalAssets", 2),
             current_assets=_col_list(bal, "CurrentAssets", 2),

@@ -119,6 +119,7 @@ def build_snapshot(
         interest_expense=_extract_field(income_rows, "InterestExpense", 4),
         tax_provision=_extract_field(income_rows, "TaxProvision", 4),
         pretax_income=_extract_field(income_rows, "PretaxIncome", 4),
+        research_development=_extract_field(income_rows, "ResearchAndDevelopment", 4),
 
         # Balance sheet
         total_assets=_extract_field(balance_rows, "TotalAssets", 2),

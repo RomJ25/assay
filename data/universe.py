@@ -13,12 +13,17 @@ Usage:
 from __future__ import annotations
 
 import io
+import json
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, UTC
+from pathlib import Path
 from typing import Callable
 
 import pandas as pd
 import requests
+
+from config import CACHE_DB_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -285,6 +290,135 @@ def _fetch_us_all() -> tuple[list[str], dict[str, dict]]:
     return tickers, info
 
 
+# ── Russell 1000 proxy (top ~1000 US stocks by market cap) ────────────
+
+
+_MIN_MARKET_CAP_R1000 = 3_000_000_000  # $3B floor
+_R1000_CACHE_TTL_HOURS = 168  # 7 days — market caps don't shift enough to matter weekly
+
+
+def _get_r1000_cache() -> tuple[list[str], dict[str, dict]] | None:
+    """Return cached R1000 qualified tickers if fresh, else None."""
+    import sqlite3
+    db_path = CACHE_DB_PATH
+    if not db_path.exists():
+        return None
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.execute("""CREATE TABLE IF NOT EXISTS r1000_cache (
+            data_json TEXT NOT NULL,
+            fetched_at TEXT NOT NULL
+        )""")
+        cutoff = (datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=_R1000_CACHE_TTL_HOURS)).isoformat()
+        row = conn.execute("SELECT data_json FROM r1000_cache WHERE fetched_at > ?", (cutoff,)).fetchone()
+        conn.close()
+        if row is None:
+            return None
+        cached = json.loads(row[0])
+        return cached["tickers"], cached["info"]
+    except Exception as e:
+        logger.debug(f"R1000 cache read failed: {e}")
+        return None
+
+
+def _set_r1000_cache(tickers: list[str], info: dict[str, dict]):
+    """Cache R1000 qualified tickers."""
+    import sqlite3
+    db_path = CACHE_DB_PATH
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.execute("""CREATE TABLE IF NOT EXISTS r1000_cache (
+            data_json TEXT NOT NULL,
+            fetched_at TEXT NOT NULL
+        )""")
+        conn.execute("DELETE FROM r1000_cache")
+        now = datetime.now(UTC).replace(tzinfo=None).isoformat()
+        conn.execute("INSERT INTO r1000_cache (data_json, fetched_at) VALUES (?, ?)",
+                     (json.dumps({"tickers": tickers, "info": info}), now))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.debug(f"R1000 cache write failed: {e}")
+
+
+def _fetch_russell1000() -> tuple[list[str], dict[str, dict]]:
+    """Fetch top ~1000 US stocks by market cap as a Russell 1000 proxy.
+
+    Uses the us_all listing, then filters by market cap at fetch time.
+    Results are cached for 7 days since market caps don't shift enough
+    to change the ~1000 qualification set week-to-week.
+
+    Academic rationale: factor premiums are 2-3x stronger in mid-cap
+    (Fama-French 2012). Adding ~500 mid-caps beyond S&P 500 accesses
+    where value+quality signals are more effective, while keeping
+    data quality high and transaction costs low.
+    """
+    # Check cache first
+    cached = _get_r1000_cache()
+    if cached is not None:
+        tickers, info = cached
+        logger.info(f"Russell 1000 proxy: {len(tickers)} stocks (from cache)")
+        return tickers, info
+
+    logger.info("Fetching Russell 1000 proxy (US stocks with market cap > $3B)...")
+
+    # Start with all US stocks
+    all_tickers, all_info = _fetch_us_all()
+
+    # S&P 500 members always qualify (all > $3B) — skip market cap check for them
+    sp500_tickers = set()
+    try:
+        sp_tickers, _ = _fetch_sp500()
+        sp500_tickers = set(sp_tickers)
+    except Exception:
+        pass
+
+    from yahooquery import Ticker as YQTicker
+
+    qualified_tickers = []
+    qualified_info = {}
+
+    # Add S&P 500 members directly
+    for t in all_tickers:
+        if t in sp500_tickers:
+            qualified_tickers.append(t)
+            qualified_info[t] = all_info.get(t, {
+                "company_name": t, "sector": "Unknown", "sub_industry": "Unknown",
+            })
+
+    # Only check market cap for non-S&P 500 tickers
+    non_sp500 = [t for t in all_tickers if t not in sp500_tickers]
+    batch_size = 200
+
+    for i in range(0, len(non_sp500), batch_size):
+        batch = non_sp500[i:i + batch_size]
+        try:
+            t = YQTicker(batch, asynchronous=True, max_workers=8, progress=False, timeout=10)
+            price_data = t.price
+            if isinstance(price_data, dict):
+                for ticker, data in price_data.items():
+                    if not isinstance(data, dict):
+                        continue
+                    mcap = data.get("marketCap")
+                    if mcap and mcap >= _MIN_MARKET_CAP_R1000:
+                        qualified_tickers.append(ticker)
+                        qualified_info[ticker] = all_info.get(ticker, {
+                            "company_name": ticker,
+                            "sector": "Unknown",
+                            "sub_industry": "Unknown",
+                        })
+        except Exception as e:
+            logger.warning(f"Market cap batch {i // batch_size + 1} failed: {e}")
+
+    logger.info(f"Russell 1000 proxy: {len(qualified_tickers)} stocks with market cap >= ${_MIN_MARKET_CAP_R1000 / 1e9:.0f}B")
+
+    # Cache for next time
+    _set_r1000_cache(qualified_tickers, qualified_info)
+
+    return qualified_tickers, qualified_info
+
+
 # ── Custom Ticker List ─────────────────────────────────────────────────
 
 
@@ -334,6 +468,67 @@ def _sp500_historical():
     return get_sp500_at_date
 
 
+def _r1000_historical():
+    """Return a callable that approximates R1000 membership at a given date.
+
+    Uses the backtest cache to check historical market cap (price × shares)
+    for each ticker. Stocks with market cap >= $3B at the rebalance date
+    are included. This is an approximation — not actual index membership —
+    but eliminates the worst survivorship bias (including stocks that only
+    became large-cap later).
+    """
+    from backtest.cache import HistoricalCache
+
+    _cache = None
+
+    def get_r1000_at_date(as_of_date) -> set[str]:
+        nonlocal _cache
+        if _cache is None:
+            _cache = HistoricalCache()
+
+        date_str = as_of_date.isoformat() if hasattr(as_of_date, 'isoformat') else str(as_of_date)
+
+        # Get all tickers with cached financials
+        all_tickers = _cache.get_all_cached_financial_tickers()
+        qualified = set()
+
+        for ticker in all_tickers:
+            # Get price at this date
+            price_data = _cache.get_price(ticker, date_str)
+            if price_data is None:
+                continue
+            close_price, _ = price_data
+            if close_price <= 0:
+                continue
+
+            # Get shares from cached financials
+            raw = _cache.get_financials(ticker)
+            if raw is None:
+                continue
+
+            # Extract shares from balance sheet
+            shares = None
+            for row in raw.get("balance", []):
+                s = row.get("OrdinarySharesNumber")
+                if s is not None:
+                    try:
+                        shares = float(s)
+                        break
+                    except (TypeError, ValueError):
+                        continue
+
+            if shares is None or shares <= 0:
+                continue
+
+            market_cap = close_price * shares
+            if market_cap >= _MIN_MARKET_CAP_R1000:
+                qualified.add(ticker)
+
+        return qualified
+
+    return get_r1000_at_date
+
+
 UNIVERSES: dict[str, Universe] = {
     "sp500": Universe(
         name="sp500",
@@ -359,6 +554,13 @@ UNIVERSES: dict[str, Universe] = {
         description="All US Stocks (NYSE + NASDAQ, ~6,200)",
         currency="USD",
         fetch=_fetch_us_all,
+    ),
+    "russell1000": Universe(
+        name="russell1000",
+        description="Russell 1000 proxy (US large+mid cap, ~1,000)",
+        currency="USD",
+        fetch=_fetch_russell1000,
+        historical=None,  # set lazily via _r1000_historical()
     ),
 }
 
@@ -405,8 +607,10 @@ def get_universe(name: str, custom_tickers: list[str] | None = None) -> Universe
 
     universe = UNIVERSES[name]
 
-    # Lazily set historical for sp500
+    # Lazily set historical callables
     if name == "sp500" and universe.historical is None:
         universe.historical = _sp500_historical()
+    if name == "russell1000" and universe.historical is None:
+        universe.historical = _r1000_historical()
 
     return universe

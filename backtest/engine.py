@@ -14,6 +14,7 @@ from config import (
     BACKTEST_DEFAULT_YEARS,
     BACKTEST_FILING_LAG_DAYS,
     BACKTEST_QUARTERS,
+    MIN_PORTFOLIO_SIZE,
     TCOST_BPS_ROUNDTRIP,
 )
 from backtest.cache import HistoricalCache
@@ -78,6 +79,8 @@ class BacktestResult:
     top_n_metrics: dict[int, BacktestMetrics] | None = None
     selective_sell_metrics: BacktestMetrics | None = None
     selective_sell_returns: list[dict] | None = None
+    survivorship_free: bool = False
+    universe_description: str = ""
 
 
 _include_stock = include_stock  # local alias
@@ -105,8 +108,10 @@ def run_backtest(
     include_financials: bool = False,
     verbose: bool = False,
     tcost_bps: int = TCOST_BPS_ROUNDTRIP,
-    survivorship_free: bool = False,
+    survivorship_free: bool = True,
     universe_name: str = "sp500",
+    min_picks: int = MIN_PORTFOLIO_SIZE,
+    semiannual: bool = False,
 ) -> BacktestResult:
     """Run the full backtest pipeline.
 
@@ -114,27 +119,43 @@ def run_backtest(
         survivorship_free: If True, use point-in-time constituents
             for each quarter instead of the current list. Only supported
             for sp500 (requires historical membership data).
+        min_picks: Minimum portfolio size. When CB has fewer picks,
+            top WATCH LIST stocks (by conviction) backfill to reach this.
+        semiannual: If True, rebalance every 6 months instead of quarterly.
         universe_name: Which universe to backtest (sp500, tase, etc.)
     """
     start_time = time.time()
 
     from data.universe import get_universe
-    universe = get_universe(universe_name)
+    universe_obj = get_universe(universe_name)
 
-    bias_label = "survivorship-free" if survivorship_free else "current list"
-    console.print(f"\n[bold blue]Assay Backtest — {universe.description} Value + Quality[/bold blue]")
+    has_historical = universe_obj.historical is not None or universe_name == "sp500"
+    effective_surv_free = survivorship_free and has_historical
+    if survivorship_free and not has_historical:
+        bias_label = "NO survivorship-free data available — using current list"
+    elif effective_surv_free:
+        bias_label = "survivorship-free (point-in-time constituents)"
+    else:
+        bias_label = "current list (survivorship-biased)"
+    console.print(f"\n[bold blue]Assay Backtest — {universe_obj.description} Value + Quality[/bold blue]")
     console.print(f"Period: {years} years | Rebalancing: quarterly | Filing lag: {BACKTEST_FILING_LAG_DAYS} days")
-    console.print(f"Universe: {universe.description} ({bias_label})\n")
+    console.print(f"Universe: {universe_obj.description} ({bias_label})\n")
 
     # Step 1: Generate rebalance dates
     rebalance_dates = _generate_rebalance_dates(years)
-    console.print(f"Rebalance dates: {len(rebalance_dates)} quarters ({rebalance_dates[0]} to {rebalance_dates[-1]})")
+    if semiannual:
+        # Keep only March and September (2 per year instead of 4)
+        rebalance_dates = [d for d in rebalance_dates if d.month in (3, 9)]
+        freq_label = "semi-annual"
+    else:
+        freq_label = "quarterly"
+    console.print(f"Rebalance dates: {len(rebalance_dates)} periods, {freq_label} ({rebalance_dates[0]} to {rebalance_dates[-1]})")
 
     # Step 2: Get stock universe
-    console.print(f"[dim]Fetching {universe.description} list...[/dim]")
-    tickers, info = universe.fetch()
+    console.print(f"[dim]Fetching {universe_obj.description} list...[/dim]")
+    tickers, info = universe_obj.fetch()
 
-    if survivorship_free and universe.historical:
+    if survivorship_free and universe_obj.historical:
         from data.sp500_historical import get_all_historical_tickers
 
         # Get ALL tickers that were ever in the universe during the backtest period
@@ -145,8 +166,8 @@ def run_backtest(
         for t in tickers:
             if t not in info:
                 info[t] = {"company_name": t, "sector": "Unknown", "sub_industry": "Unknown"}
-    elif survivorship_free and not universe.historical:
-        console.print(f"[yellow]Survivorship-free not available for {universe.description} — using current list[/yellow]")
+    elif survivorship_free and not universe_obj.historical:
+        console.print(f"[yellow]⚠ Survivorship-free not available for {universe_obj.description} — using current list (results may be biased)[/yellow]")
 
     sp500_entries = [
         {"ticker": t, "company_name": v.get("company_name", t), "sector": v.get("sector", "Unknown"), "sub_industry": v.get("sub_industry", "Unknown")}
@@ -180,8 +201,8 @@ def run_backtest(
 
             for rebal_date in rebalance_dates:
                 # Point-in-time universe if available
-                if survivorship_free and universe.historical:
-                    pit_tickers = universe.historical(rebal_date)
+                if survivorship_free and universe_obj.historical:
+                    pit_tickers = universe_obj.historical(rebal_date)
                     pit_info = {t: info.get(t, {"company_name": t, "sector": "Unknown", "sub_industry": "Unknown"}) for t in pit_tickers}
                 else:
                     pit_tickers = tickers
@@ -190,17 +211,28 @@ def run_backtest(
                 # Use full replay to get ALL classifications (for selective sell)
                 full = _screen_quarter_full(rebal_date, pit_tickers, pit_info, cache, not include_financials, verbose)
                 if full is not None:
-                    # Extract CB picks for backward-compatible quarterly rebalance
-                    picks = [(sd.conviction_score, sd.ticker) for sd in full.stock_details
-                             if sd.final_classification == "CONVICTION BUY"]
-                    picks.sort(reverse=True)
-                    sorted_tickers = [t for _, t in picks]
-                    universe = [sd.ticker for sd in full.stock_details]
+                    # Extract CB picks for quarterly rebalance
+                    cb_picks = [(sd.conviction_score, sd.ticker) for sd in full.stock_details
+                                if sd.final_classification == "CONVICTION BUY"]
+                    cb_picks.sort(reverse=True)
+                    sorted_tickers = [t for _, t in cb_picks]
 
+                    # Backfill from WATCH LIST if CB count < min_picks
+                    if min_picks > 0 and len(sorted_tickers) < min_picks:
+                        wl_picks = [(sd.conviction_score, sd.ticker) for sd in full.stock_details
+                                    if sd.final_classification == "WATCH LIST"]
+                        wl_picks.sort(reverse=True)
+                        needed = min_picks - len(sorted_tickers)
+                        backfill = [t for _, t in wl_picks[:needed]]
+                        sorted_tickers.extend(backfill)
+
+                    universe_tickers = [sd.ticker for sd in full.stock_details]
+
+                    pick_set = set(sorted_tickers)
                     qr = QuarterResult(
                         date=rebal_date,
                         picks=sorted_tickers,
-                        universe=universe,
+                        universe=universe_tickers,
                         num_screened=full.num_screened,
                         classifications=full.classifications,
                         pick_details=[{
@@ -208,7 +240,7 @@ def run_backtest(
                             "value_score": sd.value_score, "quality_score": sd.quality_score,
                             "piotroski_f": sd.piotroski_f,
                             "momentum_pct": sd.momentum_pct if sd.momentum_pct is not None else 0.0,
-                        } for sd in full.stock_details if sd.final_classification == "CONVICTION BUY"],
+                        } for sd in full.stock_details if sd.ticker in pick_set],
                     )
                     # Sort pick_details by conviction
                     ticker_order = {t: i for i, t in enumerate(sorted_tickers)}
@@ -216,7 +248,7 @@ def run_backtest(
 
                     quarter_results.append(qr)
                     quarterly_picks.append((rebal_date, sorted_tickers))
-                    quarterly_universe.append((rebal_date, universe))
+                    quarterly_universe.append((rebal_date, universe_tickers))
                     quarterly_classifications.append((rebal_date, {
                         sd.ticker: sd.final_classification for sd in full.stock_details
                     }))
@@ -258,6 +290,30 @@ def run_backtest(
             )
             top_n_metrics[n] = m
 
+        # Step 5d: Walk-forward validation of selective sell
+        # Test whether selective sell beats quarterly rebalance out-of-sample
+        console.print("[dim]Walk-forward validation...[/dim]")
+        wf_results = _walk_forward_validate(
+            quarterly_picks, quarterly_classifications, quarterly_universe,
+            cache, rebalance_dates, tcost_bps,
+        )
+        if wf_results:
+            wins = sum(1 for r in wf_results if r["ss_alpha"] > r["qr_alpha"])
+            console.print(f"\n[bold]WALK-FORWARD VALIDATION (selective sell vs quarterly rebalance)[/bold]")
+            console.print(f"  [dim]Each split trains on first N quarters, tests on remainder.[/dim]")
+            for r in wf_results:
+                ss_better = r["ss_alpha"] > r["qr_alpha"]
+                style = "green" if ss_better else "red"
+                console.print(
+                    f"  Train {r['train_q']:2d}q, Test {r['test_q']:2d}q: "
+                    f"QR alpha {r['qr_alpha']*100:+.1f}%, "
+                    f"SS alpha {r['ss_alpha']*100:+.1f}%, "
+                    f"[{style}]SS {'wins' if ss_better else 'loses'}[/{style}]"
+                )
+            console.print(f"  Selective sell wins {wins}/{len(wf_results)} test windows")
+            if wins < len(wf_results) / 2:
+                console.print(f"  [yellow]⚠ Selective sell does NOT consistently beat quarterly rebalance out-of-sample[/yellow]")
+
         result = BacktestResult(
             quarters=quarter_results,
             portfolio_returns=returns,
@@ -267,6 +323,8 @@ def run_backtest(
             top_n_metrics=top_n_metrics,
             selective_sell_metrics=ss_metrics,
             selective_sell_returns=ss_returns,
+            survivorship_free=survivorship_free and universe_obj.historical is not None,
+            universe_description=universe_obj.description,
         )
 
         elapsed = time.time() - start_time
@@ -279,6 +337,60 @@ def run_backtest(
         return result
     finally:
         cache.close()
+
+
+def _walk_forward_validate(
+    quarterly_picks: list[tuple[date, list[str]]],
+    quarterly_classifications: list[tuple[date, dict[str, str]]],
+    quarterly_universe: list[tuple[date, list[str]]],
+    cache: HistoricalCache,
+    rebalance_dates: list[date],
+    tcost_bps: int,
+    min_train: int = 6,
+    min_test: int = 4,
+) -> list[dict]:
+    """Walk-forward validation: does selective sell beat quarterly rebalance out-of-sample?
+
+    Splits the data at multiple points. For each split, runs both strategies
+    on the TEST portion only and compares selection alpha.
+
+    The selective sell rules are fixed (not tuned per window), so this tests
+    whether the structural advantage (holding winners) persists out-of-sample.
+    """
+    n = len(quarterly_picks)
+    if n < min_train + min_test:
+        return []
+
+    results = []
+    # Test at 3 split points to avoid single-split dependence
+    for train_size in range(min_train, n - min_test + 1, max(1, (n - min_train - min_test) // 2)):
+        test_picks = quarterly_picks[train_size:]
+        test_class = quarterly_classifications[train_size:]
+        test_univ = quarterly_universe[train_size:]
+
+        if len(test_picks) < min_test:
+            continue
+
+        # Quarterly rebalance on test period
+        _, qr_metrics = simulate_portfolio(
+            test_picks, test_univ, cache, rebalance_dates, tcost_bps=tcost_bps,
+        )
+
+        # Selective sell on test period (portfolio starts fresh — no carryover from train)
+        _, ss_metrics = simulate_selective_sell(
+            test_class, test_univ, cache, rebalance_dates, tcost_bps=tcost_bps,
+        )
+
+        results.append({
+            "train_q": train_size,
+            "test_q": len(test_picks),
+            "qr_alpha": qr_metrics.selection_alpha,
+            "ss_alpha": ss_metrics.selection_alpha,
+            "qr_cagr": qr_metrics.cagr,
+            "ss_cagr": ss_metrics.cagr,
+        })
+
+    return results
 
 
 def _compute_backtest_momentum(

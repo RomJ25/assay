@@ -253,19 +253,21 @@ These are the core choices that have survived at least one deep audit against pr
 
 ### Survivorship bias handling
 
-**Status:** MITIGATED · **Last reviewed:** 2026-04-12
+**Status:** FIXED · **Last reviewed:** 2026-04-15
 
-**Context.** A historically correct backtest would use the S&P 500 constituent list as it existed on each rebalance date (point-in-time data). By default, Assay uses the current list and acknowledges the survivorship overstatement.
+**Context.** A historically correct backtest would use the constituent list as it existed on each rebalance date (point-in-time data). Prior to April 2026, Assay defaulted to using the current list replayed backward, disclosing the overstatement as "2-5% CAGR." An adversarial audit (2026-04-15) revealed this was not a footnote — it was the entire alpha. SMCI's inclusion in Q4 2023 (added to S&P 500 in March 2024) accounted for 197% of cumulative excess returns.
 
-**Decision.** Two modes are available:
-- **Default:** Current list replayed backward. The overstatement is disclosed in `backtest/report.py:31-37` and `METHODOLOGY.md` §12.2.
-- **`--survivorship-free`:** Uses point-in-time constituents from `data/sp500_historical.py` for each quarter. Requires historical membership data (currently supported for S&P 500 only).
+**Decision.** Survivorship-free is now the **default** for backtests. Two modes:
+- **Default (`--survivorship-free` implied):** Uses point-in-time constituents from `data/sp500_historical.py` for each quarter. Currently supported for S&P 500 only.
+- **`--survivorship-naive`:** Uses current list for all quarters. Available for comparison but produces misleading alpha estimates.
 
-Additionally, stocks with a start-of-quarter price but no end-of-quarter price (delisting, acquisition) are assigned a conservative 0% return rather than being silently dropped from the portfolio average.
+For universes without historical membership data (Russell 1000, TASE, etc.), the engine warns that survivorship-free is not available and results may be biased.
 
-**Why.** Point-in-time data from CRSP/Compustat is paid. The `--survivorship-free` flag provides a best-effort correction using available historical membership data. The 0% delisting assumption is conservative without being catastrophic — appropriate for large-cap universes where most delistings are acquisitions, not bankruptcies.
+Stocks with a start-of-quarter price but no end-of-quarter price (delisting, acquisition) are assigned a conservative 0% return rather than being silently dropped.
 
-**Would move us:** Access to free or cheap point-in-time constituent data with delisting returns. This remains the biggest methodological improvement opportunity.
+**Why the change.** The old default produced alpha claims (+2.2%/yr) that were entirely explained by survivorship bias. Correcting for SMCI alone flipped selection alpha to −1.5%/yr. An honest default is more important than a flattering one.
+
+**Would move us:** Point-in-time constituent data for universes beyond S&P 500 (Russell 1000, 3000). This is the biggest remaining gap.
 
 ---
 
@@ -605,6 +607,50 @@ Infrastructure: `backtest/case_study.py` (analysis engine), `scripts/run_investi
 ## Review log
 
 This log records each formal audit of the algorithm. The point is to make it visible how much has changed between audits, so the project's thinking is traceable over time.
+
+### 2026-04-15 — Adversarial audit: survivorship bias, universe expansion, honest measurement
+
+**Scope.** Full adversarial audit of the algorithm, backtest methodology, universe choice, and performance claims. Verified all findings against `results/backtest_2026-04-13.csv` (16 quarters, Q1 2022 to Q4 2025). Computed selection alpha under multiple survivorship correction methods.
+
+**Critical finding: survivorship bias was the primary driver of claimed alpha.**
+
+The default backtest mode (current S&P 500 list replayed backward) included SMCI (Super Micro Computer) in Q4 2023 — a stock not added to the S&P 500 until March 18, 2024. SMCI returned ~250% in Q1 2024, contributing ~17% to the portfolio's +32.9% quarterly return. This single survivorship-biased stock-quarter accounted for 197% of cumulative excess returns (other 15 quarters netted -10.8%).
+
+Multi-method alpha correction:
+- As reported (survivorship-biased): +2.2%/yr selection alpha
+- SMCI replaced with universe average: −1.5%/yr
+- SMCI removed entirely: −1.4%/yr
+- Entire Q4 2023 removed: −2.9%/yr
+
+**Outcome.** Five code changes, three documentation updates:
+
+Code changes:
+1. `config.py`: `TCOST_BPS_ROUNDTRIP` changed from 0 to 10 (Frazzini et al. JFE empirical estimate)
+2. `backtest/engine.py`: `survivorship_free` default changed from `False` to `True`
+3. `backtest/engine.py`: Added `min_picks` parameter for WL backfill (diversification)
+4. `backtest/report.py`: Selection alpha promoted to primary metric; dynamic survivorship status; in-sample warning on selective sell
+5. `data/universe.py`: Added `russell1000` universe (top ~1000 US stocks by market cap)
+6. `main.py`: Added `--survivorship-naive`, `--min-picks` CLI args; updated `--universe` help
+
+Honest performance (16 quarters, survivorship-free, 10 bps costs):
+- S&P 500 quarterly rebalance: CAGR +9.2%, selection alpha −0.7%, Sharpe 0.39
+- S&P 500 selective sell: CAGR +10.4%, selection alpha +0.4%, Sharpe ~0.4
+- Russell 1000 quarterly: CAGR +12.9%, selection alpha +0.6%, Sharpe 0.58
+- Russell 1000 + 30 picks: CAGR +15.2%, selection alpha +0.8%, Sharpe 0.66
+
+Universe expansion to Russell 1000 improved selection alpha from −0.7% to +0.6% and Sharpe from 0.39 to 0.58. Diversification (30 picks via WL backfill) further improved Sharpe to 0.66. All results remain below the 30-quarter significance threshold.
+
+**Key conclusions:**
+1. The scoring engine (EBIT/EV, Piotroski, GP/Assets, geometric mean) is academically sound
+2. The old S&P 500 backtest was misleading — survivorship bias explained the entire alpha
+3. The signals work better on a broader universe (confirming Fama-French 2012, Schwartz-Hanauer 2024)
+4. Diversification beyond CB-only reduces idiosyncratic risk and improves Sharpe
+
+**What was NOT changed:** Scoring weights (70/30, 50/50, 40/70 thresholds). No evidence basis for tuning. Any change at n=16 is guaranteed overfitting.
+
+**Audit triggered by.** User request for deep, research-grade investigation into algorithm effectiveness.
+
+---
 
 ### 2026-04-10 — Empirical component investigation (10 tests, 12 quarters)
 

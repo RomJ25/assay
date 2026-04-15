@@ -48,6 +48,7 @@ class FinancialData:
     interest_expense: list[float | None] = field(default_factory=lambda: [None] * 4)
     tax_provision: list[float | None] = field(default_factory=lambda: [None] * 4)
     pretax_income: list[float | None] = field(default_factory=lambda: [None] * 4)
+    research_development: list[float | None] = field(default_factory=lambda: [None] * 4)
 
     # ── Balance sheet — [latest, year-1] ──────────────────────────────
     total_assets: list[float | None] = field(default_factory=lambda: [None] * 2)

@@ -44,7 +44,7 @@
 
 The portfolio accumulates winners. Stocks that appreciate and leave CB (because their value score dropped as the price rose) stay in the portfolio — they moved to WATCH LIST or QUALITY GROWTH PREMIUM, which are hold classifications. You only exit when the business itself deteriorates.
 
-**In-sample warning:** This strategy was designed from the same 11-quarter dataset used to evaluate it. The +4.0%/yr advantage over quarterly rebalancing may not persist out of sample. The LOGIC is sound (don't sell winners, cut losers) and supported by decades of academic research, but the specific rules (which classifications to hold/sell) need validation over 30+ quarters before the exact magnitude should be trusted.
+**In-sample warning:** This strategy was designed from the same dataset used to evaluate it. Under honest measurement (survivorship-free, 10 bps costs), the selective sell advantage over quarterly rebalancing is +1.1%/yr — within noise at n=16 quarters. The LOGIC is sound (don't sell winners, cut losers) and supported by decades of academic research, but the specific rules (which classifications to hold/sell) need walk-forward validation over 30+ quarters before they should be trusted as more than directional guidance.
 
 ---
 
@@ -144,22 +144,28 @@ Academic research comparing sell strategies found that fundamental stop-losses (
 
 ## 6. The Evidence
 
-### Strategy Comparison (11 quarters, 2023-2026)
+### Strategy Comparison (16 quarters, 2022-2026, survivorship-free, 10 bps costs)
+
+The numbers below use point-in-time S&P 500 constituents (survivorship-free) and 10 bps round-trip transaction costs. Earlier versions of this document reported higher numbers that were inflated by survivorship bias — stocks like SMCI (added to S&P 500 in March 2024) appeared in pre-addition backtest quarters, contributing outsized returns they would not have generated in live trading.
 
 ```
-    ┌───────────────────────────────────────────────────────────────┐
-    │  Strategy                    $100 →    CAGR     vs SPY       │
-    │  ────────                    ──────    ────     ──────       │
-    │  Selective sell (this doc)     $168   +20.7%    +4.3%/yr     │
-    │  Quarterly rebalance          $153   +16.7%    +0.3%/yr     │
-    │  Annual rebalance             $140   +12.9%    -3.5%/yr     │
-    │  SPY (benchmark)              $152   +16.4%       —         │
-    └───────────────────────────────────────────────────────────────┘
+    ┌──────────────────────────────────────────────────────────────────────────┐
+    │  Strategy                  CAGR    Selection Alpha    vs SPY   Avg Picks │
+    │  ────────                  ────    ───────────────    ──────   ───────── │
+    │  Selective sell (this doc) +10.4%        +0.4%/yr     -0.7%      37     │
+    │  Quarterly rebalance       +9.2%        -0.7%/yr     -1.8%      17     │
+    │  SPY (benchmark)          +11.1%           —            —        —      │
+    │  Universe (EW benchmark)  +10.0%           —            —       420     │
+    └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-The selective sell strategy beat quarterly rebalancing by **+4.0%/yr** and SPY by **+4.3%/yr** over 11 quarters. The advantage comes entirely from not selling winners.
+**Selection alpha** (portfolio vs equal-weight universe) is the primary metric. It measures whether the conviction matrix adds value beyond randomly picking from the same stocks. "vs SPY" is secondary context that conflates stock selection with the equal-weight premium.
 
-**Caveat:** 11 quarters is below the 30-quarter minimum for statistical significance. The directional evidence is strong (holding appreciated stocks > selling them), but the magnitude (+4.0%/yr) may not persist exactly. The LOGIC is robust regardless of sample size — selling stocks that went up is selling winners by definition.
+Under honest measurement, the quarterly rebalance strategy has **negative selection alpha** (−0.7%/yr). The selective sell strategy shows a small positive alpha (+0.4%/yr), but this is within noise at n=16 quarters and the sell rules are in-sample.
+
+**Why report these numbers honestly?** The previous version of this table showed +4.3%/yr vs SPY for selective sell. A deep audit (April 2026) revealed that survivorship bias — primarily SMCI's inclusion in Q4 2023 before its S&P 500 addition — accounted for essentially all of the claimed alpha. Correcting for SMCI alone flipped selection alpha from +2.2% to −1.5%. The honest numbers above are the foundation for improvement, not a reason for despair. The LOGIC of the strategy (hold winners, cut losers) is academically bulletproof — the implementation needs a broader universe to access where the factor premium actually lives.
+
+**Caveat:** 16 quarters is below the 30-quarter minimum for statistical significance. The sell rules are in-sample. Do not tune parameters based on these results.
 
 ### 62 Years of Factor Evidence (1963-2025)
 

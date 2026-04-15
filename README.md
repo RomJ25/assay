@@ -2,14 +2,14 @@
 
 **A system that only acts when the evidence is aligned — and stays silent when it isn't.**
 
-*An S&P 500 value + quality screener — a first filter for research, not a trading signal. Built for investors who would rather see zero picks than a forced shortlist of twenty.*
+*A U.S. equity value + quality screener — S&P 500 or Russell 1000 — a first filter for research, not a trading signal. Built for investors who would rather see zero picks than a forced shortlist of twenty.*
 
 Most screeners give you a list every time you run them. Assay is different. For five consecutive quarterly rebalances from March 2022 through March 2023, it produced zero picks. In the worst of those quarters, the S&P 500 fell 16% — Assay had nothing to buy. It didn't predict the crash. It simply couldn't find a single stock where cheapness, quality, and financial health all aligned. That willingness to say "nothing qualifies" is the system's most distinctive behavior.
 
 When Assay does surface a name, you know:
-- It's **cheap** relative to every other S&P 500 stock (Value score >= 70, driven by Earnings Yield with a Free Cash Flow reality check)
+- It's **cheap** relative to the full universe (Value score >= 70, driven by Earnings Yield with a Free Cash Flow reality check)
 - It's **financially healthy** (Piotroski F-Score >= 6/9 — positive cash flow, improving returns, no dilution)
-- It's **profitable** (Quality score >= 70, anchored in Gross Profitability and the Piotroski criteria)
+- It's **profitable** (Quality score >= 70, anchored in Gross Profitability, Piotroski criteria, and safety metrics)
 - It's **not in freefall** (passed the momentum gate)
 - And both cheapness and quality are high **at the same time** (geometric mean prevents one good dimension from masking a terrible one)
 
@@ -21,11 +21,11 @@ Assay doesn't predict prices. It doesn't forecast earnings. It doesn't use machi
 
 **Value Score (0-100):** Percentile rank by Earnings Yield (EBIT / Enterprise Value). Cheapest = 100. Composite of 70% earnings yield + 30% free cash flow yield. Negative EBIT/FCF rank at the bottom, not excluded.
 
-**Quality Score (0-100):** 50% Piotroski F-Score (9 binary financial health criteria, normalized) + 50% Gross Profitability (GP / Assets) percentile rank. Negative profitability ranks at the bottom, not excluded.
+**Quality Score (0-100):** 40% Piotroski F-Score (9 binary financial health criteria, normalized) + 40% Profitability ((GP + R&D) / Assets, per Novy-Marx & Medhat 2025) percentile rank + 20% Safety (inverse beta + inverse leverage, per AQR QMJ). Negative profitability ranks at the bottom, not excluded.
 
 **Conviction Score:** Geometric mean of value and quality — both must be high. A stock that's very cheap but low quality (value trap) gets punished. A stock that's high quality but expensive (overvalued quality) also gets punished.
 
-**Gates:** Minimum F-Score of 6/9 and bottom-25% momentum both downgrade a CONVICTION BUY to WATCH LIST.
+**Gates:** Minimum F-Score of 6/9, bottom-25% momentum, and 2+ years declining revenue all downgrade a CONVICTION BUY to WATCH LIST.
 
 **Classification Matrix:**
 
@@ -43,8 +43,11 @@ Assay doesn't predict prices. It doesn't forecast earnings. It doesn't use machi
 # Install
 pip install -r requirements.txt
 
-# Screen all S&P 500 stocks (financials excluded by default)
+# Screen S&P 500 (default, financials excluded)
 python main.py
+
+# Screen Russell 1000 (stronger factor premiums in mid-cap)
+python main.py --universe russell1000
 
 # Top 30 with extra columns and Piotroski breakdown
 python main.py --top 30 --wide --breakdown
@@ -55,8 +58,11 @@ python main.py --include-financials
 # Single stock deep dive
 python main.py --ticker AAPL --breakdown --wide
 
-# Run historical backtest (4 years, 10bps transaction costs)
-python main.py --backtest --backtest-years 4 --tcost-bps 10
+# Run historical backtest (survivorship-free by default, 10bps costs)
+python main.py --backtest --backtest-years 4
+
+# Backtest with WL backfill for 30-stock minimum portfolio
+python main.py --backtest --min-picks 30
 
 # Sector-relative scoring (70% absolute + 30% within-sector rank)
 python main.py --sector-relative
@@ -103,9 +109,14 @@ For development (hot-reload): run `python server.py` in one terminal and `cd web
 | `--breakdown` | Show Piotroski 9-criterion pass/fail grid per stock |
 | `--include-financials` | Include banks, insurance, and REITs (excluded by default) |
 | `--sector-relative` | Blend 70% absolute + 30% within-sector percentile for value score |
+| `--universe NAME` | Stock universe: sp500, russell1000, us_all, tase, custom (default: sp500) |
+| `--tickers LIST` | Custom ticker list, comma-separated (e.g., AAPL,MSFT,TEVA.TA) |
 | `--backtest` | Run historical backtest instead of live screen |
 | `--backtest-years N` | Years to backtest (default: 4) |
-| `--tcost-bps N` | Transaction cost per rebalance in basis points (default: 0) |
+| `--tcost-bps N` | Transaction cost per rebalance in basis points (default: 10) |
+| `--survivorship-naive` | Use current constituent list for all quarters (introduces survivorship bias) |
+| `--min-picks N` | Minimum portfolio size; backfill from WATCH LIST if CB count is below N |
+| `--semiannual` | Rebalance every 6 months instead of quarterly |
 | `--refresh` | Bypass cache, fetch fresh data |
 | `--verbose, -v` | Debug logging |
 
@@ -117,18 +128,20 @@ For development (hot-reload): run `python server.py` in one terminal and `cd web
 
 **JSON:** `results/screen_YYYY-MM-DD.json` — same data, structured format.
 
-**Backtest:** Shows full portfolio AND concentrated "Best Ideas" analysis (top 1/3/5 picks), grounded in Cohen, Polk & Silli research. Includes statistical caveat when sample size is below 30 quarters.
+**Backtest:** Survivorship-free by default (point-in-time constituents). Shows selection alpha vs equal-weight universe as the primary metric, with walk-forward validation of sell strategies. Includes statistical caveat when sample size is below 30 quarters.
 
 ## Academic Foundation
 
-- **Carlisle** — Acquirer's Multiple (EV/EBIT): 17.9% CAGR over 44 years
-- **Piotroski** — F-Score: separates winners from losers within value stocks (7.5% annual improvement). Effect is strongest in small/mid caps; reduced but present in S&P 500 large caps.
+- **Carlisle** — Acquirer's Multiple (EV/EBIT): 17.9% CAGR over 44 years. Effect is strongest in small/mid caps; reduced but present in S&P 500 large caps.
+- **Piotroski** — F-Score: separates winners from losers within value stocks (7.5% annual improvement)
 - **Novy-Marx** — Gross Profitability: predictive power equal to book-to-market ratio
-- **Cohen, Polk & Silli** — "Best Ideas": highest-conviction positions outperform by 2.8-4.5% per year; the rest of the portfolio shows no alpha
+- **Novy-Marx & Medhat (2025)** — (GP + R&D) / Assets dominates plain GP/Assets for return prediction over 50 years
+- **Asness, Frazzini & Pedersen (2019)** — AQR Quality Minus Junk: safety dimension (low beta + low leverage) has positive crisis convexity and 55-66 bps/month alpha
+- **Fama & French (2012)** — Factor premiums are inversely related to market cap; value+quality spreads are 2-3x wider in mid-cap than large-cap
 
 ## What This Is Not
 
-This is not a prediction engine. It does not forecast prices, estimate fair value for ranking, or use machine learning. The conviction score tells you where cheapness and quality overlap — it does not tell you which stock will outperform the most. Under the recommended selective sell strategy (hold winners, sell only when fundamentals break), the screener returned +18.7% CAGR over 12 quarters vs +18.2% for SPY — a modest edge that comes from buying cheap+quality stocks and not selling them when they appreciate. See `docs/STRATEGY.md` for the complete investment strategy.
+This is not a prediction engine. It does not forecast prices, estimate fair value for ranking, or use machine learning. The conviction score tells you where cheapness and quality overlap — it does not tell you which stock will outperform the most. In survivorship-free backtesting with 10bps transaction costs, selection alpha (vs equal-weight universe) is modest — the screener's primary value is as a discipline engine that prevents behavioral losses (panic selling, performance chasing) rather than as an alpha generator. See `docs/STRATEGY.md` for the complete investment strategy.
 
 Financials (banks, insurance, REITs) are excluded by default because the EBIT/EV model is structurally wrong for them. Use `--include-financials` to override, understanding that these stocks use a 1/PE fallback for value scoring.
 
@@ -149,6 +162,7 @@ Individual market events are not evidence — the backtest is. These case studie
 ## Data Sources
 
 - **S&P 500 list:** Wikipedia (cached 7 days)
+- **Russell 1000:** NYSE + NASDAQ filtered by market cap > $3B
 - **Fundamentals:** yahooquery (primary), yfinance (fallback) — annual statements
 - **Prices:** yfinance (cached 24 hours)
 
@@ -156,8 +170,11 @@ Individual market events are not evidence — the backtest is. These case studie
 
 - Piotroski, J. (2000). *Value Investing: The Use of Historical Financial Statement Information to Separate Winners from Losers.* Journal of Accounting Research.
 - Novy-Marx, R. (2013). *The Other Side of Value: The Gross Profitability Premium.* Journal of Financial Economics.
+- Novy-Marx, R. & Medhat, M. (2025). *Betting Against Quant: Examining the Factor Efficiency of Profitability Measures.* NBER Working Paper 33601.
+- Asness, C., Frazzini, A., & Pedersen, L. (2019). *Quality Minus Junk.* Review of Accounting Studies.
 - Carlisle, T. (2014). *Deep Value.* Wiley.
-- Cohen, R., Polk, C., & Silli, B. (2010). *Best Ideas.* Working Paper, London School of Economics.
+- Fama, E. & French, K. (2012). *Size, Value, and Momentum in International Stock Returns.* Journal of Financial Economics.
+- Schwartz, M. & Hanauer, M. (2024). *Formula Investing.* Working Paper.
 
 ---
 

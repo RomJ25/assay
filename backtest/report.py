@@ -28,47 +28,55 @@ def print_backtest_report(result) -> None:
     ))
 
     # Limitations
+    if result.survivorship_free:
+        surv_line = "  Survivorship: point-in-time constituents (survivorship-free mode)"
+    else:
+        surv_line = "  [bold]Survivorship bias: using current constituent list — results may overstate alpha by 2-5%/yr[/bold]"
     console.print(Panel(
-        "[yellow]KNOWN LIMITATIONS[/yellow]\n"
-        "  Survivorship bias: uses current S&P 500 list (est. 2-5% CAGR overstatement)\n"
-        "  Sample size: below 30-period minimum for statistical significance\n"
-        "  Data: Yahoo Finance (may include retroactive restatements)\n"
-        "  This is preliminary evidence, not proof. Do NOT tune parameters based on results.",
+        f"[yellow]KNOWN LIMITATIONS[/yellow]\n"
+        f"{surv_line}\n"
+        f"  Sample size: below 30-period minimum for statistical significance\n"
+        f"  Data: Yahoo Finance (may include retroactive restatements)\n"
+        f"  This is preliminary evidence, not proof. Do NOT tune parameters based on results.",
         style="yellow",
     ))
 
-    # Performance summary
+    # Selection alpha — the primary metric
+    alpha_style = "green" if m.selection_alpha > 0 else "red"
+    console.print(f"\n[bold]SELECTION ALPHA (primary metric)[/bold]")
+    console.print(f"  Portfolio vs Universe (EW): [{alpha_style}]{_pct(m.selection_alpha)}/yr[/{alpha_style}]")
+    console.print(f"  [dim]Does the conviction matrix add value beyond equal-weight random selection\n"
+                  f"  from the same universe? This controls for survivorship and EW premium biases.[/dim]")
+
+    # Performance detail
     perf = Table(show_header=True, header_style="bold cyan", show_lines=False)
     perf.add_column("", width=20)
     perf.add_column("Portfolio", justify="right", width=14)
     perf.add_column("Universe (EW)", justify="right", width=14)
-    perf.add_column("S&P 500 (SPY)", justify="right", width=14)
+    perf.add_column("SPY (context)", justify="right", width=14)
 
     perf.add_row("Total Return",
                  _pct(m.total_return), _pct(m.universe_total_return), _pct(m.spy_total_return))
     perf.add_row("CAGR",
                  _pct(m.cagr), _pct(m.universe_cagr), _pct(m.spy_cagr))
+    perf.add_row("Selection Alpha", f"[{alpha_style}]{_pct(m.selection_alpha)}[/{alpha_style}]", "—", "—")
     perf.add_row("Max Drawdown", _pct(m.max_drawdown), "", "")
     perf.add_row("Sharpe Ratio", f"{m.sharpe_ratio:.2f}", "", "")
 
-    console.print("\n[bold]PERFORMANCE SUMMARY[/bold]")
+    console.print(f"\n[bold]PERFORMANCE DETAIL[/bold]")
     console.print(perf)
-
-    # Selection alpha
-    alpha_style = "green" if m.selection_alpha > 0 else "red"
-    console.print(f"\n[bold]SELECTION ALPHA (Portfolio vs Universe)[/bold]")
-    console.print(f"  CAGR Difference: [{alpha_style}]{_pct(m.selection_alpha)}[/{alpha_style}]")
-    console.print(f"  [dim]Measures whether the conviction matrix adds value beyond\n"
-                  f"  equal-weight S&P 500 stock picking, controlling for biases.[/dim]")
+    ew_premium = m.universe_cagr - m.spy_cagr
+    console.print(f"  [dim]EW premium (Universe − SPY): {_pct(ew_premium)}/yr — this is NOT stock selection alpha[/dim]")
 
     # Selective sell comparison
     ss = result.selective_sell_metrics
     if ss is not None:
-        console.print(f"\n[bold]SELECTIVE SELL STRATEGY (recommended)[/bold]")
-        console.print(f"  [dim]Hold CB/WL/QGP stocks. Sell on VT/AVOID/OVERVALUED. Monitor HOLD (sell after 2 quarters).[/dim]")
+        console.print(f"\n[bold]SELECTIVE SELL STRATEGY[/bold]")
+        console.print(f"  [dim]Hold CB/WL/QGP stocks. Sell on VT/AVOID/OVERVALUED. Monitor HOLD.[/dim]")
+        console.print(f"  [yellow]⚠ In-sample: sell rules were designed from this same dataset.[/yellow]")
         ss_alpha_style = "green" if ss.selection_alpha > 0 else "red"
-        console.print(f"  CAGR:            {_pct(ss.cagr)}")
         console.print(f"  Selection Alpha: [{ss_alpha_style}]{_pct(ss.selection_alpha)}[/{ss_alpha_style}]")
+        console.print(f"  CAGR:            {_pct(ss.cagr)}")
         console.print(f"  Avg positions:   {ss.avg_picks_per_quarter:.0f}")
         console.print(f"  Avg turnover:    {ss.avg_turnover:.1f}%")
         delta = ss.cagr - m.cagr

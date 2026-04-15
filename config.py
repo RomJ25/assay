@@ -58,6 +58,8 @@ QUALITY_HIGH_THRESHOLD = 70  # top 30% on quality
 QUALITY_LOW_THRESHOLD = 40
 QUALITY_SINGLE_SOURCE_PENALTY = 0.8  # 20% discount for single-signal quality
 MIN_PIOTROSKI_F = 6  # Minimum raw F-Score (0-9) for conviction buy; below → WATCH LIST
+RD_ADDBACK_ENABLED = True  # Novy-Marx & Medhat 2025: (GP + R&D) / Assets dominates plain GP/Assets
+SAFETY_ENABLED = True  # AQR QMJ (Asness et al. 2019): low-beta + low-leverage improves risk-adjusted returns
 
 # ── Growth Model Thresholds (context display) ────────────────────────
 REVENUE_CAGR_TIERS = [
@@ -85,7 +87,11 @@ MOMENTUM_SKIP_MONTHS = 1           # skip most recent month (short-term reversal
 MOMENTUM_GATE_PERCENTILE = 25      # exclude bottom 25% momentum from CONVICTION BUY
 
 # ── Transaction Costs ────────────────────────────────────────────────
-TCOST_BPS_ROUNDTRIP = 0  # basis points per full rebalance (0 = off; 10 typical for S&P 500)
+TCOST_BPS_ROUNDTRIP = 10  # basis points per full rebalance (Frazzini et al. JFE: ~10 for S&P 500)
+
+# ── Portfolio Construction ───────────────────────────────────────────
+MIN_PORTFOLIO_SIZE = 0  # 0 = off (CB only); 30+ recommended for factor capture
+# When CB has fewer picks than this, top WATCH LIST stocks (by conviction) backfill.
 
 # ── Sector-Relative Scoring ──────────────────────────────────────────
 SECTOR_RELATIVE_BLEND = 0.3  # when --sector-relative active: 70% absolute + 30% sector-relative

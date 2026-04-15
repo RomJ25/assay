@@ -10,7 +10,7 @@
 
 ### Contents
 
-[1. Philosophy](#1-philosophy) · [2. Value Dimension](#2-value-dimension) · [3. Quality Dimension](#3-quality-dimension) · [4. Conviction Scoring](#4-conviction-scoring) · [5. Classification Matrix](#5-classification-matrix) · [6. Safety Gates](#6-safety-gates) · [7. Momentum Gate](#7-momentum-gate) · [8. Trajectory Score](#8-trajectory-score) · [9. Supplementary Models](#9-supplementary-models) · [10. Fallback Hierarchy](#10-fallback-hierarchy) · [11. Academic Foundation](#11-academic-foundation) · [12. Backtest Conventions](#12-backtest-conventions) · [13. Design Decision Log](#13-design-decision-log)
+[1. Philosophy](#1-philosophy) · [2. Value Dimension](#2-value-dimension) · [3. Quality Dimension](#3-quality-dimension) (Piotroski + Profitability + Safety) · [4. Conviction Scoring](#4-conviction-scoring) · [5. Classification Matrix](#5-classification-matrix) · [6. Safety Gates](#6-safety-gates) · [7. Momentum Gate](#7-momentum-gate) · [8. Trajectory Score](#8-trajectory-score) · [9. Supplementary Models](#9-supplementary-models) · [10. Fallback Hierarchy](#10-fallback-hierarchy) · [11. Academic Foundation](#11-academic-foundation) · [12. Backtest Conventions](#12-backtest-conventions) · [13. Design Decision Log](#13-design-decision-log)
 
 ---
 
@@ -82,7 +82,7 @@ A stock can have high EBIT but low FCF if it spends heavily on CapEx or if worki
 
 ### 2.3 Percentile Ranking
 
-Both yields are converted to **percentile ranks** across the S&P 500:
+Both yields are converted to **percentile ranks** across the universe (S&P 500 or Russell 1000):
 
 ```
                         N - rank_position
@@ -174,17 +174,19 @@ Nine binary criteria measuring profitability, leverage, liquidity, and efficienc
     └──────────────────────────────────────────┘
 ```
 
-### 3.2 Signal 2 — Gross Profitability
+### 3.2 Signal 2 — Profitability
 
-Novy-Marx (2013) showed that **Gross Profit / Total Assets** has predictive power for future returns equal to the book-to-market ratio — but on the *opposite* side of the value spectrum.
+Novy-Marx (2013) showed that **Gross Profit / Total Assets** has predictive power for future returns equal to the book-to-market ratio — but on the *opposite* side of the value spectrum. Novy-Marx & Medhat (2025) further demonstrated that **(GP + R&D) / Assets** dominates plain GP/Assets over 50 years of data.
 
 ```
-                        Gross Profit
-    Profitability  =  ──────────────
-                       Total Assets
+                        Gross Profit + R&D
+    Profitability  =  ────────────────────
+                           Total Assets
 ```
 
-This captures a company's fundamental economic engine before SG&A, depreciation, and other discretionary expenses. It is then converted to a **percentile rank** across the universe, identical to the earnings yield ranking. **Negative gross profit is included** — it ranks at the bottom, not excluded.
+When R&D data is unavailable, falls back to `GP / Assets`. This captures a company's fundamental economic engine before SG&A, depreciation, and other discretionary expenses. The R&D add-back accounts for the fact that R&D is an investment in future profitability, not a pure expense — penalizing R&D-heavy firms (Tech, Healthcare) understates their true economic profitability.
+
+Profitability is converted to a **percentile rank** across the universe, identical to the earnings yield ranking. **Negative gross profit is included** — it ranks at the bottom, not excluded.
 
 **Bank fallback:** When Gross Profit is truly unavailable (`None`):
 
@@ -194,11 +196,30 @@ This captures a company's fundamental economic engine before SG&A, depreciation,
                       Total Assets
 ```
 
-### 3.3 Composite Quality Score
+### 3.3 Signal 3 — Safety
+
+Asness, Frazzini & Pedersen (2019) showed that the safety dimension of Quality Minus Junk (QMJ) has positive crisis convexity and 55-66 bps/month alpha. Low-beta + low-leverage stocks within value have better risk-adjusted returns.
 
 ```
-    Quality Score  =  0.50 × F_normalized  +  0.50 × Profitability_percentile
+    Safety  =  0.50 × InverseBeta_percentile  +  0.50 × InverseLeverage_percentile
 ```
+
+Where:
+- **InverseBeta_percentile**: Stocks ranked by beta (ascending). Lower beta = higher safety score.
+- **InverseLeverage_percentile**: Stocks ranked by Debt/Assets (ascending). Lower leverage = higher safety score.
+- Missing beta (common in backtest) defaults to neutral 50th percentile.
+
+### 3.4 Composite Quality Score
+
+```
+    Quality Score  =  0.40 × F_normalized  +  0.40 × Profitability_percentile  +  0.20 × Safety_percentile
+```
+
+The 40/40/20 weighting reflects:
+- Piotroski and Profitability are the primary, most-validated quality signals (equal weight)
+- Safety provides crisis convexity and drawdown reduction (lower weight — supplementary but impactful)
+
+When safety is disabled (`SAFETY_ENABLED = False` in config), falls back to 50/50 Piotroski + Profitability.
 
 #### Single-Source Penalty
 
@@ -498,6 +519,14 @@ The system is designed to produce scores for as many stocks as possible with gra
 
 > Gross Profitability (GP/Assets) predicts the cross-section of expected returns with the same power as book-to-market — but on the *opposite* side. Profitable firms outperform unprofitable firms. Combined with value, the two factors are "complementary": controlling for one dramatically increases the performance of the other.
 
+**Novy-Marx, R. & Medhat, M.** (2025). *Betting Against Quant: Examining the Factor Efficiency of Profitability Measures.* NBER Working Paper 33601.
+
+> (GP + R&D) / Assets dominates plain GP/Assets for return prediction over 50 years. R&D expenditure is better understood as an investment in future profitability than as a current expense, and penalizing R&D-heavy firms systematically understates their economic profitability. This is the basis for Assay's R&D add-back in the profitability signal.
+
+**Asness, C., Frazzini, A. & Pedersen, L.** (2019). *Quality Minus Junk.* Review of Accounting Studies, 24(1), 34-112.
+
+> The safety dimension of Quality Minus Junk (low beta + low leverage) has positive crisis convexity and generates 55-66 bps/month alpha. Within value stocks, safety further improves risk-adjusted returns by reducing maximum drawdown. This is the basis for Assay's 20% safety weight in the quality composite.
+
 **Jegadeesh, N. & Titman, S.** (1993). *Returns to Buying Winners and Selling Losers: Implications for Stock Market Efficiency.* Journal of Finance, 48(1), 65-91.
 
 > The foundational cross-sectional momentum paper. Stocks that performed well over the past 3-12 months continue to outperform, and vice versa. The 12-1 month variant (skip most recent month) is the most widely used in academic factor research.
@@ -520,12 +549,15 @@ The factors are not redundant. They capture different dimensions of a stock's at
     │                          Trajectory of financial health               │
     │                                                                      │
     │   Profitability  ────►  "Is it a good business?"                     │
-    │                          Fundamental economic engine                  │
+    │                          (GP + R&D) / Assets — economic engine       │
+    │                                                                      │
+    │   Safety  ───────────►  "Is it resilient?"                           │
+    │                          Low beta + low leverage = crisis convexity   │
     │                                                                      │
     │   Momentum Gate  ────►  "Is the market catching on?"                 │
     │                          Excludes stocks the market is still dumping  │
     │                                                                      │
-    │   Together:  Cheap  +  improving  +  good business  +  not falling   │
+    │   Together:  Cheap + improving + good business + safe + not falling   │
     │              = highest probability of outperformance                  │
     │                                                                      │
     └──────────────────────────────────────────────────────────────────────┘
@@ -553,15 +585,16 @@ For an **S&P 500-only universe** — every member is a large accelerated filer s
 
 ### 12.2 Survivorship Bias
 
+Assay's backtest defaults to **survivorship-free mode** (`--survivorship-free`, now the default), which uses point-in-time constituent lists from `sp500_historical.py` — the actual S&P 500 membership at each rebalance date, reconstructed from historical addition/removal records.
+
 ```
-    fetch_sp500_list() → current membership, not point-in-time
+    survivorship_free=True  (default)  →  point-in-time constituents per quarter
+    --survivorship-naive               →  current membership replayed backward (biased)
 ```
 
-Assay's backtest universe is the **current** S&P 500 list (fetched from Wikipedia and cached), replayed backward in time. Companies that were S&P 500 members during the backtest period but have since been delisted, acquired, or removed from the index are silently excluded.
+**Why this matters:** An adversarial audit (April 2026) found that the entire reported selection alpha (+2.2%/yr) under the naive (current-list) mode was attributable to survivorship bias — primarily SMCI, which was included in the Q4 2023 backtest despite not being added to the S&P 500 until March 2024. Correcting for SMCI alone flipped selection alpha from +2.2%/yr to −1.5%/yr.
 
-This is a known upward bias. The Assay backtest disclaimer panel (`backtest/report.py:31-37`) estimates the effect at **2-5% CAGR overstatement**, consistent with published survivorship-bias literature on S&P 500 replay backtests.
-
-Correcting this bias requires a **point-in-time constituent database** (CRSP, Compustat, or equivalent), which is not available in free data sources. This is the most significant methodological limitation of Assay's backtest and one that cannot be fixed without changing data providers.
+The `--survivorship-naive` flag is retained for comparison but is no longer the default. For universes without historical membership data (e.g., Russell 1000), survivorship bias remains a known limitation.
 
 ### 12.3 Equal-Weight Portfolio Construction
 
@@ -585,7 +618,7 @@ Equal-weighting is **appropriate for individual investors** holding a small numb
 
 Rebalance dates are the **last trading day of March, June, September, and December**, matching Schwartz-Hanauer 2024 and standard academic convention. The screen is run at market close on the rebalance date and the portfolio is assumed to re-weight instantaneously at that price — no slippage, no overnight gap, no intra-quarter adjustments.
 
-**Transaction costs**: The default is `TCOST_BPS_ROUNDTRIP = 0` to produce a clean, reproducible baseline. Users who want realistic execution friction should set `--tcost-bps` to a non-zero value: roughly 10 bps for retail round-trip on S&P 500 names, under 5 bps for institutional execution.
+**Transaction costs**: The default is `TCOST_BPS_ROUNDTRIP = 10` (10 basis points per rebalance round-trip), consistent with Frazzini, Israel & Moskowitz (JFE) estimates for S&P 500 names. At ~50-60% quarterly turnover, this deducts approximately 0.5-0.7%/yr from CAGR. Users can override with `--tcost-bps`.
 
 ### 12.5 Benchmark Universe — Two Benchmarks, Two Questions
 
