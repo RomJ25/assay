@@ -1,12 +1,14 @@
-"""Assay — S&P 500 Value + Quality Stock Screener.
+"""Assay — Value + Quality Stock Screener.
 
 Tests every stock for value (Earnings Yield) and quality (Piotroski F-Score
-+ Gross Profitability), separating conviction buys from value traps.
++ Profitability + Safety), separating conviction buys from value traps.
+Supports S&P 500, Russell 1000, and custom universes.
 
 Based on academically proven quant strategies:
 - Carlisle's Acquirer's Multiple (EV/EBIT): 17.9% CAGR over 44 years
 - Piotroski F-Score: 13.4% annual outperformance over 20 years
-- Novy-Marx Gross Profitability: equal power to book-to-market ratio
+- Novy-Marx Gross Profitability + R&D add-back (Medhat 2025)
+- AQR Quality Minus Junk safety dimension (Asness et al. 2019)
 """
 
 from __future__ import annotations
@@ -229,7 +231,7 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Assay — S&P 500 Value + Quality Stock Screener"
+        description="Assay — Value + Quality Stock Screener (S&P 500, Russell 1000, or custom universe)"
     )
     parser.add_argument("--ticker", "-t", help="Screen a single ticker (e.g., AAPL)")
     parser.add_argument("--top", type=int, default=20, help="Show top N results (default: 20)")

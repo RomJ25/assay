@@ -16,7 +16,7 @@ from api.routes import router
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("assay.server")
 
-app = FastAPI(title="Assay", description="S&P 500 Value + Quality Screener")
+app = FastAPI(title="Assay", description="Value + Quality Stock Screener")
 
 # Gzip compression for large JSON responses (~1MB → ~100KB)
 app.add_middleware(GZipMiddleware, minimum_size=1000)

@@ -1,4 +1,4 @@
-"""Central configuration for Assay — S&P 500 value + quality screener."""
+"""Central configuration for Assay — value + quality stock screener."""
 
 import os
 from pathlib import Path
