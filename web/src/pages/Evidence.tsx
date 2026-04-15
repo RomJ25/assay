@@ -37,7 +37,7 @@ export function Evidence() {
           Known Limitations
         </div>
         <ul className="text-[12px] space-y-1" style={{ color: "var(--color-text-secondary)" }}>
-          <li>Survivorship bias: uses current S&P 500 list (est. 2-5% CAGR overstatement)</li>
+          <li>Survivorship: backtest defaults to point-in-time constituents (survivorship-free). Legacy runs using current list may overstate alpha by 2-5%/yr.</li>
           <li>Sample size: {data.quarters.length} quarters (below 30-period minimum for significance)</li>
           <li>Data: Yahoo Finance (may include retroactive restatements)</li>
         </ul>

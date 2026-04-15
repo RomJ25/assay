@@ -68,7 +68,7 @@ async def get_screen():
     # Legacy format: bare list of stocks
     date_str = path.stem.replace("screen_", "")
     return {
-        "universe": "S&P 500",
+        "universe": "Unknown",
         "date": date_str,
         "screened": len(raw),
         "stocks": raw,

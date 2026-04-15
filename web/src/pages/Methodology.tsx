@@ -15,9 +15,9 @@ export function Methodology() {
       </Section>
 
       <Section title="Quality Score (0-100)">
-        <p>50% <strong>Piotroski F-Score</strong> (9 binary financial health criteria, normalized 0-100) + 50% <strong>Gross Profitability</strong> (GP / Assets) percentile rank.</p>
+        <p>40% <strong>Piotroski F-Score</strong> (9 binary financial health criteria, normalized 0-100) + 40% <strong>Profitability</strong> ((GP + R&D) / Assets) percentile rank + 20% <strong>Safety</strong> (inverse beta + inverse leverage).</p>
         <p className="text-[12px] mt-2" style={{ color: "var(--color-text-muted)" }}>
-          Piotroski (2000): 13.4% annual outperformance. Novy-Marx (2013): predictive power equal to book-to-market.
+          Piotroski (2000): 13.4% annual outperformance. Novy-Marx & Medhat (2025): (GP+R&D)/Assets dominates plain GP/Assets. Asness et al. (2019): safety has 55-66 bps/month alpha.
         </p>
       </Section>
 
@@ -80,6 +80,7 @@ export function Methodology() {
       <Section title="Safety Gates">
         <p><strong>F-Score Gate:</strong> CONVICTION BUY requires F-Score ≥ 6/9. Below 6 → downgraded to WATCH LIST.</p>
         <p><strong>Momentum Gate:</strong> Bottom 25% by 12-1 month momentum → downgraded to WATCH LIST. Catches falling knives.</p>
+        <p><strong>Revenue Gate:</strong> 2+ consecutive years of declining revenue → downgraded to WATCH LIST.</p>
         <p className="text-[12px] mt-2" style={{ color: "var(--color-text-muted)" }}>
           Momentum gate validated: 98 victims averaged +2.6% vs CB's +4.5% (12-quarter investigation).
         </p>
@@ -108,8 +109,10 @@ export function Methodology() {
           <li><strong>Carlisle</strong> — Acquirer's Multiple (EV/EBIT): 17.9% CAGR over 44 years</li>
           <li><strong>Piotroski (2000)</strong> — F-Score: 13.4% long-only excess return, 23% long-short differential</li>
           <li><strong>Novy-Marx (2013)</strong> — Gross Profitability: predictive power equal to book-to-market</li>
+          <li><strong>Novy-Marx & Medhat (2025)</strong> — (GP + R&D) / Assets dominates plain GP/Assets over 50 years</li>
+          <li><strong>Asness, Frazzini & Pedersen (2019)</strong> — QMJ Safety: low beta + low leverage = crisis convexity</li>
           <li><strong>Jegadeesh & Titman (1993)</strong> — 12-1 month momentum: persistent return premium</li>
-          <li><strong>Cohen, Polk & Silli (2010)</strong> — Best Ideas: highest-conviction positions outperform by 2.8-4.5%/yr</li>
+          <li><strong>Fama & French (2012)</strong> — Factor premiums are 2-3x stronger in mid-cap than large-cap</li>
           <li><strong>Schwartz & Hanauer (2024)</strong> — Formula Investing: unified comparison of Piotroski, Magic Formula, Acquirer's Multiple</li>
         </ul>
       </Section>

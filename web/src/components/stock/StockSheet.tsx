@@ -90,7 +90,7 @@ export function StockSheet({ stock, allStocks, onClose }: Props) {
           <div className="grid grid-cols-3 gap-3 mb-6">
             {([
               { label: "Value", score: stock.value_score, sub: `${Math.round(stock.value_score)}th percentile by earnings yield` },
-              { label: "Quality", score: stock.quality_score, sub: `Piotroski ${stock.piotroski_f}/9 + gross profitability` },
+              { label: "Quality", score: stock.quality_score, sub: `Piotroski ${stock.piotroski_f}/9 + profitability + safety` },
               { label: "Conviction", score: stock.conviction_score, sub: "Geometric mean — both must be high" },
             ] as const).map((g) => (
               <div key={g.label} className="flex-1 rounded-lg p-4 text-center"
@@ -159,7 +159,7 @@ export function StockSheet({ stock, allStocks, onClose }: Props) {
             { label: "Trajectory", value: stock.trajectory_score?.toFixed(0) ?? null },
             { label: "Revenue CAGR 3yr", value: stock.revenue_cagr_3yr != null ? `${(stock.revenue_cagr_3yr * 100).toFixed(1)}%` : null },
             { label: "Gross Margin", value: stock.gross_margin != null ? `${(stock.gross_margin * 100).toFixed(1)}%` : null },
-            { label: "Gross Profitability", value: stock.gross_profitability?.toFixed(3) ?? null },
+            { label: "(GP+R&D)/Assets", value: stock.gross_profitability?.toFixed(3) ?? null },
             { label: "Growth Score", value: stock.growth_score?.toFixed(0) ?? null },
           ]} />
 
@@ -193,7 +193,8 @@ function Narrative({ stock }: { stock: ScreenStock }) {
           <strong style={{ color: "var(--color-text-primary)" }}>High quality:</strong> ranked{" "}
           <span className="font-mono">{Math.round(stock.quality_score)}th</span> percentile
           — Piotroski <span className="font-mono">{stock.piotroski_f}/9</span>
-          {stock.gross_profitability != null && <> + GP/Assets <span className="font-mono">{stock.gross_profitability.toFixed(2)}</span></>}
+          {stock.gross_profitability != null && <> + (GP+R&D)/Assets <span className="font-mono">{stock.gross_profitability.toFixed(2)}</span></>}
+          {" "}+ safety
         </li>
         <li>
           <strong style={{ color: "var(--color-text-primary)" }}>Both dimensions strong:</strong> conviction{" "}
@@ -273,6 +274,13 @@ function GateStatus({ stock }: { stock: ScreenStock }) {
           detail={stock.momentum_12m != null
             ? `12-1 month return: ${(stock.momentum_12m * 100).toFixed(1)}% (above 25th percentile cutoff)`
             : "Momentum data available"}
+        />
+        <GateRow
+          label="Revenue Gate"
+          passed={!stock.revenue_gate_fired}
+          detail={stock.revenue_gate_fired
+            ? "2+ years declining revenue — downgraded"
+            : "Revenue trend acceptable"}
         />
       </div>
     </div>
