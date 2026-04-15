@@ -147,12 +147,19 @@
 
 ## 9. Universe Expansion
 
-**Priority:** LOW — Currently S&P 500 only. Design is universe-agnostic.
+**Priority:** PARTIALLY DONE — S&P 500 (default), Russell 1000, TASE, US All, and custom tickers are implemented.
+
+**Done:**
+- Russell 1000 proxy (top ~1000 US by market cap, `--universe russell1000`) with 7-day cache
+- TASE TA-125 (`--universe tase`) and all TASE stocks (`--universe tase_all`)
+- All US stocks (`--universe us_all`, ~6,200 NYSE + NASDAQ)
+- Custom ticker lists (`--tickers AAPL,MSFT,TEVA.TA`)
+- Combined universes (`--universe sp500+tase`)
+- Russell 1000 historical approximation for survivorship-free backtest
 
 **To investigate:**
-- Russell 1000 (adds mid-caps where Piotroski effect is stronger)
-- International markets (developed, emerging)
-- Custom watchlists (user-defined ticker lists)
+- Russell 3000 ex-micro (market cap > $500M) — requires broader survivorship data
+- International developed markets (London, Frankfurt, Tokyo)
 - Sector-specific screens (e.g., only screen Healthcare)
 
 ---

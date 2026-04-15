@@ -373,17 +373,17 @@ These are changes that have been specifically considered and rejected after deli
 
 ---
 
-### Different weights for Quality composite (60/40, 40/60)
+### Quality composite weights
 
-**Status:** REJECTED · **Last reviewed:** 2026-04-09
+**Status:** UPDATED · **Last reviewed:** 2026-04-15
 
-**Context.** The 50/50 Piotroski/GP split treats the two signals as independent complements. Alternatives tilt toward one or the other.
+**Context.** Originally 50/50 Piotroski/GP. The April 2026 audit added a Safety sub-score (AQR QMJ: Asness, Frazzini & Pedersen 2019) and R&D add-back to profitability (Novy-Marx & Medhat 2025).
 
-**Decision.** Keep 50/50.
+**Decision.** 40% Piotroski + 40% (GP+R&D)/Assets + 20% Safety. Configurable via `SAFETY_ENABLED` in config.py (falls back to 50/50 when disabled).
 
-**Why rejected.** Same reasoning as the Value composite: no academic consensus, no evidence basis for tilting on large-caps, tuning without evidence is overfitting.
+**Why.** Safety (low beta + low leverage) has positive crisis convexity and 55-66 bps/month alpha per QMJ research. R&D add-back dominates plain GP/Assets over 50 years. The 20% safety weight is conservative — it supplements rather than displaces the two primary signals.
 
-**Would move us:** A study that specifically optimizes the Piotroski/GP blend.
+**Would move us:** Out-of-sample evidence (30+ quarters) on optimal safety weight.
 
 ---
 

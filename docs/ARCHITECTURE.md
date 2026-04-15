@@ -25,7 +25,7 @@ Assay follows a **linear pipeline architecture** — data flows in one direction
     │   ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌───────┐│
     │   │ Stage 1  │───►│ Stage 2  │───►│ Stage 3  │───►│ Stage 4  │───►│ Stage ││
     │   │  FETCH   │    │ FILTER   │    │  SCORE   │    │CLASSIFY  │    │   5   ││
-    │   │ S&P 500  │    │  Data    │    │ Value &  │    │ 9-Cell   │    │OUTPUT ││
+    │   │Universe │    │  Data    │    │ Value &  │    │ 9-Cell   │    │OUTPUT ││
     │   │ + Data   │    │ Quality  │    │ Quality  │    │ Matrix   │    │Report ││
     │   └────┬─────┘    └─────────┘    └─────────┘    └─────────┘    └───────┘│
     │        │                                                                 │
@@ -44,6 +44,7 @@ Assay follows a **linear pipeline architecture** — data flows in one direction
     ├── config.py                          constants only — no side effects
     │
     ├── data/                              DATA LAYER
+    │   ├── universe.py                    → sp500.py (multi-universe registry)
     │   ├── sp500.py                       → fetcher.py
     │   ├── fetcher.py                     → cache.py, providers/*
     │   ├── cache.py                       standalone (SQLite)
@@ -89,11 +90,11 @@ Assay follows a **linear pipeline architecture** — data flows in one direction
 
 ## Pipeline Stages
 
-### Stage 1 — Fetch S&P 500 List & Financial Data
+### Stage 1 — Fetch Universe & Financial Data
 
 ```
-    Wikipedia HTML ──► pandas.read_html() ──► [ticker, name, sector, sub_industry]
-                                                         │
+    Universe source ──► get_universe() ──► [ticker, name, sector, sub_industry]
+    (Wikipedia/Twelve Data/custom)                       │
                                                          ▼
                                                   Cache (7-day TTL)
 ```
@@ -150,9 +151,9 @@ Two independent scoring passes run over the filtered universe:
     │  ────────────                    ──────────────              │
     │  For each stock:                 For each stock:             │
     │    • compute Earnings Yield        • compute Piotroski F     │
-    │    • compute FCF Yield             • compute GP/Assets       │
-    │  Percentile rank all             Percentile rank profitab.   │
-    │  Composite: 70/30                Composite: 50/50            │
+    │    • compute FCF Yield             • compute (GP+R&D)/Assets │
+    │  Percentile rank all               • compute Safety score    │
+    │  Composite: 70/30                Composite: 40/40/20         │
     │                                                             │
     │          ▼                                ▼                  │
     │    Value Score (0-100)          Quality Score (0-100)        │
