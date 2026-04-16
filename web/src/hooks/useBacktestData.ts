@@ -11,18 +11,20 @@ export interface BacktestQuarter {
   turnover: number | null;
 }
 
+export interface BacktestPick {
+  quarter: string;
+  ticker: string;
+  sector: string;
+  value_score: number;
+  quality_score: number;
+  piotroski_f: number;
+  momentum_pct: number;
+}
+
 export interface BacktestResponse {
   date: string;
   quarters: BacktestQuarter[];
-  picks: Array<{
-    quarter: string;
-    ticker: string;
-    sector: string;
-    value_score: number;
-    quality_score: number;
-    piotroski_f: number;
-    momentum_pct: number;
-  }>;
+  picks: BacktestPick[];
 }
 
 export function useBacktestData() {

@@ -78,7 +78,9 @@ async def get_screen():
 @router.get("/screen/diff")
 async def get_screen_diff():
     """Compare the latest screen to the previous one."""
-    files = sorted(RESULTS_DIR.glob("screen_*.json"), reverse=True)
+    # Filter by size to skip single-ticker runs (same logic as _find_latest_screen)
+    files = [f for f in sorted(RESULTS_DIR.glob("screen_*.json"), reverse=True)
+             if f.stat().st_size > 10000]
     if len(files) < 2:
         raise HTTPException(status_code=404, detail="Need at least 2 screens to compute diff.")
 
@@ -321,8 +323,8 @@ async def get_logo(ticker: str):
                 logger.warning(f"Failed to cache logo for {ticker_upper}")
             return FastResponse(content=r.content, media_type="image/webp",
                                headers={"Cache-Control": "public, max-age=2592000"})
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Failed to fetch logo for {ticker_upper}: {e}")
 
     raise HTTPException(status_code=404, detail="Logo not available")
 

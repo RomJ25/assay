@@ -1,12 +1,31 @@
 import { useState, useEffect } from "react";
 import { classificationColors } from "../../lib/colors";
+import type { Classification } from "../../lib/types";
+
+interface DiffPick {
+  ticker: string;
+  company: string;
+  value_score: number;
+  quality_score: number;
+  conviction_score: number;
+  confidence?: string;
+  new_classification?: Classification;
+  previous_classification?: string;
+}
+
+interface DiffScoreChange {
+  ticker: string;
+  company: string;
+  current: { value: number; quality: number; conviction: number };
+  previous: { value: number; quality: number; conviction: number };
+}
 
 interface DiffData {
   current_date: string;
   previous_date: string;
-  new_picks: any[];
-  dropped_picks: any[];
-  changed_scores: any[];
+  new_picks: DiffPick[];
+  dropped_picks: DiffPick[];
+  changed_scores: DiffScoreChange[];
 }
 
 export function WhatChanged() {
@@ -24,7 +43,7 @@ export function WhatChanged() {
   if (diff.new_picks.length === 0 && diff.dropped_picks.length === 0 && diff.changed_scores.length === 0) return null;
 
   return (
-    <div className="px-8 pb-6">
+    <div className="px-8 pb-6 anim-fade-up-lg" style={{ animationDelay: "400ms" }}>
       <div className="rounded-lg p-5" style={{ backgroundColor: "var(--color-surface-1)", border: "1px solid var(--color-border)" }}>
         <h3 className="text-[11px] font-medium uppercase tracking-[0.06em] mb-4"
             style={{ color: "var(--color-text-muted)" }}>
@@ -37,8 +56,9 @@ export function WhatChanged() {
             <div className="text-[12px] font-medium mb-2" style={{ color: "#22c55e" }}>
               New to Conviction Buy
             </div>
-            {diff.new_picks.map((s: any) => (
-              <div key={s.ticker} className="flex items-center gap-3 py-1.5">
+            {diff.new_picks.map((s, i) => (
+              <div key={s.ticker} className="flex items-center gap-3 py-1.5 anim-fade-up"
+                   style={{ animationDelay: `${500 + i * 30}ms` }}>
                 <span className="text-[13px]" style={{ color: "#22c55e" }}>+</span>
                 <span className="font-mono text-[13px] font-semibold w-14">{s.ticker}</span>
                 <span className="text-[12px] flex-1 truncate" style={{ color: "var(--color-text-secondary)" }}>{s.company}</span>
@@ -59,11 +79,12 @@ export function WhatChanged() {
             <div className="text-[12px] font-medium mb-2" style={{ color: "#ef4444" }}>
               Dropped from Conviction Buy ({diff.dropped_picks.length})
             </div>
-            {(expanded ? diff.dropped_picks : diff.dropped_picks.slice(0, 5)).map((s: any) => {
+            {(expanded ? diff.dropped_picks : diff.dropped_picks.slice(0, 5)).map((s, i) => {
               const newCl = s.new_classification;
-              const clColor = newCl ? (classificationColors as any)[newCl] || "#71717a" : "#71717a";
+              const clColor = newCl ? classificationColors[newCl] || "#71717a" : "#71717a";
               return (
-                <div key={s.ticker} className="flex items-center gap-3 py-1.5">
+                <div key={s.ticker} className="flex items-center gap-3 py-1.5 anim-fade-up"
+                     style={{ animationDelay: `${600 + i * 30}ms` }}>
                   <span className="text-[13px]" style={{ color: "#ef4444" }}>−</span>
                   <span className="font-mono text-[13px] font-semibold w-14">{s.ticker}</span>
                   <span className="text-[12px] flex-1 truncate" style={{ color: "var(--color-text-secondary)" }}>{s.company}</span>
@@ -92,7 +113,7 @@ export function WhatChanged() {
             <div className="text-[12px] font-medium mb-2" style={{ color: "var(--color-text-secondary)" }}>
               Score Changes (still in CB)
             </div>
-            {diff.changed_scores.map((s: any) => {
+            {diff.changed_scores.map((s) => {
               const vDelta = s.current.value - s.previous.value;
               const qDelta = s.current.quality - s.previous.quality;
               return (

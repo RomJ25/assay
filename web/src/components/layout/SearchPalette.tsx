@@ -11,6 +11,7 @@ export function SearchPalette({ onSelect }: Props) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [selected, setSelected] = useState(0);
+  const [searching, setSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Cmd+K to open
@@ -38,12 +39,14 @@ export function SearchPalette({ onSelect }: Props) {
 
   // Search on query change
   useEffect(() => {
-    if (!query || query.length < 1) { setResults([]); return; }
+    if (!query || query.length < 1) { setResults([]); setSearching(false); return; }
+    setSearching(true);
     const controller = new AbortController();
     fetch(`/api/v1/search?q=${encodeURIComponent(query)}`, { signal: controller.signal })
       .then((r) => r.json())
       .then((d) => { setResults(d.results || []); setSelected(0); })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setSearching(false));
     return () => controller.abort();
   }, [query]);
 
@@ -63,11 +66,16 @@ export function SearchPalette({ onSelect }: Props) {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center pt-[15vh]" onClick={() => setOpen(false)}>
-      <div className="absolute inset-0 transition-opacity duration-200"
-           style={{ backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }} />
+      <div className="absolute inset-0 anim-fade"
+           style={{ backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", animationDuration: "160ms" }} />
 
-      <div className="relative w-full max-w-lg rounded-xl overflow-hidden shadow-2xl"
-           style={{ backgroundColor: "var(--color-surface-1)", border: "1px solid var(--color-border)" }}
+      <div className="relative w-full max-w-lg rounded-xl overflow-hidden shadow-2xl anim-fade-scale"
+           style={{
+             backgroundColor: "var(--color-surface-1)",
+             border: "1px solid var(--color-border)",
+             animationDuration: "200ms",
+             animationTimingFunction: "var(--ease-ios-sheet)",
+           }}
            onClick={(e) => e.stopPropagation()}>
 
         {/* Search input */}
@@ -93,12 +101,16 @@ export function SearchPalette({ onSelect }: Props) {
         {results.length > 0 && (
           <div className="max-h-[320px] overflow-y-auto py-1">
             {results.map((r, i) => {
-              const clColor = (classificationColors as any)[r.classification] || "#71717a";
+              const clColor = classificationColors[r.classification] || "#71717a";
               return (
                 <button
                   key={r.ticker}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors duration-75"
-                  style={{ backgroundColor: i === selected ? "var(--color-surface-2)" : "transparent" }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors duration-75 anim-fade-up"
+                  style={{
+                    backgroundColor: i === selected ? "var(--color-surface-2)" : "transparent",
+                    animationDelay: `${Math.min(i, 8) * 20}ms`,
+                    animationDuration: "120ms",
+                  }}
                   onClick={() => handleSelect(r.ticker)}
                   onMouseEnter={() => setSelected(i)}
                 >
@@ -119,8 +131,17 @@ export function SearchPalette({ onSelect }: Props) {
           </div>
         )}
 
+        {/* Loading indicator */}
+        {searching && results.length === 0 && (
+          <div className="py-6 text-center">
+            <div className="inline-block w-16 h-0.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--color-surface-2)" }}>
+              <div className="h-full rounded-full animate-pulse w-1/2" style={{ backgroundColor: "var(--color-cb)" }} />
+            </div>
+          </div>
+        )}
+
         {/* Empty state */}
-        {query && results.length === 0 && (
+        {query && !searching && results.length === 0 && (
           <div className="py-8 text-center text-[13px]" style={{ color: "var(--color-text-muted)" }}>
             No stocks match "{query}"
           </div>

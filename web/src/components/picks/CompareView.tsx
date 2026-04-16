@@ -33,13 +33,20 @@ const METRICS: { label: string; key: string; format: (s: ScreenStock) => string 
   { label: "Dividend Yield", key: "dividend_yield", format: (s) => s.dividend_yield != null ? `${(s.dividend_yield * 100).toFixed(1)}%` : "—" },
 ];
 
+function getNumeric(stock: ScreenStock, key: string): number | null {
+  const val = (stock as unknown as Record<string, unknown>)[key];
+  return typeof val === "number" ? val : null;
+}
+
 export function CompareView({ stocks, onClose }: Props) {
   // Find best value per metric for highlighting
   function isBest(metric: typeof METRICS[0], stock: ScreenStock): boolean {
-    if (metric.key.startsWith("divider")) return false;
-    const val = (stock as any)[metric.key];
+    if (metric.key.startsWith("divider") || metric.key === "confidence") return false;
+    const val = getNumeric(stock, metric.key);
     if (val == null) return false;
-    const vals = stocks.map((s) => (s as any)[metric.key]).filter((v: any) => v != null) as number[];
+    const vals = stocks
+      .map((s) => getNumeric(s, metric.key))
+      .filter((v): v is number => v != null);
     if (vals.length < 2) return false;
     // Higher is better for most metrics, lower for P/E and EV/EBITDA
     if (metric.key === "pe_ratio" || metric.key === "ev_ebitda") {
@@ -98,7 +105,7 @@ export function CompareView({ stocks, onClose }: Props) {
                   {stocks.map((s) => {
                     const best = isBest(m, s);
                     const isScore = ["value_score", "quality_score", "conviction_score"].includes(m.key);
-                    const val = isScore ? (s as any)[m.key] : null;
+                    const val = isScore ? getNumeric(s, m.key) : null;
                     return (
                       <td key={s.ticker} className="text-center font-mono text-[12px] py-2 px-2"
                           style={{ color: best ? "#22c55e" : "var(--color-text-primary)" }}>

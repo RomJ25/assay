@@ -1,5 +1,5 @@
 import { useState, useCallback, lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { NavBar } from "./components/layout/NavBar";
 import { SearchPalette } from "./components/layout/SearchPalette";
 import { StockSheet } from "./components/stock/StockSheet";
@@ -23,6 +23,7 @@ function PageLoader() {
 
 export function App() {
   const { data } = useScreenData();
+  const location = useLocation();
   const [searchTicker, setSearchTicker] = useState<string | null>(null);
 
   const handleSearchSelect = useCallback((ticker: string) => {
@@ -39,12 +40,15 @@ export function App() {
 
       <main className="max-w-7xl mx-auto">
         <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/universe" element={<Universe />} />
-            <Route path="/evidence" element={<Evidence />} />
-            <Route path="/methodology" element={<Methodology />} />
-          </Routes>
+          {/* Keyed wrapper — route change triggers fade-up. Subtle, preserves scroll to top naturally. */}
+          <div key={location.pathname} className="anim-fade">
+            <Routes location={location}>
+              <Route path="/" element={<Home />} />
+              <Route path="/universe" element={<Universe />} />
+              <Route path="/evidence" element={<Evidence />} />
+              <Route path="/methodology" element={<Methodology />} />
+            </Routes>
+          </div>
         </Suspense>
       </main>
 

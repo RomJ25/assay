@@ -137,8 +137,12 @@ export function ConvictionTable({ stocks, onSelectStock }: Props) {
           return (
             <div
               key={s.ticker}
-              className="rounded-lg p-3 cursor-pointer transition-colors duration-100"
-              style={{ backgroundColor: "var(--color-surface-1)", border: "1px solid var(--color-border)" }}
+              className="rounded-lg p-3 cursor-pointer transition-colors duration-100 anim-fade-up"
+              style={{
+                backgroundColor: "var(--color-surface-1)",
+                border: "1px solid var(--color-border)",
+                animationDelay: `${1100 + Math.min(i, 20) * 20}ms`,
+              }}
               onClick={() => onSelectStock(s.ticker)}
             >
               <div className="flex items-center justify-between mb-2">
@@ -213,9 +217,11 @@ export function ConvictionTable({ stocks, onSelectStock }: Props) {
             {sorted.map((s, i) => (
               <tr
                 key={s.ticker}
-                className="border-b cursor-pointer transition-colors duration-100"
+                className="border-b cursor-pointer transition-colors duration-100 anim-fade-up"
                 style={{
                   borderColor: "rgba(39, 39, 42, 0.5)",
+                  animationDelay: `${1100 + Math.min(i, 20) * 20}ms`,
+                  animationDuration: "220ms",
                 }}
                 onClick={() => {
                   if (compareMode) {

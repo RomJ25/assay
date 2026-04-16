@@ -1,14 +1,18 @@
 import { useState, useMemo, Fragment } from "react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceDot, Label } from "recharts";
-import { useBacktestData, type BacktestQuarter } from "../hooks/useBacktestData";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceDot } from "recharts";
+import { useBacktestData, type BacktestQuarter, type BacktestPick } from "../hooks/useBacktestData";
+import { useCountUp } from "../hooks/useCountUp";
 
 export function Evidence() {
   const { data, loading, error } = useBacktestData();
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-[13px]" style={{ color: "var(--color-text-muted)" }}>Loading backtest data...</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="w-48 h-1 rounded-full overflow-hidden" style={{ backgroundColor: "var(--color-surface-2)" }}>
+          <div className="h-full rounded-full animate-pulse" style={{ backgroundColor: "var(--color-cb)", width: "40%" }} />
+        </div>
+        <p className="mt-4 text-[13px]" style={{ color: "var(--color-text-muted)" }}>Loading backtest data...</p>
       </div>
     );
   }
@@ -85,23 +89,36 @@ function PerformanceSummary({ quarters }: { quarters: BacktestQuarter[] }) {
           { label: "Portfolio", cagr: stats.cagr, total: stats.totalReturn },
           { label: "Universe (EW)", cagr: stats.univCagr, total: stats.univReturn },
           { label: "S&P 500 (SPY)", cagr: stats.spyCagr, total: stats.spyReturn },
-        ].map((c) => (
-          <div key={c.label} className="rounded-lg p-4" style={{ backgroundColor: "var(--color-surface-1)", border: "1px solid var(--color-border)" }}>
-            <div className="text-[10px] uppercase tracking-[0.06em] mb-2" style={{ color: "var(--color-text-muted)" }}>{c.label}</div>
-            <div className="font-mono text-2xl font-semibold mb-1" style={{ color: c.cagr >= 0 ? "#22c55e" : "#ef4444" }}>
-              {(c.cagr * 100).toFixed(1)}%
-            </div>
-            <div className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>CAGR · Total: {(c.total * 100).toFixed(1)}%</div>
-          </div>
+        ].map((c, i) => (
+          <CAGRCard key={c.label} label={c.label} cagr={c.cagr} total={c.total} delay={i * 100} />
         ))}
       </div>
       <div className="grid grid-cols-3 gap-3 mt-3">
         <SmallCard label="Selection Alpha" value={`${(stats.selectionAlpha * 100).toFixed(1)}%`}
-                   color={stats.selectionAlpha >= 0 ? "#22c55e" : "#ef4444"} sub="Portfolio - Universe CAGR" />
-        <SmallCard label="Max Drawdown" value={`${(stats.maxDD * 100).toFixed(1)}%`} color="#ef4444" sub="Peak-to-trough" />
+                   color={stats.selectionAlpha >= 0 ? "#22c55e" : "#ef4444"} sub="Portfolio - Universe CAGR" delay={360} />
+        <SmallCard label="Max Drawdown" value={`${(stats.maxDD * 100).toFixed(1)}%`} color="#ef4444" sub="Peak-to-trough" delay={440} />
         <SmallCard label="Quarters" value={`${stats.quarters}`}
-                   color="var(--color-text-primary)" sub={stats.quarters < 30 ? "Below 30-quarter minimum" : ""} />
+                   color="var(--color-text-primary)" sub={stats.quarters < 30 ? "Below 30-quarter minimum" : ""} delay={520} />
       </div>
+    </div>
+  );
+}
+
+/* CAGR card — count-up on the headline number */
+function CAGRCard({ label, cagr, total, delay }: { label: string; cagr: number; total: number; delay: number }) {
+  const animatedPct = useCountUp(cagr * 100, 800, delay);
+  return (
+    <div className="rounded-lg p-4 anim-fade-up"
+         style={{
+           backgroundColor: "var(--color-surface-1)",
+           border: "1px solid var(--color-border)",
+           animationDelay: `${delay}ms`,
+         }}>
+      <div className="text-[10px] uppercase tracking-[0.06em] mb-2" style={{ color: "var(--color-text-muted)" }}>{label}</div>
+      <div className="font-mono text-2xl font-semibold mb-1 tabular-nums" style={{ color: cagr >= 0 ? "#22c55e" : "#ef4444" }}>
+        {animatedPct.toFixed(1)}%
+      </div>
+      <div className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>CAGR · Total: {(total * 100).toFixed(1)}%</div>
     </div>
   );
 }
@@ -146,9 +163,9 @@ function CumulativeChart({ quarters }: { quarters: BacktestQuarter[] }) {
             labelStyle={{ color: "#a1a1aa", marginBottom: "4px" }}
             formatter={(value: any, name: any) => [`$${Number(value).toFixed(1)}`, name === "portfolio" ? "Portfolio" : name === "universe" ? "Universe" : "SPY"]}
           />
-          <Line type="monotone" dataKey="portfolio" stroke="#d4a832" strokeWidth={2} dot={false} />
-          <Line type="monotone" dataKey="universe" stroke="#71717a" strokeWidth={1.5} dot={false} />
-          <Line type="monotone" dataKey="spy" stroke="#a1a1aa" strokeWidth={1} strokeDasharray="4 4" dot={false} />
+          <Line type="monotone" dataKey="portfolio" stroke="#d4a832" strokeWidth={2} dot={false} animationDuration={900} animationEasing="ease-out" />
+          <Line type="monotone" dataKey="universe" stroke="#71717a" strokeWidth={1.5} dot={false} animationDuration={900} animationEasing="ease-out" />
+          <Line type="monotone" dataKey="spy" stroke="#a1a1aa" strokeWidth={1} strokeDasharray="4 4" dot={false} animationDuration={900} animationEasing="ease-out" />
           {/* Annotated events */}
           {chartData.map((d, i) => {
             if (d.picks === 0 && i > 0) {
@@ -164,7 +181,7 @@ function CumulativeChart({ quarters }: { quarters: BacktestQuarter[] }) {
 
 /* ── Quarterly Table with Drill-Down ── */
 
-function QuarterlyTable({ quarters, picks }: { quarters: BacktestQuarter[]; picks: any[] }) {
+function QuarterlyTable({ quarters, picks }: { quarters: BacktestQuarter[]; picks: BacktestPick[] }) {
   const [expanded, setExpanded] = useState<string | null>(null);
 
   return (
@@ -196,7 +213,9 @@ function QuarterlyTable({ quarters, picks }: { quarters: BacktestQuarter[]; pick
                       onMouseLeave={(e) => { if (!isExpanded) e.currentTarget.style.backgroundColor = "transparent"; }}>
                     <td className="font-mono text-[12px] py-2.5 px-2" style={{ color: "var(--color-text-muted)" }}>{i + 1}</td>
                     <td className="font-mono text-[12px] py-2.5 px-2">
-                      {isExpanded ? "▾" : "▸"} {q.date}
+                      <span className="inline-block transition-transform duration-150"
+                            style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>▸</span>
+                      {" "}{q.date}
                     </td>
                     <td className="font-mono text-[12px] py-2.5 px-2 text-right"
                         style={{ color: q.num_picks === 0 ? "#eab308" : "var(--color-text-primary)" }}>
@@ -226,7 +245,7 @@ function QuarterlyTable({ quarters, picks }: { quarters: BacktestQuarter[]; pick
                             Picks for {q.date}
                           </div>
                           <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                            {quarterPicks.map((p: any) => (
+                            {quarterPicks.map((p) => (
                               <div key={p.ticker} className="flex items-center gap-2 py-0.5">
                                 <span className="font-mono text-[12px] font-semibold w-12">{p.ticker}</span>
                                 <span className="text-[11px] flex-1 truncate" style={{ color: "var(--color-text-secondary)" }}>{p.sector}</span>
@@ -287,9 +306,13 @@ function InvestigationSummary() {
         12 quarters analyzed. All findings are directional hypotheses (n&lt;30).
       </p>
       <div className="grid grid-cols-2 gap-2">
-        {findings.map((f) => (
-          <div key={f.question} className="rounded-lg p-4"
-               style={{ backgroundColor: "var(--color-surface-1)", border: "1px solid var(--color-border)" }}>
+        {findings.map((f, i) => (
+          <div key={f.question} className="rounded-lg p-4 anim-fade-up"
+               style={{
+                 backgroundColor: "var(--color-surface-1)",
+                 border: "1px solid var(--color-border)",
+                 animationDelay: `${i * 50}ms`,
+               }}>
             <div className="flex items-start justify-between mb-2">
               <div className="text-[13px] font-medium" style={{ color: "var(--color-text-primary)" }}>
                 "{f.question}"
@@ -317,9 +340,14 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function SmallCard({ label, value, color, sub }: { label: string; value: string; color: string; sub: string }) {
+function SmallCard({ label, value, color, sub, delay = 0 }: { label: string; value: string; color: string; sub: string; delay?: number }) {
   return (
-    <div className="rounded-lg p-4" style={{ backgroundColor: "var(--color-surface-1)", border: "1px solid var(--color-border)" }}>
+    <div className="rounded-lg p-4 anim-fade-up"
+         style={{
+           backgroundColor: "var(--color-surface-1)",
+           border: "1px solid var(--color-border)",
+           animationDelay: `${delay}ms`,
+         }}>
       <div className="text-[10px] uppercase tracking-[0.06em] mb-2" style={{ color: "var(--color-text-muted)" }}>{label}</div>
       <div className="font-mono text-xl font-semibold mb-1" style={{ color }}>{value}</div>
       <div className="text-[10px]" style={{ color: "var(--color-text-secondary)" }}>{sub}</div>

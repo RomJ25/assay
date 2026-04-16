@@ -93,7 +93,7 @@ export function RunScreener({ onComplete }: Props) {
       >
         {running ? (
           <>
-            <span className="animate-spin text-[10px]">⟳</span>
+            <span className="anim-spin-fast inline-block text-[10px]">⟳</span>
             {phase}
           </>
         ) : (

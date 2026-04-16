@@ -3,6 +3,7 @@ import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, Refe
 import { useScreenData } from "../hooks/useScreenData";
 import { StockSheet } from "../components/stock/StockSheet";
 import { classificationColors } from "../lib/colors";
+import { useCountUp } from "../hooks/useCountUp";
 import type { ScreenStock, Classification } from "../lib/types";
 
 const MATRIX: Classification[][] = [
@@ -57,8 +58,11 @@ export function Universe() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-[13px]" style={{ color: "var(--color-text-muted)" }}>Loading...</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="w-48 h-1 rounded-full overflow-hidden" style={{ backgroundColor: "var(--color-surface-2)" }}>
+          <div className="h-full rounded-full animate-pulse" style={{ backgroundColor: "var(--color-cb)", width: "40%" }} />
+        </div>
+        <p className="mt-4 text-[13px]" style={{ color: "var(--color-text-muted)" }}>Loading universe data...</p>
       </div>
     );
   }
@@ -116,10 +120,8 @@ export function Universe() {
                   // AVOID appears in two cells: v_mid+q_low (row 1, col 2) and v_low+q_low (row 2, col 2)
                   let cellStocks: ScreenStock[];
                   if (cl === "AVOID" && ri === 1) {
-                    // v_mid + q_low: value 40-70
                     cellStocks = (bucketMap.get("AVOID") || []).filter((s) => s.value_score >= 40);
                   } else if (cl === "AVOID" && ri === 2) {
-                    // v_low + q_low: value < 40
                     cellStocks = (bucketMap.get("AVOID") || []).filter((s) => s.value_score < 40);
                   } else {
                     cellStocks = bucketMap.get(cl) || [];
@@ -127,27 +129,19 @@ export function Universe() {
                   const displayCount = cellStocks.length;
                   const color = classificationColors[cl];
                   const isSelected = selectedCell === cl;
+                  const cellDelay = (ri * 3 + ci) * 40;
 
                   return (
-                    <button
+                    <MatrixCell
                       key={key}
-                      className="rounded-lg p-3 text-left transition-all duration-150 hover:scale-[1.01]"
-                      style={{
-                        backgroundColor: isSelected ? `${color}1a` : `${color}0a`,
-                        border: `1px solid ${isSelected ? `${color}40` : `${color}20`}`,
-                      }}
+                      count={displayCount}
+                      color={color}
+                      label={SHORT_LABELS[cl]}
+                      isSelected={isSelected}
+                      dimmed={selectedCell !== null && !isSelected}
+                      delay={cellDelay}
                       onClick={() => setSelectedCell(isSelected ? null : cl)}
-                    >
-                      <div className="text-[11px] font-medium mb-1" style={{ color }}>
-                        {SHORT_LABELS[cl]}
-                      </div>
-                      <div className="font-mono text-lg font-semibold" style={{ color: "var(--color-text-primary)" }}>
-                        {displayCount}
-                      </div>
-                      <div className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>
-                        stocks
-                      </div>
-                    </button>
+                    />
                   );
                 })}
               </div>
@@ -241,6 +235,37 @@ export function Universe() {
         <StockSheet stock={selectedStock} allStocks={data.stocks} onClose={() => setSelectedTicker(null)} />
       )}
     </div>
+  );
+}
+
+/* ── Matrix cell with count-up + selection focus ── */
+
+function MatrixCell({ count, color, label, isSelected, dimmed, delay, onClick }: {
+  count: number; color: string; label: string;
+  isSelected: boolean; dimmed: boolean; delay: number; onClick: () => void;
+}) {
+  const animated = useCountUp(count, 600, delay);
+  return (
+    <button
+      className="rounded-lg p-3 text-left transition-all duration-200 hover:scale-[1.01] anim-fade-scale"
+      style={{
+        backgroundColor: isSelected ? `${color}1a` : `${color}0a`,
+        border: `1px solid ${isSelected ? `${color}40` : `${color}20`}`,
+        opacity: dimmed ? 0.4 : 1,
+        animationDelay: `${delay}ms`,
+      }}
+      onClick={onClick}
+    >
+      <div className="text-[11px] font-medium mb-1" style={{ color }}>
+        {label}
+      </div>
+      <div className="font-mono text-lg font-semibold tabular-nums" style={{ color: "var(--color-text-primary)" }}>
+        {Math.round(animated)}
+      </div>
+      <div className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>
+        stocks
+      </div>
+    </button>
   );
 }
 

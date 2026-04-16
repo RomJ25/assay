@@ -1,5 +1,6 @@
 import type { ScreenStock, Confidence } from "../../lib/types";
 import { confidenceColors, confidenceIcons } from "../../lib/colors";
+import { useCountUp } from "../../hooks/useCountUp";
 
 interface Props {
   stocks: ScreenStock[];
@@ -12,6 +13,9 @@ export function SignalBanner({ stocks, universe, date, screened }: Props) {
   const cbPicks = stocks.filter((s) => s.classification === "CONVICTION BUY");
   const count = cbPicks.length;
   const isZero = count === 0;
+  // Hero count-up — 900ms ease-out-expo. Zero stays still (restraint).
+  const animatedCount = useCountUp(count, 900);
+  const displayCount = isZero ? 0 : Math.round(animatedCount);
 
   // Confidence distribution
   const confCounts: Record<Confidence, number> = { HIGH: 0, MODERATE: 0, LOW: 0 };
@@ -33,33 +37,34 @@ export function SignalBanner({ stocks, universe, date, screened }: Props) {
   return (
     <div className="flex flex-col items-center pt-10 sm:pt-16 pb-8 sm:pb-10 px-4 sm:px-8">
       {/* Logotype */}
-      <span className="font-mono text-sm font-medium tracking-[0.12em] uppercase mb-1"
+      <span className="font-mono text-sm font-medium tracking-[0.12em] uppercase mb-1 anim-fade"
             style={{ color: "var(--color-text-muted)" }}>
         ASSAY
       </span>
-      <span className="text-sm mb-12" style={{ color: "var(--color-text-secondary)" }}>
+      <span className="text-sm mb-12 anim-fade" style={{ color: "var(--color-text-secondary)", animationDelay: "60ms" }}>
         {universe} · Value + Quality
       </span>
 
-      {/* Hero number */}
+      {/* Hero number — count-up tells the story of "earned" */}
       <span
-        className="font-mono text-[56px] sm:text-[80px] leading-none font-semibold mb-1"
+        className="font-mono text-[56px] sm:text-[80px] leading-none font-semibold mb-1 tabular-nums"
         style={{ color: isZero ? "#eab308" : "var(--color-text-primary)" }}
       >
-        {count}
+        {displayCount}
       </span>
-      <span className="text-lg mb-0.5" style={{ color: "var(--color-text-secondary)" }}>
+      <span className="text-lg mb-0.5 anim-fade-up" style={{ color: "var(--color-text-secondary)", animationDelay: "300ms" }}>
         {isZero ? "nothing qualifies today" : "conviction buys"}
       </span>
-      <span className="text-[13px] mb-8" style={{ color: "var(--color-text-muted)" }}>
+      <span className="text-[13px] mb-8 anim-fade" style={{ color: "var(--color-text-muted)", animationDelay: "500ms" }}>
         from {screened} screened
       </span>
 
       {/* Confidence dots (only if picks exist) */}
       {count > 0 && (
         <div className="flex gap-6 mb-10">
-          {(["HIGH", "MODERATE", "LOW"] as Confidence[]).map((tier) => (
-            <div key={tier} className="flex items-center gap-1.5">
+          {(["HIGH", "MODERATE", "LOW"] as Confidence[]).map((tier, i) => (
+            <div key={tier} className="flex items-center gap-1.5 anim-fade-up"
+                 style={{ animationDelay: `${700 + i * 80}ms` }}>
               <span className="text-xs" style={{ color: confidenceColors[tier] }}>
                 {confidenceIcons[tier]}
               </span>
@@ -73,7 +78,8 @@ export function SignalBanner({ stocks, universe, date, screened }: Props) {
 
       {/* Zero-pick context */}
       {isZero && (
-        <p className="text-[13px] max-w-md text-center mb-10" style={{ color: "var(--color-text-secondary)" }}>
+        <p className="text-[13px] max-w-md text-center mb-10 anim-fade-up"
+           style={{ color: "var(--color-text-secondary)", animationDelay: "400ms" }}>
           Nothing in the {universe} passes all filters simultaneously.
           This has happened in 5 of 16 historical quarters.
           The system couldn't find a single stock where cheapness, quality, and
@@ -82,14 +88,15 @@ export function SignalBanner({ stocks, universe, date, screened }: Props) {
       )}
 
       {/* Date */}
-      <span className="text-[13px] mb-8" style={{ color: "var(--color-text-muted)" }}>
+      <span className="text-[13px] mb-8 anim-fade"
+            style={{ color: "var(--color-text-muted)", animationDelay: "800ms" }}>
         {date}
       </span>
 
-      {/* Classification bar */}
-      <div className="w-full max-w-2xl">
+      {/* Classification bar — assembles itself, stratigraphy of the universe */}
+      <div className="w-full max-w-2xl anim-fade" style={{ animationDelay: "850ms" }}>
         <div className="flex h-1 rounded-full overflow-hidden">
-          {bucketOrder.map((bucket) => {
+          {bucketOrder.map((bucket, bi) => {
             const n = bucketCounts.get(bucket) || 0;
             if (n === 0) return null;
             const pct = (n / stocks.length) * 100;
@@ -106,14 +113,22 @@ export function SignalBanner({ stocks, universe, date, screened }: Props) {
             return (
               <div
                 key={bucket}
-                style={{ width: `${pct}%`, backgroundColor: colors[bucket], opacity: 0.6 }}
+                className="h-full"
+                style={{
+                  width: `${pct}%`,
+                  backgroundColor: colors[bucket],
+                  opacity: 0.6,
+                  transform: "scaleX(0)",
+                  transformOrigin: "left center",
+                  animation: `a-draw-x 320ms var(--ease-out-quart) ${950 + bi * 40}ms forwards`,
+                }}
                 title={`${bucket}: ${n}`}
               />
             );
           })}
         </div>
-        <div className="flex justify-between mt-1.5 text-[10px] tracking-wide"
-             style={{ color: "var(--color-text-muted)" }}>
+        <div className="flex justify-between mt-1.5 text-[10px] tracking-wide anim-fade"
+             style={{ color: "var(--color-text-muted)", animationDelay: "1300ms" }}>
           <span>CB {bucketCounts.get("CONVICTION BUY") || 0}</span>
           <span>WL {bucketCounts.get("WATCH LIST") || 0}</span>
           <span>HOLD {bucketCounts.get("HOLD") || 0}</span>

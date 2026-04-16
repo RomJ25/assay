@@ -3,6 +3,7 @@ import type { ScreenStock, Classification, Confidence } from "../../lib/types";
 import { classificationColors, confidenceColors, confidenceIcons, scoreColor } from "../../lib/colors";
 import { fmtPrice, fmtMarketCap } from "../../lib/format";
 import { StockLogo } from "../ui/StockLogo";
+import { useCountUp } from "../../hooks/useCountUp";
 
 interface Props {
   stock: ScreenStock;
@@ -29,27 +30,28 @@ export function StockSheet({ stock, allStocks, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
       {/* Backdrop */}
-      <div className="absolute inset-0 transition-opacity duration-200"
-           style={{ backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }} />
+      <div className="absolute inset-0 anim-fade"
+           style={{ backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", animationDuration: "180ms" }} />
 
-      {/* Panel */}
+      {/* Panel — iOS-sheet slide with glide-to-rest */}
       <div
-        className="relative w-full sm:max-w-[680px] h-full overflow-y-auto sm:border-l"
+        className="relative w-full sm:max-w-[680px] h-full overflow-y-auto sm:border-l anim-slide-in-right"
         style={{ backgroundColor: "var(--color-surface-0)", borderColor: "var(--color-border)" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Brand color top border */}
-        <div className="h-0.5" style={{ backgroundColor: clColor }} />
+        {/* Brand color top border — draws in like a tab pulling open */}
+        <div className="h-0.5 anim-draw-x"
+             style={{ backgroundColor: clColor, animationDelay: "80ms", animationDuration: "400ms" }} />
 
         <div className="p-8">
           {/* Back button */}
-          <button className="text-[13px] mb-6 hover:opacity-80 transition-opacity"
-                  style={{ color: "var(--color-text-secondary)" }} onClick={onClose}>
+          <button className="text-[13px] mb-6 hover:opacity-80 transition-opacity anim-fade-up"
+                  style={{ color: "var(--color-text-secondary)", animationDelay: "140ms" }} onClick={onClose}>
             ← Back
           </button>
 
           {/* Header */}
-          <div className="mb-6">
+          <div className="mb-6 anim-fade-up" style={{ animationDelay: "180ms" }}>
             <div className="flex items-center gap-3 mb-2">
               <StockLogo ticker={stock.ticker} company={stock.company} size={48} />
               <div>
@@ -64,7 +66,7 @@ export function StockSheet({ stock, allStocks, onClose }: Props) {
             </p>
 
             {/* Classification + Confidence badges */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 anim-fade-scale" style={{ animationDelay: "220ms" }}>
               <span className="inline-flex rounded-full px-3 py-1 text-[12px] font-medium"
                     style={{ backgroundColor: `${clColor}26`, color: clColor }}>
                 {stock.classification}
@@ -82,39 +84,37 @@ export function StockSheet({ stock, allStocks, onClose }: Props) {
           </div>
 
           {/* ── WHY THIS STOCK QUALIFIES (narrative) ── */}
-          {isCB && <Narrative stock={stock} />}
-          {!isCB && <NonCBNarrative stock={stock} />}
+          <div className="anim-fade-up" style={{ animationDelay: "280ms" }}>
+            {isCB && <Narrative stock={stock} />}
+            {!isCB && <NonCBNarrative stock={stock} />}
+          </div>
 
-          {/* ── Score gauges ── */}
-          <SectionLabel>Scores</SectionLabel>
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            {([
-              { label: "Value", score: stock.value_score, sub: `${Math.round(stock.value_score)}th percentile by earnings yield` },
-              { label: "Quality", score: stock.quality_score, sub: `Piotroski ${stock.piotroski_f}/9 + profitability + safety` },
-              { label: "Conviction", score: stock.conviction_score, sub: "Geometric mean — both must be high" },
-            ] as const).map((g) => (
-              <div key={g.label} className="flex-1 rounded-lg p-4 text-center"
-                   style={{ backgroundColor: "var(--color-surface-1)", border: "1px solid var(--color-border)" }}>
-                <div className="text-[10px] uppercase tracking-[0.06em] mb-2" style={{ color: "var(--color-text-muted)" }}>
-                  {g.label}
-                </div>
-                <div className="font-mono text-3xl font-semibold mb-1.5"
-                     style={{ color: scoreColor(g.score) }}>
-                  {Math.round(g.score)}
-                </div>
-                <div className="text-[10px] leading-tight" style={{ color: "var(--color-text-secondary)" }}>
-                  {g.sub}
-                </div>
-              </div>
-            ))}
+          {/* ── Score gauges — labels fade in, then numbers count up — "earned" lands with the digit ── */}
+          <div className="anim-fade-up" style={{ animationDelay: "360ms" }}>
+            <SectionLabel>Scores</SectionLabel>
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              {([
+                { label: "Value", score: stock.value_score, sub: `${Math.round(stock.value_score)}th percentile by earnings yield` },
+                { label: "Quality", score: stock.quality_score, sub: `Piotroski ${stock.piotroski_f}/9 + profitability + safety` },
+                { label: "Conviction", score: stock.conviction_score, sub: "Geometric mean — both must be high" },
+              ] as const).map((g, i) => (
+                <ScoreGauge key={g.label} label={g.label} score={g.score} sub={g.sub} delay={440 + i * 60} />
+              ))}
+            </div>
           </div>
 
           {/* ── Gate status ── */}
-          {isCB && <GateStatus stock={stock} />}
+          {isCB && (
+            <div className="anim-fade-up" style={{ animationDelay: "620ms" }}>
+              <GateStatus stock={stock} />
+            </div>
+          )}
 
           {/* ── Piotroski 3×3 ── */}
-          <SectionLabel>Piotroski Breakdown · {stock.piotroski_f}/9</SectionLabel>
-          <PiotroskiGrid breakdown={stock.piotroski_breakdown} />
+          <div className="anim-fade-up" style={{ animationDelay: "700ms" }}>
+            <SectionLabel>Piotroski Breakdown · {stock.piotroski_f}/9</SectionLabel>
+            <PiotroskiGrid breakdown={stock.piotroski_breakdown} />
+          </div>
 
           {/* ── Value Metrics ── */}
           <SectionLabel className="mt-6">Value Metrics</SectionLabel>
@@ -169,6 +169,36 @@ export function StockSheet({ stock, allStocks, onClose }: Props) {
           {/* ── Sector Peers ── */}
           {allStocks && <SectorPeers stock={stock} allStocks={allStocks} />}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Score Gauge — count-up + ring pulse on HIGH ── */
+
+function ScoreGauge({ label, score, sub, delay }: { label: string; score: number; sub: string; delay: number }) {
+  const animated = useCountUp(score, 800, delay);
+  const displayed = Math.round(animated);
+  // Ring pulse on HIGH (>=85) for conviction-class wins — fires once at landing
+  const pulse = score >= 85;
+  const totalDelay = delay + 800; // when count finishes
+
+  return (
+    <div className="flex-1 rounded-lg p-4 text-center relative"
+         style={{ backgroundColor: "var(--color-surface-1)", border: "1px solid var(--color-border)" }}>
+      <div className="text-[10px] uppercase tracking-[0.06em] mb-2" style={{ color: "var(--color-text-muted)" }}>
+        {label}
+      </div>
+      <div className="font-mono text-3xl font-semibold mb-1.5 tabular-nums relative inline-block"
+           style={{ color: scoreColor(score) }}>
+        {displayed}
+        {pulse && (
+          <span className="absolute inset-0 rounded-full anim-ring-pulse-once pointer-events-none"
+                style={{ animationDelay: `${totalDelay}ms` }} />
+        )}
+      </div>
+      <div className="text-[10px] leading-tight" style={{ color: "var(--color-text-secondary)" }}>
+        {sub}
       </div>
     </div>
   );
@@ -292,7 +322,7 @@ function GateRow({ label, passed, detail }: { label: string; passed: boolean; de
   return (
     <div className="flex items-center gap-3 rounded-md px-3 py-2"
          style={{ backgroundColor: `${color}08`, border: `1px solid ${color}1a` }}>
-      <span className="text-sm" style={{ color }}>{passed ? "✓" : "✗"}</span>
+      <span className="text-sm anim-gate-pop" style={{ color }}>{passed ? "✓" : "✗"}</span>
       <div>
         <span className="text-[12px] font-medium" style={{ color: "var(--color-text-primary)" }}>
           {label}: {passed ? "PASSED" : "FIRED"}
@@ -324,22 +354,37 @@ function DCFRange({ stock }: { stock: ScreenStock }) {
         DCF Scenarios vs Current Price
       </div>
       <div className="relative h-8 mb-2">
-        {/* Range bar */}
-        <div className="absolute top-3 h-2 rounded-full"
-             style={{ left: `${bearPct}%`, width: `${bullPct - bearPct}%`, backgroundColor: "var(--color-surface-3)" }} />
-        {/* Base marker */}
-        <div className="absolute top-2 w-1 h-4 rounded-full"
-             style={{ left: `${basePct}%`, backgroundColor: "var(--color-text-secondary)" }} />
-        {/* Current price marker */}
+        {/* Range bar — draws in from left */}
+        <div className="absolute top-3 h-2 rounded-full anim-draw-x"
+             style={{
+               left: `${bearPct}%`,
+               width: `${bullPct - bearPct}%`,
+               backgroundColor: "var(--color-surface-3)",
+               animationDuration: "400ms",
+             }} />
+        {/* Base marker — pin drop with slight overshoot */}
+        <div className="absolute top-2 w-1 h-4 rounded-full anim-pin-drop"
+             style={{
+               left: `${basePct}%`,
+               backgroundColor: "var(--color-text-secondary)",
+               animationDelay: "200ms",
+             }} />
+        {/* Current price marker — slides from left to its actual position */}
         <div className="absolute top-0 w-0.5 h-8"
-             style={{ left: `${Math.min(Math.max(pricePct, 0), 100)}%`, backgroundColor: "#60a5fa" }} />
+             style={{
+               left: `${Math.min(Math.max(pricePct, 0), 100)}%`,
+               backgroundColor: "#60a5fa",
+               animation: "a-fade 500ms var(--ease-in-out-quart) 400ms both",
+             }} />
       </div>
-      <div className="flex justify-between text-[11px] font-mono" style={{ color: "var(--color-text-secondary)" }}>
+      <div className="flex justify-between text-[11px] font-mono anim-fade"
+           style={{ color: "var(--color-text-secondary)", animationDelay: "700ms" }}>
         <span>Bear {fmtPrice(stock.dcf_bear)}</span>
         <span>Base {fmtPrice(stock.dcf_base)}</span>
         <span>Bull {fmtPrice(stock.dcf_bull)}</span>
       </div>
-      <div className="text-[11px] mt-1 font-mono" style={{ color: "#60a5fa" }}>
+      <div className="text-[11px] mt-1 font-mono anim-fade"
+           style={{ color: "#60a5fa", animationDelay: "800ms" }}>
         Current {fmtPrice(stock.price)}
         {stock.dcf_base && (
           <span style={{ color: "var(--color-text-muted)" }}>
@@ -382,10 +427,22 @@ function PiotroskiGrid({ breakdown }: { breakdown: ScreenStock["piotroski_breakd
               const c = criteria[key];
               const pass = c?.pass ?? false;
               const color = pass ? "#22c55e" : "#ef4444";
+              // Row-major stagger, 40ms apart. Absolute delay from sheet open: ~760ms + cell index × 40ms
+              const cellDelay = 760 + (ri * 3 + ci) * 40;
               return (
-                <div key={key} className="flex-1 rounded-lg p-2.5 text-center transition-transform duration-150 hover:scale-[1.02]"
-                     style={{ backgroundColor: `${color}14`, border: `1px solid ${color}33` }}>
-                  <div className="text-base mb-0.5" style={{ color }}>{pass ? "✓" : "✗"}</div>
+                <div key={key}
+                     className="flex-1 rounded-lg p-2.5 text-center transition-transform duration-150 hover:scale-[1.02] anim-fade-scale"
+                     style={{
+                       backgroundColor: `${color}14`,
+                       border: `1px solid ${color}33`,
+                       animationDelay: `${cellDelay}ms`,
+                       animationDuration: "200ms",
+                     }}>
+                  {/* Verdict arrives 80ms after the cell settles — deliberate */}
+                  <div className="text-base mb-0.5 anim-fade"
+                       style={{ color, animationDelay: `${cellDelay + 160}ms`, animationDuration: "140ms" }}>
+                    {pass ? "✓" : "✗"}
+                  </div>
                   <div className="text-[10px]" style={{ color: "var(--color-text-secondary)" }}>
                     {PIO_LABELS[ri][ci]}
                   </div>
@@ -439,7 +496,7 @@ interface HistoryEntry {
   quality_score: number | null;
   piotroski_f: number | null;
   momentum_pct: number | null;
-  classification?: string;
+  classification?: Classification;
   confidence?: string;
 }
 
@@ -456,7 +513,19 @@ function StockHistory({ ticker }: { ticker: string }) {
       .finally(() => setLoading(false));
   }, [ticker]);
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="mt-6">
+        <SectionLabel>Score History</SectionLabel>
+        <div className="flex items-center gap-2 py-4">
+          <div className="w-24 h-0.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--color-surface-2)" }}>
+            <div className="h-full rounded-full animate-pulse w-1/2" style={{ backgroundColor: "var(--color-cb)" }} />
+          </div>
+          <span className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>Loading history...</span>
+        </div>
+      </div>
+    );
+  }
   if (history.length === 0) return null;
 
   return (
@@ -476,7 +545,7 @@ function StockHistory({ ticker }: { ticker: string }) {
           <tbody>
             {history.map((h, i) => {
               const cl = h.classification;
-              const clColor = cl ? (classificationColors as any)[cl] || "#71717a" : "#71717a";
+              const clColor = cl ? classificationColors[cl] || "#71717a" : "#71717a";
               const prevV = i > 0 ? history[i - 1].value_score : null;
               const prevQ = i > 0 ? history[i - 1].quality_score : null;
               const vDelta = h.value_score != null && prevV != null ? h.value_score - prevV : null;
