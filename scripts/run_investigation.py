@@ -66,7 +66,7 @@ def run():
             snap = replay_screen_at_date(rd, cache)
             snapshots.append(snap)
             if snap:
-                cb = snap.classifications.get("CONVICTION BUY", 0)
+                cb = snap.classifications.get("RESEARCH CANDIDATE", 0)
                 console.print(f"  {rd}: {snap.num_screened} screened, {cb} CB picks")
             else:
                 console.print(f"  {rd}: [red]replay failed[/red]")
@@ -157,7 +157,7 @@ def run():
             fg = test_gate_effectiveness(snap, returns, "f_gate")
             all_f_survivors.extend([(snap.date, r) for _, r in
                                     [(sd.ticker, returns.get(sd.ticker)) for sd in snap.stock_details
-                                     if sd.final_classification == "CONVICTION BUY" and returns.get(sd.ticker) is not None]])
+                                     if sd.final_classification == "RESEARCH CANDIDATE" and returns.get(sd.ticker) is not None]])
             for t, r in fg["victim_details"]:
                 all_f_victims.append((snap.date, t, r))
 
@@ -233,13 +233,13 @@ def run():
 
             if t["HIGH"]["n"] > 0:
                 all_h.extend([returns[sd.ticker] for sd in snap.stock_details
-                              if sd.final_classification == "CONVICTION BUY" and sd.confidence == "HIGH" and sd.ticker in returns])
+                              if sd.final_classification == "RESEARCH CANDIDATE" and sd.confidence == "HIGH" and sd.ticker in returns])
             if t["MODERATE"]["n"] > 0:
                 all_m.extend([returns[sd.ticker] for sd in snap.stock_details
-                              if sd.final_classification == "CONVICTION BUY" and sd.confidence == "MODERATE" and sd.ticker in returns])
+                              if sd.final_classification == "RESEARCH CANDIDATE" and sd.confidence == "MODERATE" and sd.ticker in returns])
             if t["LOW"]["n"] > 0:
                 all_l.extend([returns[sd.ticker] for sd in snap.stock_details
-                              if sd.final_classification == "CONVICTION BUY" and sd.confidence == "LOW" and sd.ticker in returns])
+                              if sd.final_classification == "RESEARCH CANDIDATE" and sd.confidence == "LOW" and sd.ticker in returns])
 
             has_data = t["HIGH"]["n"] > 0 or t["MODERATE"]["n"] > 0 or t["LOW"]["n"] > 0
             if has_data:
@@ -305,7 +305,7 @@ def run():
         console.print("\n[bold]═══ Test 6: Selectivity Signal ═══[/bold]\n")
 
         for snap, returns, spy_ret, nd in quarter_data:
-            cb_count = snap.classifications.get("CONVICTION BUY", 0)
+            cb_count = snap.classifications.get("RESEARCH CANDIDATE", 0)
             if cb_count == 0:
                 console.print(f"[yellow]Zero-pick quarter: {snap.date}[/yellow]")
                 console.print(f"  Screened: {snap.num_screened}")
@@ -462,7 +462,7 @@ def run():
             m_v_mean = sum(m_v) / len(m_v)
             # Compare momentum victims to CB survivors
             cb_all = [returns.get(sd.ticker) for snap, returns, _, _ in quarter_data
-                      for sd in snap.stock_details if sd.final_classification == "CONVICTION BUY" and returns.get(sd.ticker) is not None]
+                      for sd in snap.stock_details if sd.final_classification == "RESEARCH CANDIDATE" and returns.get(sd.ticker) is not None]
             cb_mean = sum(cb_all) / len(cb_all) if cb_all else 0
             mom_helps = m_v_mean < cb_mean
             summary.add_row("3. Momentum Gate", f"n={len(m_v)}, victim mean={m_v_mean*100:+.1f}% vs CB {cb_mean*100:+.1f}%",

@@ -43,12 +43,12 @@ def compute_momentum_percentiles(momentum: dict[str, float]) -> dict[str, float]
 
 
 def apply_momentum_gate(classification: str, momentum_percentile: float | None) -> str:
-    """Downgrade CONVICTION BUY to WATCH LIST if momentum is in bottom quartile.
+    """Downgrade RESEARCH CANDIDATE to WATCH LIST if momentum is in bottom quartile.
 
     Research Affiliates (2024): excluding bottom-quartile momentum from value
     picks improved returns by +2.8%/yr over 32 years (long-only, US large-cap).
     """
-    if classification != "CONVICTION BUY":
+    if classification != "RESEARCH CANDIDATE":
         return classification
     if momentum_percentile is None:
         return classification

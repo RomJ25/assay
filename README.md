@@ -13,7 +13,7 @@ When Assay does surface a name, you know:
 - It's **not in freefall** (passed the momentum gate)
 - And both cheapness and quality are high **at the same time** (geometric mean prevents one good dimension from masking a terrible one)
 
-The result is a short list of conviction buys — typically 15-25 in normal markets, occasionally zero when nothing qualifies — where every name has survived every filter. Your job is the last mile: pick 2-3 from that list using your own judgment about the business, the sector, and the timing.
+The result is a short list of research candidates — typically 15-25 in normal markets, occasionally zero when nothing qualifies — where every name has survived every filter. Use it as a research input: do your own work on each candidate (read the 10-K, check the bear case, sanity-check the data) before committing capital. Empirical testing inside this repo (`docs/DESIGN_DECISIONS.md`) shows ranking *within* the candidate list does NOT predict subsequent returns, so resist the urge to weight the top of the list more heavily.
 
 Assay doesn't predict prices. It doesn't forecast earnings. It doesn't use machine learning. Every score traces to observable, auditable data — nine binary Piotroski criteria, two percentile ranks, one geometric mean. You can see exactly why every stock is where it is and decide whether you agree.
 
@@ -25,13 +25,13 @@ Assay doesn't predict prices. It doesn't forecast earnings. It doesn't use machi
 
 **Conviction Score:** Geometric mean of value and quality — both must be high. A stock that's very cheap but low quality (value trap) gets punished. A stock that's high quality but expensive (overvalued quality) also gets punished.
 
-**Gates:** Minimum F-Score of 6/9, bottom-25% momentum, and 2+ years declining revenue all downgrade a CONVICTION BUY to WATCH LIST.
+**Gates:** Minimum F-Score of 6/9, bottom-25% momentum, and 2+ years declining revenue all downgrade a RESEARCH CANDIDATE to WATCH LIST.
 
 **Classification Matrix:**
 
 |  | Quality High (>=70) | Quality Mid (40-70) | Quality Low (<40) |
 |---|---|---|---|
-| **Value High (>=70)** | CONVICTION BUY | WATCH LIST | VALUE TRAP |
+| **Value High (>=70)** | RESEARCH CANDIDATE | WATCH LIST | VALUE TRAP |
 | **Value Mid (40-70)** | QUALITY GROWTH PREMIUM | HOLD | AVOID |
 | **Value Low (<40)** | OVERVALUED QUALITY | OVERVALUED | AVOID |
 
@@ -102,7 +102,7 @@ For development (hot-reload): run `python server.py` in one terminal and `cd web
 ## Docker
 
 ```bash
-# Start server (builds frontend, runs initial screen, starts scheduler + API)
+# Start server (builds frontend, starts API + scheduler + background initial scan)
 docker compose up -d
 
 # Run a one-off scan without starting the server
@@ -112,7 +112,9 @@ docker compose run --rm scan
 ASSAY_UNIVERSE=russell1000 docker compose up -d
 ```
 
-The container runs as a non-root user (`appuser`, UID 1000) with `init: true` for proper signal handling. Resource limits default to 2GB RAM / 2 CPUs.
+**One-click start from Docker Desktop:** clicking *Start* on the `assay` container brings the web server up within seconds (reachable at http://localhost:8000). The initial screen runs in the background — the UI shows a "loading data" state until it completes (~5–15 min on a fresh cache). The daily refresh scheduler (06:00 container TZ) arms automatically.
+
+The container runs as a non-root user (`appuser`, UID 1000) with `init: true` for proper signal handling and a 15s stop grace period for clean shutdowns. Resource limits default to 2GB RAM / 2 CPUs.
 
 | Environment Variable | Default | Description |
 |---|---|---|
@@ -123,7 +125,7 @@ The container runs as a non-root user (`appuser`, UID 1000) with `init: true` fo
 | `ASSAY_CORS_ORIGIN` | *(none)* | Additional CORS origin for production |
 | `ASSAY_MODE` | server | `server` or `scan` |
 
-Data persists in Docker volumes (`assay_data`, `assay_logos`).
+Data persists in Docker volumes (`assay_state` for screen results + SQLite cache, `assay_logos` for stock logos). Volumes mount to `/app/state` and `/app/storage/logos` respectively — deliberately kept outside `/app/data/` so they can't shadow the Python source.
 
 ## CLI Reference
 

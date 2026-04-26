@@ -25,7 +25,7 @@ export function StockSheet({ stock, allStocks, onClose }: Props) {
   }, [onClose]);
 
   const clColor = classificationColors[stock.classification] || "#71717a";
-  const isCB = stock.classification === "CONVICTION BUY";
+  const isCB = stock.classification === "RESEARCH CANDIDATE";
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
@@ -65,7 +65,7 @@ export function StockSheet({ stock, allStocks, onClose }: Props) {
               {fmtPrice(stock.price)} · {fmtMarketCap(stock.market_cap)}
             </p>
 
-            {/* Classification + Confidence badges */}
+            {/* Classification + Confidence + Data-Quality badges */}
             <div className="flex items-center gap-2 anim-fade-scale" style={{ animationDelay: "220ms" }}>
               <span className="inline-flex rounded-full px-3 py-1 text-[12px] font-medium"
                     style={{ backgroundColor: `${clColor}26`, color: clColor }}>
@@ -80,6 +80,7 @@ export function StockSheet({ stock, allStocks, onClose }: Props) {
                   {confidenceIcons[stock.confidence]} {stock.confidence}
                 </span>
               )}
+              <DataQualityChip dq={stock.data_quality} />
             </div>
           </div>
 
@@ -488,6 +489,29 @@ function MetricsGrid({ metrics }: { metrics: { label: string; value: string | nu
   );
 }
 
+/* ── Data Quality Chip (Slice D) ── */
+
+const DQ_COLORS: Record<string, { bg: string; fg: string; label: string }> = {
+  green:  { bg: "#10b98126", fg: "#059669", label: "DATA OK" },
+  yellow: { bg: "#f59e0b26", fg: "#b45309", label: "DATA WARN" },
+  red:    { bg: "#ef444426", fg: "#b91c1c", label: "DATA INSUFFICIENT" },
+};
+
+function DataQualityChip({ dq }: { dq?: { grade: string; warnings: string[] } }) {
+  if (!dq) return null;
+  const palette = DQ_COLORS[dq.grade] ?? DQ_COLORS.yellow;
+  const tooltip = dq.warnings.length > 0 ? dq.warnings.join("; ") : "Primary provider, fresh filing.";
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium"
+      style={{ backgroundColor: palette.bg, color: palette.fg }}
+      title={tooltip}
+    >
+      ● {palette.label}
+    </span>
+  );
+}
+
 /* ── Historical Context ── */
 
 interface HistoryEntry {
@@ -558,7 +582,7 @@ function StockHistory({ ticker }: { ticker: string }) {
                     {cl && (
                       <span className="text-[9px] font-mono font-medium rounded px-1 py-0.5"
                             style={{ backgroundColor: `${clColor}20`, color: clColor }}>
-                        {cl === "CONVICTION BUY" ? "CB" : cl === "WATCH LIST" ? "WL" : cl === "QUALITY GROWTH PREMIUM" ? "QGP" : cl}
+                        {cl === "RESEARCH CANDIDATE" ? "CB" : cl === "WATCH LIST" ? "WL" : cl === "QUALITY GROWTH PREMIUM" ? "QGP" : cl}
                       </span>
                     )}
                   </td>
@@ -686,7 +710,7 @@ function SectorPeers({ stock, allStocks }: { stock: ScreenStock; allStocks: Scre
 function ClassBadge({ cl }: { cl: Classification }) {
   const color = classificationColors[cl] || "#71717a";
   const SHORT: Record<string, string> = {
-    "CONVICTION BUY": "CB", "QUALITY GROWTH PREMIUM": "QGP", "WATCH LIST": "WL",
+    "RESEARCH CANDIDATE": "CB", "QUALITY GROWTH PREMIUM": "QGP", "WATCH LIST": "WL",
     HOLD: "HOLD", "OVERVALUED QUALITY": "OQ", OVERVALUED: "OV", "VALUE TRAP": "VT", AVOID: "AV",
   };
   return (

@@ -5,9 +5,12 @@ from __future__ import annotations
 import math
 
 from config import (
+    BUY_QUALITY_THRESHOLD,
+    BUY_VALUE_THRESHOLD,
     MIN_PIOTROSKI_F,
     QUALITY_HIGH_THRESHOLD,
     QUALITY_LOW_THRESHOLD,
+    REVENUE_GATE_ENABLED,
     VALUE_HIGH_THRESHOLD,
     VALUE_LOW_THRESHOLD,
 )
@@ -44,20 +47,20 @@ def confidence_level(value_score: float | None, quality_score: float | None) -> 
 
 
 def apply_min_fscore(classification: str, piotroski_f: int) -> str:
-    """Downgrade CONVICTION BUY to WATCH LIST if raw F-Score is below minimum.
+    """Downgrade RESEARCH CANDIDATE to WATCH LIST if raw F-Score is below minimum.
 
     Piotroski's paper compared F >= 8 ("high") vs F <= 1 ("low") within high-B/M
     stocks and reported a 13.4% long-only excess return. The F >= 6 gate here is a
     pragmatic long-only choice for the 500-name large-cap universe, not a claim from
     the paper. See docs/DESIGN_DECISIONS.md for the full rationale.
     """
-    if classification == "CONVICTION BUY" and piotroski_f < MIN_PIOTROSKI_F:
+    if classification == "RESEARCH CANDIDATE" and piotroski_f < MIN_PIOTROSKI_F:
         return "WATCH LIST"
     return classification
 
 
 def apply_revenue_gate(classification: str, revenue: list[float | None] | None) -> tuple[str, bool]:
-    """Downgrade CONVICTION BUY to WATCH LIST if revenue declined 2+ consecutive years.
+    """Downgrade RESEARCH CANDIDATE to WATCH LIST if revenue declined 2+ consecutive years.
 
     Chen, Chen, Hsin & Lee (2014): revenue momentum carries exclusive predictive
     information beyond earnings and price momentum. Persistent revenue decline
@@ -65,7 +68,9 @@ def apply_revenue_gate(classification: str, revenue: list[float | None] | None) 
 
     Returns: (classification, gate_fired)
     """
-    if classification != "CONVICTION BUY":
+    if not REVENUE_GATE_ENABLED:
+        return classification, False
+    if classification != "RESEARCH CANDIDATE":
         return classification, False
     if not revenue or len(revenue) < 3:
         return classification, False  # insufficient data, don't penalize
@@ -86,9 +91,21 @@ def apply_revenue_gate(classification: str, revenue: list[float | None] | None) 
 
 
 def classify(value_score: float | None, quality_score: float | None) -> str:
-    """Classify stock into conviction matrix bucket."""
+    """Classify stock into conviction matrix bucket.
+
+    The buy/hold spread (audit §6.5 / Novy-Marx & Velikov 2023) is implemented
+    here: RESEARCH CANDIDATE requires the BUY thresholds (env-overridable, default =
+    VALUE_HIGH_THRESHOLD / QUALITY_HIGH_THRESHOLD for backwards compatibility).
+    When BUY thresholds exceed HIGH thresholds, stocks in the [HIGH, BUY)
+    interval on both dimensions land in QUALITY GROWTH PREMIUM — a "hold"
+    bucket in selective-sell mode. Existing CB names drift through this band
+    before sale, while new entries require the stricter BUY bar.
+    """
     if value_score is None or quality_score is None:
         return "INSUFFICIENT DATA"
+
+    v_buy = value_score >= BUY_VALUE_THRESHOLD
+    q_buy = quality_score >= BUY_QUALITY_THRESHOLD
 
     v_high = value_score >= VALUE_HIGH_THRESHOLD
     v_mid = VALUE_LOW_THRESHOLD <= value_score < VALUE_HIGH_THRESHOLD
@@ -98,8 +115,14 @@ def classify(value_score: float | None, quality_score: float | None) -> str:
     q_mid = QUALITY_LOW_THRESHOLD <= quality_score < QUALITY_HIGH_THRESHOLD
     q_low = quality_score < QUALITY_LOW_THRESHOLD
 
+    # CB requires the (possibly-stricter) BUY thresholds.
+    if v_buy and q_buy:
+        return "RESEARCH CANDIDATE"
+    # Stocks meeting HIGH on both but not BUY → "hold" bucket (QGP) so selective
+    # sell continues to hold them. Naming is QUALITY GROWTH PREMIUM because that
+    # bucket already holds the "high quality, not-quite-cheap-enough" semantic.
     if v_high and q_high:
-        return "CONVICTION BUY"
+        return "QUALITY GROWTH PREMIUM"
     if v_high and q_low:
         return "VALUE TRAP"
     if v_high and q_mid:

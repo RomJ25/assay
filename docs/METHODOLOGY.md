@@ -296,7 +296,7 @@ These create three tiers on each axis, producing a **3 x 3 matrix** of 9 classif
 ```
     classify(V, Q) =
     ┌
-    │  CONVICTION BUY           if V ≥ 70  and  Q ≥ 70
+    │  RESEARCH CANDIDATE           if V ≥ 70  and  Q ≥ 70
     │  VALUE TRAP               if V ≥ 70  and  Q < 40
     │  WATCH LIST               if V ≥ 70  and  40 ≤ Q < 70
     │  QUALITY GROWTH PREMIUM   if 40 ≤ V < 70  and  Q ≥ 70
@@ -314,7 +314,7 @@ These create three tiers on each axis, producing a **3 x 3 matrix** of 9 classif
     ┌────────────────────────────────────────────────────────────────────────────┐
     │  Classification             Meaning                           Action      │
     │  ──────────────             ───────                           ──────      │
-    │  CONVICTION BUY             Cheap AND healthy                 Research    │
+    │  RESEARCH CANDIDATE             Cheap AND healthy                 Research    │
     │  WATCH LIST                 Cheap, middling quality           Monitor     │
     │  VALUE TRAP                 Cheap but deteriorating           Avoid       │
     │  QUALITY GROWTH PREMIUM     Great business, fair price        Hold / dip  │
@@ -331,7 +331,7 @@ These create three tiers on each axis, producing a **3 x 3 matrix** of 9 classif
 
 ### 6.1 Confidence Levels
 
-For stocks classified as CONVICTION BUY:
+For stocks classified as RESEARCH CANDIDATE:
 
 ```
     confidence(V, Q) =
@@ -349,11 +349,11 @@ The `min()` function ensures the **weakest dimension** determines confidence. A 
 ### 6.2 Minimum F-Score Gate
 
 ```
-    if classification = "CONVICTION BUY"  and  raw_F < 6:
+    if classification = "RESEARCH CANDIDATE"  and  raw_F < 6:
         classification ← "WATCH LIST"
 ```
 
-Piotroski's 2000 paper compared stocks with F-scores of **8-9** ("high" financial health) against F-scores of **0-1** ("low") within high book-to-market value stocks, reporting the 13.4% long-only excess return cited in §11 and a 23% long-short return differential over 1976-1996. That paper does not single out F ≥ 5-6 as a threshold; the 6-of-9 gate is a pragmatic long-only choice Assay makes to preserve meaningful quality discrimination while allowing broader investment coverage on a 500-name universe. A stock with F < 6 may still have high composite Quality via strong Gross Profitability, but the raw F-Score is showing multiple signs of financial deterioration simultaneously — the gate prevents these from being promoted to CONVICTION BUY regardless of how high the composite score looks.
+Piotroski's 2000 paper compared stocks with F-scores of **8-9** ("high" financial health) against F-scores of **0-1** ("low") within high book-to-market value stocks, reporting the 13.4% long-only excess return cited in §11 and a 23% long-short return differential over 1976-1996. That paper does not single out F ≥ 5-6 as a threshold; the 6-of-9 gate is a pragmatic long-only choice Assay makes to preserve meaningful quality discrimination while allowing broader investment coverage on a 500-name universe. A stock with F < 6 may still have high composite Quality via strong Gross Profitability, but the raw F-Score is showing multiple signs of financial deterioration simultaneously — the gate prevents these from being promoted to RESEARCH CANDIDATE regardless of how high the composite score looks.
 
 ### 6.3 Data Quality Filter
 
@@ -385,7 +385,7 @@ Based on Jegadeesh & Titman (1993): 12-month lookback, skip most recent month to
 Momentum is **not** a scoring dimension. It serves only as a negative gate:
 
 ```
-    if classification = "CONVICTION BUY"  and  momentum_percentile ≤ 25:
+    if classification = "RESEARCH CANDIDATE"  and  momentum_percentile ≤ 25:
         classification ← "WATCH LIST"
 ```
 
@@ -604,7 +604,7 @@ The `--survivorship-naive` flag is retained for comparison but is no longer the 
         return sum(returns) / len(returns)
 ```
 
-Assay computes equal-weighted returns from the CONVICTION BUY tickers each quarter. Academic factor research (Schwartz-Hanauer 2024, Jensen et al. 2023b) typically reports **capped value-weighted** returns — weighted by market capitalization, then capped at the 80th percentile of NYSE market cap to prevent a single mega-cap from dominating the portfolio.
+Assay computes equal-weighted returns from the RESEARCH CANDIDATE tickers each quarter. Academic factor research (Schwartz-Hanauer 2024, Jensen et al. 2023b) typically reports **capped value-weighted** returns — weighted by market capitalization, then capped at the 80th percentile of NYSE market cap to prevent a single mega-cap from dominating the portfolio.
 
 Equal-weighting is **appropriate for individual investors** holding a small number of positions — nobody buys $10M of AAPL just because it's bigger than WMT. It also avoids the complexity of point-in-time market-cap reweighting.
 

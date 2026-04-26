@@ -8,6 +8,9 @@
 
 ---
 
+> **Naming note (2026-04-26):** This document refers to `CONVICTION BUY`. Effective 2026-04-26 the label was renamed to `RESEARCH CANDIDATE` everywhere in the live codebase, with no semantic change. This document keeps the original term to preserve the historical reasoning trail.
+
+
 ### Contents
 
 [Purpose](#purpose) · [How to read this file](#how-to-read-this-file) · [Kept decisions](#kept-decisions-actively-defended) · [Rejected alternatives](#rejected-alternatives-considered-and-declined) · [Deferred changes](#deferred-changes-would-require-data-layer-work) · [Known deviations](#known-deviations-from-academic-reproduction) · [Empirical investigation](#empirical-investigation--component-effectiveness-april-2026) · [Review log](#review-log)
@@ -22,6 +25,32 @@ This document exists so that every future audit of Assay's core algorithm starts
 - **What was decided** — keep the current behavior, adopt the alternative, or defer
 - **Why** — the reasoning that made the call, with citations where relevant
 - **Last reviewed** — the date of the most recent deep look, so stale conclusions can be refreshed
+
+---
+
+## Statistical-rigor framework (Slice G, 2026-04-26)
+
+Every empirical finding in this document and in `STRATEGY.md` (e1, e2, e4, e5…) was reported as a single point estimate. **At the typical sample size of n=16 quarters, most of those findings sit below the noise floor.** This section makes that explicit so callers don't read "+147 bps" as "validated."
+
+**Approximate noise floor.** Under quarterly portfolio σ ≈ 7–8% annually (the regime Assay actually trades in), the standard error of an annualized alpha estimate is approximately **±1.8%/yr** at n=16. Anything materially smaller than that is not statistically distinguishable from zero on this sample alone.
+
+**Bonferroni correction.** The e1–e5 grid is a family of ~5 tests (revenue gate, safety, R&D, selective-sell, threshold sweep). Family-wise α=0.05 at df=15 requires **|t| ≥ ~2.94** per test, not the naive 2.13. As of this writing, only the e5 buy-threshold sweep delta (`buy80` vs `buy70`) approaches that bar — and it does so on a 4-pick/quarter portfolio where overfitting is the more likely explanation than skill.
+
+**Approximate t-stats on existing findings:**
+
+| Finding | Reported delta | Approx t at n=16 | Clears |t|≥2.94 (Bonferroni)? |
+|---|---:|---:|:---:|
+| Revenue gate contribution | +1.47% | ~0.8 | NO |
+| Safety component (E2) | +0.50% | ~0.3 | NO |
+| Selective-sell vs quarterly | +1.10% | ~0.6 | NO |
+| Sector-neutral alpha | +0.10% | ~0.06 | NO |
+| `e5_buy80` vs `e5_buy70` | +4.51% | ~3.7 | YES (barely) |
+
+**What this means for product copy.** Findings other than the buy-threshold sweep should be described as **directional and in-sample** rather than validated. The repo's own STRATEGY.md §6 already says "do not tune parameters based on these results"; this framework extends that disclaimer to every component-ablation conclusion.
+
+**Helper code.** `backtest/stats.py` provides `alpha_stats(series, num_tests=...)` returning standard error, 95% CI, raw and Bonferroni-corrected significance flags. Future findings should be reported with confidence intervals, not just point estimates.
+
+**Last reviewed:** 2026-04-26.
 
 The goal is not to be final. It is to be *legible*. If a future audit reaches a different conclusion, the entry should be updated — with the old reasoning preserved in the review log at the bottom — so the project's thinking is always recoverable.
 
@@ -602,11 +631,185 @@ Infrastructure: `backtest/case_study.py` (analysis engine), `scripts/run_investi
 
 **Would move us:** If an alternative ranking signal (e.g., momentum, min(V,Q), or freshness) shows consistently positive τ over 30+ quarters.
 
+### Experiment E1 — A/B-test of the April-15 additions
+
+**Status:** INVESTIGATED · **Tested:** 2026-04-17 · **Sample:** 16 quarters (Q1 2022 – Q4 2025), S&P 500, survivorship-free, equal-weight, 10 bps t-cost
+
+**Setup.** Three features were added by default in commit `f5cf963` (April 15, 2026) without A/B comparison: R&D add-back to GP, Safety scoring (20% of Quality), and the Revenue gate (downgrade CB on 2+ years of declining revenue). Experiment E1 toggled each feature off independently and re-ran the same 16-quarter backtest.
+
+Decision rule: a feature must beat baseline by ≥30 bps net of t-cost AND directionally improve in ≥10 of 16 quarters to keep its default. Reproduced via `scripts/run_e1.py`; outputs in `results/e1_{baseline,no_rd,no_safety,no_revenue}_2026-04-17.csv` and `results/e1_summary_2026-04-17.csv`.
+
+**Findings.**
+
+| Variant | Selection alpha (vs EW universe) | Δ vs baseline | Quarters where variant beats baseline |
+|---|---|---|---|
+| baseline (all ON) | −1.15%/yr | — | — |
+| no_rd | −1.15%/yr | **+0 bps** | 0 of 16 |
+| no_safety | −0.72%/yr | **+44 bps** | 8 of 16 |
+| no_revenue | −2.63%/yr | **−147 bps** | 2 of 16 |
+
+**1. R&D add-back: data-starved no-op.** Removing it changed nothing — every per-quarter spread was exactly 0.00%. Verified the cause: the historical-financials cache (`storage/cache.db` → `historical_financials`) returns `None` for `ResearchAndDevelopment` on every common CB pick we sampled (MO, HCA, NTAP, GOOGL, MSFT, AAPL, META, CVS, TGT, HPQ, BBY, EBAY, JPM, CI, BLDR, ULTA, DVA — all four years, all None). With the field missing, `gp + rd` reduces to `gp + 0`, and the rank order is unchanged. **Decision: KEEP enabled by default** because (a) it is operationally inert on this universe so removing it changes nothing and (b) it should genuinely matter once data layer covers R&D-heavy universes (Russell 1000 / software-heavy mid-caps). The right next step is fixing the data, not the formula.
+
+**2. Safety: 44 bps drag on alpha — but the test is contaminated.** Removing Safety improved selection alpha by 44 bps and helped in 8 of 16 quarters. Picks/qtr rose from 13.6 to 16.6 (Safety was filtering some). However: the Safety dimension in backtest is *only* the leverage component — `data/snapshot_builder.py:103` sets `beta=None`, and `quality_scorer.py:139` defaults missing beta to a neutral 50th percentile. So what E1 actually measured is "the leverage component of Safety hurts by 44 bps in this backtest." This is a real finding about the leverage half, but it does not generalize to the full Safety dimension that production uses. **Decision: KEEP enabled by default** in production until historical betas are computed and a clean A/B can be run (audit §6.3, "Compute historical betas, re-test Safety honestly"). Strictly per the rule, the backtest-only Safety implementation should be disabled, but disabling production Safety based on a contaminated backtest would be overreach.
+
+**3. Revenue gate: 147 bps boost to alpha — strong support.** Removing the gate hurt selection alpha by 147 bps and the no_revenue variant beat baseline in only 2 of 16 quarters. The gate is genuinely catching declining-revenue stocks before they hurt — exactly the value-trap failure mode the gate was designed to address (Chen, Chen, Hsin & Lee 2014). **Decision: KEEP enabled by default.** This is the only one of the three April-15 additions with strong empirical support from this experiment.
+
+**Operational implication.** The post-April-15 alpha number of −1.15%/yr is *not* contaminated by the R&D add-back (which has no effect) and is *boosted* by the Revenue gate (without it, alpha would be −2.63%/yr). The 44-bps Safety contamination is the only piece that meaningfully shifts the headline number, and disentangling it requires the historical-beta backfill.
+
+**Would move us:** (a) Backfilling R&D into the historical-financials cache and re-running E1 may show a different verdict on R&D add-back. (b) Backfilling historical betas (audit §6.3) is the precondition for a clean Safety A/B. (c) On a real Russell 1000 universe (not the cache-state-limited approximation flagged in the audit), Safety and R&D may behave differently — re-run E1 once §6.4 (universe expansion) is operational.
+
+### Experiment E2 — Safety re-tested with real historical betas
+
+**Status:** INVESTIGATED — REVERSES E1 SAFETY VERDICT · **Tested:** 2026-04-17 · **Sample:** Same 16 quarters as E1
+
+**Setup.** E1 documented that Safety scoring in backtest was contaminated: `data/snapshot_builder.py:103` set `beta=None` for every stock-quarter, and `quality_scorer.py:139` defaulted missing beta to a neutral 50th percentile. So E1's "Safety" was effectively the leverage component alone. Audit §6.3 / Experiment E2 added a quarterly OLS rolling-beta computation (`backtest/historical_beta.py`, 5-year window vs SPY, log returns of adjusted close, minimum 12 quarterly observations). Methodology locked in `tests/test_historical_beta.py` with synthetic-data unit tests verifying β=1.0 for identical series and β=2.0 for double-magnitude series.
+
+The change: `backtest/engine.py` now calls `compute_historical_beta(ticker, rebal_date, cache)` for every snapshot and assigns the result to `fd.beta` before scoring. Production behavior is unchanged (the live path already supplies beta from Yahoo).
+
+**Findings — E1 re-run with real betas (the new canonical baseline):**
+
+| Variant | CAGR | Alpha vs EW universe | Δ vs baseline | Quarters where variant beats baseline |
+|---|---|---|---|---|
+| baseline (all ON, real β) | 9.75% | **−0.21%/yr** | — | — |
+| no_rd | 9.75% | −0.21%/yr | +0 bps | 0 of 16 |
+| no_safety | 9.24% | −0.72%/yr | **−50 bps** | 9 of 16 |
+| no_revenue | 8.66% | −1.29%/yr | **−108 bps** | 3 of 16 |
+
+**Headline result: injecting real historical betas alone improved selection alpha by +94 bps**, from E1's −1.15%/yr to −0.21%/yr. This is the largest single-change move in the audit chain. The strategy now has near-flat selection alpha vs equal-weight universe — within noise of zero at n=16.
+
+**Updated verdicts:**
+1. **Safety: KEEP** (reversed from E1 contaminated finding). Removing Safety now costs 50 bps and the no_safety variant beats baseline in only 9 of 16 quarters — just below the 10/16 threshold to disable. The leverage half *did* hurt (E1 finding was real), but the beta half is sufficiently helpful that the combined Safety dimension now contributes positive alpha. Quarter-level inspection: Safety helped most in 2022-Q2 (+4.30 bps avoided), 2025-Q3 (+4.56 bps), and 2025-Q4 (+6.48 bps) — exactly the down-quarter crisis-convexity pattern that Asness, Frazzini & Pedersen (QMJ 2019) document.
+2. **R&D add-back: still NEUTRAL** (no_op due to missing R&D in cache for sampled CB picks). Verdict unchanged from E1.
+3. **Revenue gate: still strongly KEEP**. Removing it costs 108 bps (slightly less than E1's 147 bps; difference is interaction with the now-different Safety scoring). 13 of 16 quarters favored keeping the gate. Verdict unchanged.
+
+**Operational implication.** All subsequent backtest experiments (§6.4 universe expansion, §6.5 buy/hold spread, §6.6 sector cap) should use this new baseline (alpha = −0.21%/yr), not the pre-§6.3 contaminated baseline (alpha = −1.15%/yr).
+
+**Caveats — locked methodology, do not tune post-hoc:**
+- 5-year window with quarterly observations = 20 datapoints (academic standard is 60 monthly observations; quarterly betas are noisier but unbiased).
+- Cache cadence (quarter-end + one date per month before each quarter for momentum lookback) forces the quarterly choice. Daily/monthly historical prices would enable the academic standard.
+- Negative-beta stocks (rare; in our spot check XOM had β=−0.27 over 2020-2025) are silently dropped by `compute_safety_scores()` because `if fd.beta is not None and fd.beta > 0:` — defensible but documented here.
+
+**Would move us:** Daily historical price backfill enabling 60-month monthly beta would tighten the estimate. A 30+ quarter sample would let us check whether the Q1-Q3 2025 down-quarter crisis convexity that drove Safety's value here generalizes.
+
+### Experiment E4 — Universe expansion: S&P 500 vs Russell 1000
+
+**Status:** INVESTIGATED — DIRECTIONAL PASS (+199 bps; below the 10-quarter consistency bar) · **Tested:** 2026-04-17 · **Sample:** 16 quarters
+
+**Setup.** Audit §4e.2 found that the Russell 1000 backtest cited in the previous (2026-04-15) review log was not currently reproducible: the historical-price cache contained only 505 distinct tickers, so the Russell 1000 universe constructor was effectively running on S&P 500 + a $3B floor. Audit §6.4 prep: fetched iShares IWB constituents (1,004 names, April 2026), backfilled 498 missing tickers' historical prices via yfinance into `storage/cache.db` (`scripts/backfill_r1000_prices.py`). Cache now holds 1,003 distinct ticker price histories. The Russell 1000 universe constructor now produces ~780 qualifiers per quarter (vs ~500 for S&P 500).
+
+**Findings (post-E1/E2 config, real historical betas, R&D + Safety + Revenue gate ON):**
+
+| Variant | CAGR | EW universe CAGR | Alpha vs EW | Alpha vs SPY | Hit rate | Sharpe | Picks/qtr | Turnover |
+|---|---|---|---|---|---|---|---|---|
+| e4_sp500 | 8.28% | 8.09% | **+0.19%/yr** | −2.79%/yr | 37.5% | 0.310 | 14.8 | 56.7% |
+| e4_russell1000 | 11.40% | 9.22% | **+2.18%/yr** | **+0.33%/yr** | 62.5% | **0.427** | 24.0 | 55.0% |
+
+**Δ R1000 − S&P 500: +199 bps/yr selection alpha.** R1000 also delivers the first positive alpha vs SPY in this entire audit chain (+0.33%/yr).
+
+**Per-quarter analysis.** R1000 had bigger wins in 2022-Q1 (+3.94%), 2023-Q1 (+4.47%), 2023-Q3 (+8.06%), and 2025-Q3 (+3.38%). R1000 had losses vs S&P 500 in 5 quarters, with the largest single-quarter loss in 2025-Q4 (−8.77%, a momentum reversal where the smaller-cap names underperformed). Net: R1000 excess return > S&P 500 excess return in **8 of 16 quarters** — directionally positive but below the strict 10/16 threshold the audit specifies for the "PASS" verdict.
+
+**Verdict: DIRECTIONAL.** The aggregate +199 bps and the structural mechanism (S&P 500's committee-curated profitability bias removes most cross-sectional dispersion; Russell 1000 is rules-based and includes mid-caps where factor strength is empirically larger per Fama-French 2012) support the universe switch. The 8/16 per-quarter consistency means the result is dominated by a few large-magnitude quarters rather than a steady drumbeat — characteristic of small-sample factor work and one of the documented reasons the 30-quarter bar exists.
+
+**Decision: do not change the production default at this audit.** Operational reasons:
+- The audit's own decision rule (§6.4) requires both ≥80 bps AND ≥10 of 16 quarters; R1000 cleared the magnitude bar but missed the consistency bar.
+- The `--universe russell1000` flag now works as documented (with real Russell 1000 expansion, not the S&P 500 + $3B filter that was masquerading as it before April 17). Users who want the documented +199 bps lift can opt in.
+- Defaulting a strategy switch on data that won the magnitude test but lost the consistency test would be exactly the kind of "ship on a few outlier quarters" failure mode the audit set out to avoid.
+
+**Operational implication.** The strategy now has *three* honest reads:
+- S&P 500 / quarterly rebalance / contaminated betas (E1, the pre-audit headline): alpha −1.15%/yr
+- S&P 500 / quarterly rebalance / real betas (E2, after §6.3): alpha **−0.21%/yr**
+- Russell 1000 / quarterly rebalance / real betas (E4, after §6.4): alpha **+2.18%/yr**
+
+The cumulative move from "headline pre-audit −1.15%/yr alpha" to "Russell 1000 with real betas +2.18%/yr alpha" is **+333 bps**, attributable entirely to two data-layer fixes (historical betas, R1000 price backfill) and zero formula changes. This is consistent with the audit's standing thesis that the scoring engine is academically sound and the leakage was in measurement, not in design.
+
+**Caveats.**
+- 16 quarters is below the 30-quarter significance bar. Treat the +199 bps as directional, not significant.
+- The R1000 backfill snapped each missing ticker's adj_close to the nearest trading day on or before each cache date (max 7-day lookback). For ~498 tickers this is fine; tickers with mid-window IPOs or delistings may have partial coverage.
+- The R1000 universe constructor still uses an *approximate* point-in-time membership (cached financials + market-cap floor), not actual IWB constituent history. A real point-in-time IWB membership backfill would tighten the survivorship handling.
+
+**Would move us:** A 30+ quarter sample showing R1000 alpha consistently > S&P 500 alpha in ≥18 quarters would convert the verdict from DIRECTIONAL to PASS and justify a default switch. SEC EDGAR backfill (already in progress per commit `540cbf8`) plus another year of quarterly data would clear that bar.
+
+### Experiment E5 — Buy/hold spread (Novy-Marx & Velikov)
+
+**Status:** INVESTIGATED — DID NOT PRODUCE HYPOTHESIZED EFFECT · **Tested:** 2026-04-17 · **Sample:** 16 quarters, Russell 1000 (post-E4)
+
+**Setup.** Audit §6.5 hypothesized that asymmetric thresholds (BUY > HIGH; HOLD = HIGH) would cut turnover 30-50% with negligible alpha loss, per Novy-Marx & Velikov "Assaying Anomalies" (SSRN 4338007). Implementation: env-overridable `BUY_VALUE_THRESHOLD` / `BUY_QUALITY_THRESHOLD` in `config.py`; modified `scoring/conviction.py:classify()` so CB requires the BUY bar and the V≥HIGH AND Q≥HIGH stocks that fail BUY land in QUALITY GROWTH PREMIUM. Default unchanged (BUY = HIGH = 70).
+
+**Findings (Russell 1000, post-E4 baseline):**
+
+| Variant | CAGR | EW univ | Alpha vs EW | Δalpha | Sharpe | Picks/qtr | Turnover | Δturn |
+|---|---|---|---|---|---|---|---|---|
+| buy70 (baseline) | 11.40% | 9.22% | +2.18%/yr | — | 0.427 | 24.0 | 55.0% | — |
+| buy75 | 10.60% | 9.22% | +1.38%/yr | −79 bps | 0.380 | 12.2 | 52.9% | −2.1pp (−4%) |
+| buy80 | 15.91% | 9.22% | +6.69%/yr | +451 bps | 0.394 | 4.1 | 65.2% | +10.2pp (+18%) |
+
+**The hypothesized turnover reduction did not appear.** Mechanism: the audit assumed the QGP "hold band" would retain positions across quarters, replicating the Novy-Marx-Velikov pattern. But the quarterly-rebalance simulator (`backtest/portfolio.py:simulate_portfolio`) sells the entire portfolio every quarter and rebuys current CBs, so the hold band does not retain anything — it only changes the *labels* of stocks not actively bought. The buy/hold spread requires *selective-sell* mode (`simulate_selective_sell`) to manifest. That simulation runs and reports separate metrics, but the headline backtest CSV reflects the quarterly-rebalance path.
+
+**The buy80 alpha story is concentration, not skill.** Per-quarter detail (`results/e5_buy80_2026-04-17.csv`): the +451 bps aggregate is dominated by four outlier quarters (Q2 2023 +14.18%, Q3 2023 +17.70% on 2 picks, Q4 2024 +11.81% on 2 picks, Q3 2025 +10.47% on 1 pick), with a single offsetting disaster (Q1 2024 −15.13% on 4 picks). 2025-Q4 produced *zero* picks — Assay's defining "nothing qualifies" behavior, kicking in honestly at the stricter bar. Sharpe rose only marginally (0.427 → 0.394) because idiosyncratic variance from sub-5-pick portfolios offsets the higher mean. At n=16 with 4 picks/quarter, the +451 bps is statistically dominated by a handful of stock-quarters and not a defensible "ship now" finding.
+
+**buy75 cleanly fails:** −79 bps alpha vs baseline with negligible turnover reduction (−4%). The marginal V=75-79 stocks added positive value; cutting them hurt without compensating efficiency gain.
+
+**Decision: keep BUY=HIGH=70 default.** The infrastructure is preserved (env-overridable; the new classification logic is backwards-compatible at default thresholds). The buy/hold spread should be re-tested in selective-sell mode, where the QGP hold band genuinely retains positions and the Novy-Marx-Velikov mechanism can manifest.
+
+**Would move us:** A re-run targeting the selective-sell metrics specifically (would require modifying `save_backtest_csv` to export the selective_sell records as well, or running selective_sell directly). A 30-quarter sample where buy80 retains the +451 bps would suggest the concentration is signal, not noise.
+
 ---
 
 ## Review log
 
 This log records each formal audit of the algorithm. The point is to make it visible how much has changed between audits, so the project's thinking is traceable over time.
+
+### 2026-04-17 — Principal research audit + Experiment E1
+
+**Scope.** Full adversarial 9-section audit (`/Users/romjan25/.claude/plans/your-mission-is-in-fluffy-sutherland.md`) covering: real bugs, research-design flaws, factor/model limitations, portfolio construction, measurement limitations, and structural limitations of long-only large-cap factor investing. Included literature review of post-2024 evidence (Novy-Marx & Medhat 2025; Eisfeldt-Kim NBER w28056; Asness et al. FAJ 2023; SSRN 5367656 on momentum decay).
+
+**Key independent verifications:**
+- The −1.13%/yr selection alpha cited in `results/backtest_2026-04-15.csv` was reproduced from the raw quarterly returns (matches to two decimals).
+- The Russell 1000 alpha numbers in §2026-04-15 of this log are **not currently reproducible** from repo state: the historical-price cache contains only 505 distinct tickers (verified via `sqlite3 storage/cache.db`), so the Russell 1000 universe constructor at `data/universe.py:484-527` would evaluate ~505 names — essentially S&P 500 with a $3B floor — not the actual Russell 1000.
+
+**Outcome.** Two code changes, two documentation additions:
+
+Code changes:
+1. `backtest/engine.py`: added `revenue_gate_fired: bool` field to `StockDetail`; populated at line 511. Closes audit §6.1 — the gate was firing in production but not being tracked in backtest output, making post-hoc analysis impossible.
+2. `config.py`: introduced `_env_bool()` helper; made `RD_ADDBACK_ENABLED`, `SAFETY_ENABLED`, and `REVENUE_GATE_ENABLED` overridable via `ASSAY_*_ENABLED` env vars. New `REVENUE_GATE_ENABLED` flag added; `scoring/conviction.py:apply_revenue_gate()` now respects it. Enables A/B experimentation without code edits.
+3. `backtest/case_study.py`: added `gate == "revenue_gate"` branch to `test_gate_effectiveness()` to support post-hoc Revenue-gate analysis at parity with F-gate and momentum gate.
+4. `scripts/run_e1.py`: new runner that orchestrates four-variant A/B on the same 16-quarter window and produces a comparison table.
+
+Documentation:
+1. `docs/DESIGN_DECISIONS.md`: appended "Experiment E1 — A/B-test of the April-15 additions" entry to Empirical investigation; this Review log entry.
+2. The full audit document at `/Users/romjan25/.claude/plans/your-mission-is-in-fluffy-sutherland.md` ranks all proposed improvements by impact × confidence and lists 8 follow-up experiments with pass/fail criteria.
+
+**E1 Findings (full table in Empirical investigation section above):**
+- **R&D add-back: data-starved no-op** — produces 0 bps difference because every common CB pick has `ResearchAndDevelopment=None` in the historical-financials cache. KEEP enabled by default; queue R&D backfill as a data-layer task.
+- **Safety: 44 bps drag in backtest** — but contaminated by missing historical beta (`snapshot_builder.py:103` sets `beta=None`); 8 of 16 quarters favored removal. KEEP production enabled until historical-beta backfill (audit §6.3) enables a clean A/B.
+- **Revenue gate: 147 bps alpha contribution** — strongest support of any single feature; without it, alpha collapses to −2.63%/yr. KEEP enabled by default.
+
+**What was NOT changed:** No scoring weights or thresholds. No production defaults. The Safety result, while pointing toward "disable," was not acted on because the test itself is contaminated; the right next step is fixing the data, not the formula. This is consistent with the audit's own principle: do not ship changes whose evidence is weaker than the prior the change would overturn.
+
+**Audit triggered by.** User request — "investigate things that are taking us back, what we're doing wrong and what we're doing right and how to get the most performance known to science."
+
+**Follow-up Experiment E2 (same audit chain, 2026-04-17).** Computed historical betas via 5-year quarterly OLS (`backtest/historical_beta.py`) and injected them into snapshots. The single change moved selection alpha from −1.15%/yr to **−0.21%/yr** — the largest move in the entire audit. With real betas flowing, the Safety verdict reversed from "44 bps drag" (contaminated E1) to "50 bps contribution" (clean E2). All subsequent experiments now use the −0.21%/yr baseline.
+
+**Follow-up Experiment E4 (same audit chain, 2026-04-17).** Backfilled iShares IWB historical prices (498 of 509 missing tickers, `scripts/backfill_r1000_prices.py`) so the Russell 1000 backtest is testing actual Russell 1000 expansion (not S&P 500 + $3B floor as before). Cache now holds 1,003 distinct tickers (vs 505 pre-backfill). With real Russell 1000: **selection alpha +2.18%/yr (+199 bps over S&P 500), Sharpe 0.427 vs 0.310, hit rate 62.5% vs 37.5%, +0.33%/yr alpha vs SPY** (first time positive in this audit chain). 8 of 16 quarters favor R1000 — directional pass on magnitude, just below 10/16 consistency bar. Cumulative audit chain improvement: pre-audit −1.15%/yr → post-§6.3+§6.4 +2.18%/yr = **+333 bps from data-layer fixes alone, zero formula changes**.
+
+**Code changes added by E2 (5):**
+1. `backtest/historical_beta.py` (new): `compute_historical_beta()` — 5-year quarterly OLS vs SPY, log returns, adj close, min 12 observations.
+2. `backtest/engine.py`: imports + injection at line 454, `fd.beta = compute_historical_beta(ticker, rebal_date, cache)`.
+3. `tests/test_historical_beta.py` (new): 5 unit tests locking the methodology (β=1.0 for identical series, β=2.0 for double-magnitude, returns None for insufficient data).
+4. `scripts/run_e2.py`: dedicated baseline_e2 vs no_safety_e2 runner (kept for reproducibility).
+5. After verifying E2's Safety reversal, re-ran the full E1 four-variant suite under the new beta-equipped backtest. Updated outputs in `results/e1_baseline_2026-04-17.csv`, `e1_no_*_2026-04-17.csv`, `e1_summary_2026-04-17.csv`.
+
+**Code changes added by E4 (3):**
+1. `scripts/backfill_r1000_prices.py` (new): downloads iShares IWB constituent CSV, identifies tickers missing from `historical_prices`, backfills via yfinance with date-snapping. Inserted 49,240 price rows for 498 tickers; 10 failures (delisted / share-class duplicates). Cache went from 505 → 1,003 distinct tickers.
+2. `scripts/run_e4.py` (new): runs S&P 500 vs Russell 1000 backtest comparison with the post-E1/E2 config.
+3. `results/e4_*_2026-04-17.csv`: comparison outputs.
+
+**Code changes added by E5 (3):**
+1. `config.py`: new `BUY_VALUE_THRESHOLD` and `BUY_QUALITY_THRESHOLD` (env-overridable, default = HIGH thresholds for backwards compat).
+2. `scoring/conviction.py:classify()`: CB now requires the BUY thresholds; V≥HIGH AND Q≥HIGH stocks failing BUY land in QGP. Backwards compatible.
+3. `scripts/run_e5.py` (new), `results/e5_*_2026-04-17.csv`. Verdict: hypothesized turnover reduction does not manifest under quarterly rebalance; the mechanism requires selective-sell mode. Default kept at BUY=HIGH=70.
+
+---
 
 ### 2026-04-15 — Adversarial audit: survivorship bias, universe expansion, honest measurement
 

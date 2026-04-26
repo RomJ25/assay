@@ -56,10 +56,35 @@ VALUE_HIGH_THRESHOLD = 70    # top 30% on value
 VALUE_LOW_THRESHOLD = 40
 QUALITY_HIGH_THRESHOLD = 70  # top 30% on quality
 QUALITY_LOW_THRESHOLD = 40
+
+# Buy/hold spread (Novy-Marx & Velikov, "Assaying Anomalies", SSRN 4338007).
+# Asymmetric thresholds: CB classification requires the BUY bar (default = HIGH);
+# stocks with V/Q in [HIGH, BUY) but not ≥ BUY land in QUALITY GROWTH PREMIUM —
+# a "hold" bucket in selective-sell mode. Setting BUY > HIGH cuts turnover by
+# admitting fewer new positions while letting existing high-conviction names
+# drift through the hold band before sale.
+def _env_int(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+BUY_VALUE_THRESHOLD = _env_int("ASSAY_BUY_VALUE_THRESHOLD", VALUE_HIGH_THRESHOLD)
+BUY_QUALITY_THRESHOLD = _env_int("ASSAY_BUY_QUALITY_THRESHOLD", QUALITY_HIGH_THRESHOLD)
 QUALITY_SINGLE_SOURCE_PENALTY = 0.8  # 20% discount for single-signal quality
-MIN_PIOTROSKI_F = 6  # Minimum raw F-Score (0-9) for conviction buy; below → WATCH LIST
-RD_ADDBACK_ENABLED = True  # Novy-Marx & Medhat 2025: (GP + R&D) / Assets dominates plain GP/Assets
-SAFETY_ENABLED = True  # AQR QMJ (Asness et al. 2019): low-beta + low-leverage improves risk-adjusted returns
+MIN_PIOTROSKI_F = _env_int("ASSAY_MIN_PIOTROSKI_F", 6)  # Minimum raw F-Score (0-9) for conviction buy; below → WATCH LIST
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in ("1", "true", "yes", "on")
+
+RD_ADDBACK_ENABLED = _env_bool("ASSAY_RD_ADDBACK_ENABLED", True)  # Novy-Marx & Medhat 2025
+SAFETY_ENABLED = _env_bool("ASSAY_SAFETY_ENABLED", True)  # AQR QMJ (Asness et al. 2019)
+REVENUE_GATE_ENABLED = _env_bool("ASSAY_REVENUE_GATE_ENABLED", True)  # Chen et al. 2014
 
 # ── Growth Model Thresholds (context display) ────────────────────────
 REVENUE_CAGR_TIERS = [
@@ -84,7 +109,7 @@ BACKTEST_PRICE_LOOKBACK_DAYS = 5   # max days backward to find trading day
 # ── Momentum Gate ─────────────────────────────────────────────────────
 MOMENTUM_LOOKBACK_MONTHS = 12
 MOMENTUM_SKIP_MONTHS = 1           # skip most recent month (short-term reversal)
-MOMENTUM_GATE_PERCENTILE = 25      # exclude bottom 25% momentum from CONVICTION BUY
+MOMENTUM_GATE_PERCENTILE = _env_int("ASSAY_MOMENTUM_GATE_PERCENTILE", 25)  # exclude bottom % momentum from RESEARCH CANDIDATE
 
 # ── Transaction Costs ────────────────────────────────────────────────
 TCOST_BPS_ROUNDTRIP = 10  # basis points per full rebalance (Frazzini et al. JFE: ~10 for S&P 500)
@@ -94,4 +119,13 @@ MIN_PORTFOLIO_SIZE = 0  # 0 = off (CB only); 30+ recommended for factor capture
 # When CB has fewer picks than this, top WATCH LIST stocks (by conviction) backfill.
 
 # ── Sector-Relative Scoring ──────────────────────────────────────────
-SECTOR_RELATIVE_BLEND = 0.3  # when --sector-relative active: 70% absolute + 30% sector-relative
+def _env_float(name: str, default: float) -> float:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default
+
+SECTOR_RELATIVE_BLEND = _env_float("ASSAY_SECTOR_RELATIVE_BLEND", 0.3)  # when --sector-relative: 70% absolute + 30% within-sector by default

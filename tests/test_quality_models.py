@@ -168,7 +168,7 @@ class TestQualityScorer:
 
 class TestConviction:
     def test_conviction_buy(self):
-        assert classify(75, 75) == "CONVICTION BUY"
+        assert classify(75, 75) == "RESEARCH CANDIDATE"
 
     def test_value_trap(self):
         assert classify(75, 30) == "VALUE TRAP"
@@ -292,14 +292,14 @@ class TestConfidenceLevel:
 
 class TestMinFScoreGate:
     def test_downgrades_low_fscore(self):
-        """F=5 with MIN_F=6 should downgrade CONVICTION BUY to WATCH LIST."""
-        assert apply_min_fscore("CONVICTION BUY", 5) == "WATCH LIST"
-        assert apply_min_fscore("CONVICTION BUY", 4) == "WATCH LIST"
+        """F=5 with MIN_F=6 should downgrade RESEARCH CANDIDATE to WATCH LIST."""
+        assert apply_min_fscore("RESEARCH CANDIDATE", 5) == "WATCH LIST"
+        assert apply_min_fscore("RESEARCH CANDIDATE", 4) == "WATCH LIST"
 
     def test_keeps_high_fscore(self):
-        """F=6+ should stay as CONVICTION BUY."""
-        assert apply_min_fscore("CONVICTION BUY", 6) == "CONVICTION BUY"
-        assert apply_min_fscore("CONVICTION BUY", 9) == "CONVICTION BUY"
+        """F=6+ should stay as RESEARCH CANDIDATE."""
+        assert apply_min_fscore("RESEARCH CANDIDATE", 6) == "RESEARCH CANDIDATE"
+        assert apply_min_fscore("RESEARCH CANDIDATE", 9) == "RESEARCH CANDIDATE"
 
     def test_only_affects_conviction_buy(self):
         """Other classifications should not be changed regardless of F-Score."""
@@ -309,7 +309,7 @@ class TestMinFScoreGate:
 
     def test_boundary(self):
         """F-Score exactly at minimum (6) should pass."""
-        assert apply_min_fscore("CONVICTION BUY", 6) == "CONVICTION BUY"
+        assert apply_min_fscore("RESEARCH CANDIDATE", 6) == "RESEARCH CANDIDATE"
 
 
 class TestExcludeFinancials:

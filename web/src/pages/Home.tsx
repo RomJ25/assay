@@ -38,6 +38,14 @@ export function Home() {
 
   return (
     <div>
+      {/* Caveat above the hero — first thing a visitor reads. */}
+      <div
+        className="text-center pt-6 pb-2 text-[14px]"
+        style={{ color: "var(--color-text-secondary)" }}
+      >
+        Research tool for idea generation. Not a trading signal. Minimum 3–5 year horizon.
+      </div>
+
       <SignalBanner
         stocks={data.stocks}
         universe={data.universe}
@@ -48,11 +56,6 @@ export function Home() {
       <WhatChanged />
 
       <ConvictionTable stocks={data.stocks} onSelectStock={setSelectedTicker} />
-
-      {/* Caveat footer */}
-      <div className="text-center py-8 text-[12px] italic" style={{ color: "var(--color-text-muted)" }}>
-        Research tool for idea generation. Not a trading signal. Minimum 3-5 year horizon.
-      </div>
 
       {/* Stock Deep Dive */}
       {selectedStock && (

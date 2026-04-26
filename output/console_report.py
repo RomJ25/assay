@@ -43,11 +43,11 @@ def print_report(today: date, results: list[dict], top_n: int = 20,
     ))
 
     # Conviction Buys — sorted by opportunity score (definitive ranking)
-    buys = [r for r in sorted_results if r.get("classification") == "CONVICTION BUY"]
+    buys = [r for r in sorted_results if r.get("classification") == "RESEARCH CANDIDATE"]
     if buys:
         # Primary: conviction (validated V×Q signal). Tie-break: trajectory (visible column)
         buys.sort(key=lambda r: (r.get("conviction_score") or 0, r.get("trajectory_score") or 0), reverse=True)
-        _print_main_table("CONVICTION BUYS — Cheap + High Quality", buys[:top_n], "green", wide, breakdown)
+        _print_main_table("RESEARCH CANDIDATES — Cheap + High Quality", buys[:top_n], "green", wide, breakdown)
 
     # Value Traps
     traps = [r for r in sorted_results if r.get("classification") == "VALUE TRAP"]

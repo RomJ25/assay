@@ -10,7 +10,7 @@ interface Props {
 }
 
 export function SignalBanner({ stocks, universe, date, screened }: Props) {
-  const cbPicks = stocks.filter((s) => s.classification === "CONVICTION BUY");
+  const cbPicks = stocks.filter((s) => s.classification === "RESEARCH CANDIDATE");
   const count = cbPicks.length;
   const isZero = count === 0;
   // Hero count-up — 900ms ease-out-expo. Zero stays still (restraint).
@@ -25,7 +25,7 @@ export function SignalBanner({ stocks, universe, date, screened }: Props) {
 
   // Classification distribution for the bar
   const bucketOrder = [
-    "CONVICTION BUY", "QUALITY GROWTH PREMIUM", "WATCH LIST", "HOLD",
+    "RESEARCH CANDIDATE", "QUALITY GROWTH PREMIUM", "WATCH LIST", "HOLD",
     "OVERVALUED QUALITY", "OVERVALUED", "VALUE TRAP", "AVOID",
   ] as const;
 
@@ -101,7 +101,7 @@ export function SignalBanner({ stocks, universe, date, screened }: Props) {
             if (n === 0) return null;
             const pct = (n / stocks.length) * 100;
             const colors: Record<string, string> = {
-              "CONVICTION BUY": "var(--color-cb)",
+              "RESEARCH CANDIDATE": "var(--color-cb)",
               "QUALITY GROWTH PREMIUM": "var(--color-qgp)",
               "WATCH LIST": "var(--color-wl)",
               HOLD: "var(--color-hold)",
@@ -129,7 +129,7 @@ export function SignalBanner({ stocks, universe, date, screened }: Props) {
         </div>
         <div className="flex justify-between mt-1.5 text-[10px] tracking-wide anim-fade"
              style={{ color: "var(--color-text-muted)", animationDelay: "1300ms" }}>
-          <span>CB {bucketCounts.get("CONVICTION BUY") || 0}</span>
+          <span>CB {bucketCounts.get("RESEARCH CANDIDATE") || 0}</span>
           <span>WL {bucketCounts.get("WATCH LIST") || 0}</span>
           <span>HOLD {bucketCounts.get("HOLD") || 0}</span>
           <span>AVOID {bucketCounts.get("AVOID") || 0}</span>

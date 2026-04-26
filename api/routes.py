@@ -18,13 +18,31 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1")
 
 
+_LEGACY_LABEL_MAP = {
+    # Old label (pre-2026-04-26 rename) → current label.
+    # Keeps /screen/diff working across the rename boundary so a freshly-renamed
+    # current screen doesn't show every prior CB as a "phantom flip."
+    "CONVICTION BUY": "RESEARCH CANDIDATE",
+}
+
+
+def _normalize_classification(stock: dict) -> dict:
+    """Map legacy classification labels to current ones in-place. Returns the dict."""
+    cl = stock.get("classification")
+    if cl in _LEGACY_LABEL_MAP:
+        stock["classification"] = _LEGACY_LABEL_MAP[cl]
+    raw = stock.get("raw_classification")
+    if raw in _LEGACY_LABEL_MAP:
+        stock["raw_classification"] = _LEGACY_LABEL_MAP[raw]
+    return stock
+
+
 def _load_stocks(path: Path) -> list[dict]:
     """Load stock list from a screen JSON file (handles both old and new format)."""
     with open(path, encoding="utf-8") as f:
         raw = json.load(f)
-    if isinstance(raw, dict) and "stocks" in raw:
-        return raw["stocks"]
-    return raw  # legacy bare list
+    stocks = raw["stocks"] if isinstance(raw, dict) and "stocks" in raw else raw
+    return [_normalize_classification(s) for s in stocks]
 
 
 def _find_latest_screen() -> Path | None:
@@ -77,7 +95,13 @@ async def get_screen():
 
 @router.get("/screen/diff")
 async def get_screen_diff():
-    """Compare the latest screen to the previous one."""
+    """Compare the latest screen to the previous one.
+
+    Beyond the raw new/dropped/changed lists, every changed entry is annotated
+    with a `why_changed` block: which gates fired now vs prior, plus per-metric
+    before/after deltas. Lets a caller see *why* a classification flipped, not
+    just *that* it flipped (Slice E enrichment over the original endpoint).
+    """
     # Filter by size to skip single-ticker runs (same logic as _find_latest_screen)
     files = [f for f in sorted(RESULTS_DIR.glob("screen_*.json"), reverse=True)
              if f.stat().st_size > 10000]
@@ -90,22 +114,29 @@ async def get_screen_diff():
     current_date = files[0].stem.replace("screen_", "")
     previous_date = files[1].stem.replace("screen_", "")
 
-    current_cb = {s["ticker"]: s for s in current if s.get("classification") == "CONVICTION BUY"}
-    previous_cb = {s["ticker"]: s for s in previous if s.get("classification") == "CONVICTION BUY"}
+    current_by_ticker = {s["ticker"]: s for s in current}
+    previous_by_ticker = {s["ticker"]: s for s in previous}
+
+    current_cb = {t: s for t, s in current_by_ticker.items() if s.get("classification") == "RESEARCH CANDIDATE"}
+    previous_cb = {t: s for t, s in previous_by_ticker.items() if s.get("classification") == "RESEARCH CANDIDATE"}
 
     new_picks = []
     for t, s in current_cb.items():
-        if t not in previous_cb:
-            new_picks.append(s)
+        prior = previous_by_ticker.get(t)
+        entry = {**s}
+        if prior is not None:
+            entry["why_changed"] = _explain_change(prior, s)
+        new_picks.append(entry)
 
     dropped_picks = []
     for t, s in previous_cb.items():
         if t not in current_cb:
             # Find the stock in current screen to see its new classification
-            current_stock = next((cs for cs in current if cs["ticker"] == t), None)
-            entry = {**s, "previous_classification": "CONVICTION BUY"}
+            current_stock = current_by_ticker.get(t)
+            entry = {**s, "previous_classification": "RESEARCH CANDIDATE"}
             if current_stock:
                 entry["new_classification"] = current_stock.get("classification")
+                entry["why_changed"] = _explain_change(s, current_stock)
             dropped_picks.append(entry)
 
     changed_scores = []
@@ -122,6 +153,7 @@ async def get_screen_diff():
                                 "conviction": curr.get("conviction_score")},
                     "previous": {"value": prev.get("value_score"), "quality": prev.get("quality_score"),
                                  "conviction": prev.get("conviction_score")},
+                    "why_changed": _explain_change(prev, curr),
                 })
 
     return {
@@ -130,6 +162,44 @@ async def get_screen_diff():
         "new_picks": new_picks,
         "dropped_picks": dropped_picks,
         "changed_scores": changed_scores,
+    }
+
+
+def _explain_change(prior: dict, current: dict) -> dict:
+    """Return a structured "what changed" record between two screen rows for the same ticker.
+
+    Surfaces gate-state transitions and material metric deltas so callers can
+    distinguish "score drifted" from "a gate fired" from "raw classification
+    changed". Tolerant of older screen JSON that predates the f/momentum gate
+    fields — only revenue_gate_fired was captured before Slice E.
+    """
+    GATES = ("f_gate_fired", "momentum_gate_fired", "revenue_gate_fired")
+    fired_now = [g for g in GATES if current.get(g)]
+    fired_before = [g for g in GATES if prior.get(g)]
+
+    metric_deltas = {}
+    for key in ("value_score", "quality_score", "conviction_score", "piotroski_f"):
+        before = prior.get(key)
+        after = current.get(key)
+        if before is None and after is None:
+            continue
+        if before != after:
+            metric_deltas[key] = {"previous": before, "current": after}
+
+    return {
+        "raw_classification": {
+            "previous": prior.get("raw_classification") or prior.get("classification"),
+            "current": current.get("raw_classification") or current.get("classification"),
+        },
+        "final_classification": {
+            "previous": prior.get("classification"),
+            "current": current.get("classification"),
+        },
+        "gates_fired_now": fired_now,
+        "gates_fired_before": fired_before,
+        "newly_fired": [g for g in fired_now if g not in fired_before],
+        "newly_cleared": [g for g in fired_before if g not in fired_now],
+        "metric_deltas": metric_deltas,
     }
 
 

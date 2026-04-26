@@ -71,6 +71,13 @@ class FinancialData:
     current_quarter_estimate: float | None = None
     momentum_12m: float | None = None  # 12-1 month price return (decimal)
 
+    # ── Provenance (Slice D) ────────────────────────────────────────────
+    # Where the fundamentals came from. Set by the provider. Used for the
+    # red/yellow/green data-quality grade and for surfacing trust caveats.
+    data_source: str = "unknown"  # "yahooquery" | "yfinance_fallback" | "edgar" | "unknown"
+    fallback_used: bool = False
+    fiscal_age_days: int | None = None  # days between latest fiscal-year-end and now
+
     def __post_init__(self):
         """Fill gaps where derived values can be computed from available data."""
         # Fill missing EPS from NI / shares (yahooquery sometimes omits DilutedEPS)

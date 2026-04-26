@@ -1,3 +1,5 @@
+> **Naming note (2026-04-26):** This case study refers to the classification `CONVICTION BUY`. Effective 2026-04-26 that label was renamed to `RESEARCH CANDIDATE` everywhere in the live codebase, with no semantic change. This document is preserved as historical narrative and uses the original term.
+
 <!--
   Convention: ASCII code-block tables for aggregated summaries (<= 10 rows).
   Real markdown tables are used only for detail listings like the 20-pick grid

@@ -39,7 +39,7 @@ export function Methodology() {
           ))}
         </div>
         <p className="text-[12px] mt-1" style={{ color: "var(--color-text-muted)" }}>
-          Each criterion is binary (0 or 1). Raw F-Score = sum of 9 criteria (0-9). Minimum 6/9 required for CONVICTION BUY.
+          Each criterion is binary (0 or 1). Raw F-Score = sum of 9 criteria (0-9). Minimum 6/9 required for RESEARCH CANDIDATE.
         </p>
       </Section>
 
@@ -61,7 +61,7 @@ export function Methodology() {
             </thead>
             <tbody>
               {[
-                { label: "V ≥ 70", cells: ["CONVICTION BUY", "WATCH LIST", "VALUE TRAP"] },
+                { label: "V ≥ 70", cells: ["RESEARCH CANDIDATE", "WATCH LIST", "VALUE TRAP"] },
                 { label: "V 40-70", cells: ["QUALITY GROWTH", "HOLD", "AVOID"] },
                 { label: "V < 40", cells: ["OVERVALUED QUALITY", "OVERVALUED", "AVOID"] },
               ].map((row) => (
@@ -78,7 +78,7 @@ export function Methodology() {
       </Section>
 
       <Section title="Safety Gates">
-        <p><strong>F-Score Gate:</strong> CONVICTION BUY requires F-Score ≥ 6/9. Below 6 → downgraded to WATCH LIST.</p>
+        <p><strong>F-Score Gate:</strong> RESEARCH CANDIDATE requires F-Score ≥ 6/9. Below 6 → downgraded to WATCH LIST.</p>
         <p><strong>Momentum Gate:</strong> Bottom 25% by 12-1 month momentum → downgraded to WATCH LIST. Catches falling knives.</p>
         <p><strong>Revenue Gate:</strong> 2+ consecutive years of declining revenue → downgraded to WATCH LIST.</p>
         <p className="text-[12px] mt-2" style={{ color: "var(--color-text-muted)" }}>
@@ -87,7 +87,7 @@ export function Methodology() {
       </Section>
 
       <Section title="Confidence Levels">
-        <p>Within CONVICTION BUY, confidence = min(V - 70, Q - 70):</p>
+        <p>Within RESEARCH CANDIDATE, confidence = min(V - 70, Q - 70):</p>
         <ul className="text-[13px] pl-4 space-y-1 mt-2" style={{ color: "var(--color-text-secondary)" }}>
           <li><strong style={{ color: "#22c55e" }}>HIGH:</strong> Both V, Q ≥ 85 (margin ≥ 15)</li>
           <li><strong style={{ color: "#eab308" }}>MODERATE:</strong> Both V, Q ≥ 75 (margin ≥ 5)</li>

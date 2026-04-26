@@ -18,6 +18,7 @@ from config import (
     TCOST_BPS_ROUNDTRIP,
 )
 from backtest.cache import HistoricalCache
+from backtest.historical_beta import compute_historical_beta
 from backtest.historical_fetcher import fetch_historical_data
 from backtest.snapshot_builder import build_snapshot
 from backtest.portfolio import simulate_portfolio, simulate_selective_sell, BacktestMetrics
@@ -47,6 +48,7 @@ class StockDetail:
     final_classification: str     # After F-gate and momentum gate
     f_gate_fired: bool            # True if F-gate downgraded from CB
     momentum_gate_fired: bool     # True if momentum gate downgraded from CB
+    revenue_gate_fired: bool      # True if revenue-decline gate downgraded from CB
     confidence: str | None        # HIGH/MOD/LOW for final CB only
 
 
@@ -62,7 +64,7 @@ class FullQuarterSnapshot:
 @dataclass
 class QuarterResult:
     date: date
-    picks: list[str]  # CONVICTION BUY tickers
+    picks: list[str]  # RESEARCH CANDIDATE tickers
     universe: list[str]  # ALL screened tickers (for benchmark)
     num_screened: int
     classifications: dict[str, int] = field(default_factory=dict)
@@ -112,6 +114,8 @@ def run_backtest(
     universe_name: str = "sp500",
     min_picks: int = MIN_PORTFOLIO_SIZE,
     semiannual: bool = False,
+    filing_lag_days: int | None = None,
+    prefer_filed_date: bool = False,
 ) -> BacktestResult:
     """Run the full backtest pipeline.
 
@@ -123,6 +127,11 @@ def run_backtest(
             top WATCH LIST stocks (by conviction) backfill to reach this.
         semiannual: If True, rebalance every 6 months instead of quarterly.
         universe_name: Which universe to backtest (sp500, tase, etc.)
+        filing_lag_days: Override config.BACKTEST_FILING_LAG_DAYS for the
+            period-end+lag proxy. Used by --lag-grid sensitivity sweep.
+        prefer_filed_date: If True, use SEC EDGAR's actual `filed` date when
+            present on each statement row (true point-in-time availability),
+            falling back to the proxy when missing.
     """
     start_time = time.time()
 
@@ -137,8 +146,13 @@ def run_backtest(
         bias_label = "survivorship-free (point-in-time constituents)"
     else:
         bias_label = "current list (survivorship-biased)"
+    effective_lag = BACKTEST_FILING_LAG_DAYS if filing_lag_days is None else filing_lag_days
+    if prefer_filed_date:
+        lag_label = f"true filed_date when present, else {effective_lag}-day proxy"
+    else:
+        lag_label = f"{effective_lag} days"
     console.print(f"\n[bold blue]Assay Backtest — {universe_obj.description} Value + Quality[/bold blue]")
-    console.print(f"Period: {years} years | Rebalancing: quarterly | Filing lag: {BACKTEST_FILING_LAG_DAYS} days")
+    console.print(f"Period: {years} years | Rebalancing: quarterly | Filing lag: {lag_label}")
     console.print(f"Universe: {universe_obj.description} ({bias_label})\n")
 
     # Step 1: Generate rebalance dates
@@ -209,11 +223,14 @@ def run_backtest(
                     pit_info = info
 
                 # Use full replay to get ALL classifications (for selective sell)
-                full = _screen_quarter_full(rebal_date, pit_tickers, pit_info, cache, not include_financials, verbose)
+                full = _screen_quarter_full(
+                    rebal_date, pit_tickers, pit_info, cache, not include_financials, verbose,
+                    filing_lag_days=filing_lag_days, prefer_filed_date=prefer_filed_date,
+                )
                 if full is not None:
                     # Extract CB picks for quarterly rebalance
                     cb_picks = [(sd.conviction_score, sd.ticker) for sd in full.stock_details
-                                if sd.final_classification == "CONVICTION BUY"]
+                                if sd.final_classification == "RESEARCH CANDIDATE"]
                     cb_picks.sort(reverse=True)
                     sorted_tickers = [t for _, t in cb_picks]
 
@@ -240,6 +257,11 @@ def run_backtest(
                             "value_score": sd.value_score, "quality_score": sd.quality_score,
                             "piotroski_f": sd.piotroski_f,
                             "momentum_pct": sd.momentum_pct if sd.momentum_pct is not None else 0.0,
+                            "f_gate_fired": sd.f_gate_fired,
+                            "momentum_gate_fired": sd.momentum_gate_fired,
+                            "revenue_gate_fired": sd.revenue_gate_fired,
+                            "raw_classification": sd.raw_classification,
+                            "final_classification": sd.final_classification,
                         } for sd in full.stock_details if sd.ticker in pick_set],
                     )
                     # Sort pick_details by conviction
@@ -434,6 +456,8 @@ def _screen_quarter_full(
     cache: HistoricalCache,
     exclude_financials: bool,
     verbose: bool,
+    filing_lag_days: int | None = None,
+    prefer_filed_date: bool = False,
 ) -> FullQuarterSnapshot | None:
     """Run the screening pipeline and return ALL stocks' classifications with gate tracking."""
     # Build snapshots
@@ -449,8 +473,16 @@ def _screen_quarter_full(
         close_price, _ = price_data
 
         sp_entry = sp500_info.get(ticker, {})
-        fd = build_snapshot(ticker, rebal_date, raw, close_price, sp_entry)
+        fd = build_snapshot(
+            ticker, rebal_date, raw, close_price, sp_entry,
+            filing_lag_days=filing_lag_days,
+            prefer_filed_date=prefer_filed_date,
+        )
         if fd is not None:
+            # Inject historical beta computed from cached prices vs SPY (5-year
+            # quarterly OLS). Closes the §4b.4 / §6.3 gap where backtest
+            # Safety scoring received beta=None.
+            fd.beta = compute_historical_beta(ticker, rebal_date, cache)
             snapshots[ticker] = fd
 
     if not snapshots:
@@ -494,7 +526,7 @@ def _screen_quarter_full(
         classifications[final] = classifications.get(final, 0) + 1
 
         conv = conviction_score(v, q) or 0.0
-        conf = confidence_level(v, q) if final == "CONVICTION BUY" else None
+        conf = confidence_level(v, q) if final == "RESEARCH CANDIDATE" else None
         mom = momentum_pcts.get(t)
 
         stock_details.append(StockDetail(
@@ -507,13 +539,14 @@ def _screen_quarter_full(
             momentum_pct=round(mom, 1) if mom is not None else None,
             raw_classification=raw_cl,
             final_classification=final,
-            f_gate_fired=(raw_cl == "CONVICTION BUY" and raw_cl != post_f),
-            momentum_gate_fired=(post_f == "CONVICTION BUY" and post_f != post_mom),
+            f_gate_fired=(raw_cl == "RESEARCH CANDIDATE" and raw_cl != post_f),
+            momentum_gate_fired=(post_f == "RESEARCH CANDIDATE" and post_f != post_mom),
+            revenue_gate_fired=rev_gate,
             confidence=conf,
         ))
 
     if verbose:
-        cb_count = classifications.get("CONVICTION BUY", 0)
+        cb_count = classifications.get("RESEARCH CANDIDATE", 0)
         logger.info(f"{rebal_date}: {len(stock_details)} screened, {cb_count} picks, {classifications}")
 
     return FullQuarterSnapshot(
@@ -531,12 +564,17 @@ def _screen_quarter(
     cache: HistoricalCache,
     exclude_financials: bool,
     verbose: bool,
+    filing_lag_days: int | None = None,
+    prefer_filed_date: bool = False,
 ) -> QuarterResult | None:
     """Run the screening pipeline for a single quarter.
 
     Delegates to _screen_quarter_full() and extracts CB picks for backward compatibility.
     """
-    full = _screen_quarter_full(rebal_date, tickers, sp500_info, cache, exclude_financials, verbose)
+    full = _screen_quarter_full(
+        rebal_date, tickers, sp500_info, cache, exclude_financials, verbose,
+        filing_lag_days=filing_lag_days, prefer_filed_date=prefer_filed_date,
+    )
     if full is None:
         return None
 
@@ -547,7 +585,7 @@ def _screen_quarter(
 
     for sd in full.stock_details:
         universe.append(sd.ticker)
-        if sd.final_classification == "CONVICTION BUY":
+        if sd.final_classification == "RESEARCH CANDIDATE":
             picks.append((sd.conviction_score, sd.ticker))
             pick_details.append({
                 "ticker": sd.ticker,
@@ -556,6 +594,11 @@ def _screen_quarter(
                 "quality_score": sd.quality_score,
                 "piotroski_f": sd.piotroski_f,
                 "momentum_pct": sd.momentum_pct if sd.momentum_pct is not None else 0.0,
+                "f_gate_fired": sd.f_gate_fired,
+                "momentum_gate_fired": sd.momentum_gate_fired,
+                "revenue_gate_fired": sd.revenue_gate_fired,
+                "raw_classification": sd.raw_classification,
+                "final_classification": sd.final_classification,
             })
 
     picks.sort(reverse=True)

@@ -3,7 +3,7 @@
 import type { Classification, Confidence } from "./types";
 
 export const classificationColors: Record<Classification, string> = {
-  "CONVICTION BUY": "#22c55e",
+  "RESEARCH CANDIDATE": "#22c55e",
   "QUALITY GROWTH PREMIUM": "#3b82f6",
   "WATCH LIST": "#eab308",
   HOLD: "#71717a",

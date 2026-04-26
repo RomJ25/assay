@@ -34,6 +34,12 @@ from scoring.trajectory import compute_trajectory_scores
 from scoring.filters import passes_data_quality, include_stock
 from output.console_report import print_report
 from output.csv_report import save_csv, save_json
+from data.quality import grade_data_quality, DataQualityReport
+
+
+def _grade_to_dict(report: DataQualityReport) -> dict:
+    """Serialize a DataQualityReport for JSON output."""
+    return {"grade": report.grade, "warnings": list(report.warnings)}
 
 console = Console()
 logger = logging.getLogger("assay")
@@ -127,11 +133,13 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
             v_score = value_scores.get(t)
             q_score = quality_scores.get(t)
             conv = conviction_score(v_score, q_score)
-            cl = classify(v_score, q_score)
-            cl = apply_min_fscore(cl, piotroski_raw.get(t, 0))
-            cl = apply_momentum_gate(cl, momentum_pcts.get(t))
-            cl, rev_gate_fired = apply_revenue_gate(cl, d.revenue)
-            conf = confidence_level(v_score, q_score) if cl == "CONVICTION BUY" else None
+            cl_raw = classify(v_score, q_score)
+            cl_after_f = apply_min_fscore(cl_raw, piotroski_raw.get(t, 0))
+            f_gate_fired = (cl_raw == "RESEARCH CANDIDATE" and cl_after_f != "RESEARCH CANDIDATE")
+            cl_after_mom = apply_momentum_gate(cl_after_f, momentum_pcts.get(t))
+            mom_gate_fired = (cl_after_f == "RESEARCH CANDIDATE" and cl_after_mom != "RESEARCH CANDIDATE")
+            cl, rev_gate_fired = apply_revenue_gate(cl_after_mom, d.revenue)
+            conf = confidence_level(v_score, q_score) if cl == "RESEARCH CANDIDATE" else None
 
             # Yield metrics
             yields = get_yield_metrics(d)
@@ -199,7 +207,13 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
                 "beta": d.beta,
                 "market_cap": d.market_cap,
                 "momentum_12m": d.momentum_12m,
+                # Slice E — full gate audit trail for /screen/diff enrichment.
+                "f_gate_fired": f_gate_fired,
+                "momentum_gate_fired": mom_gate_fired,
                 "revenue_gate_fired": rev_gate_fired,
+                "raw_classification": cl_raw,
+                # Slice D — data-quality grade (red/yellow/green).
+                "data_quality": _grade_to_dict(grade_data_quality(d)),
             })
             progress.advance(task)
 
@@ -227,6 +241,53 @@ def run_screener(ticker: str | None = None, top_n: int = 20, verbose: bool = Fal
 
     console.print(f"\n[green]Reports saved to {csv_path.parent}/[/green]")
     fetcher.close()
+
+
+def _run_lag_grid(**kwargs) -> None:
+    """Sensitivity sweep across filing-lag assumptions.
+
+    Reruns the backtest at lags {true_filed, 30, 60, 75, 90} and writes a
+    side-by-side comparison CSV under results/. Tests whether the period-end+lag
+    proxy materially distorts results vs SEC EDGAR's actual filing dates.
+    """
+    import csv
+    from datetime import date
+    from backtest.engine import run_backtest
+    from config import RESULTS_DIR
+
+    console = Console()
+    variants = [
+        ("true_filed", {"prefer_filed_date": True, "filing_lag_days": None}),
+        ("lag_30", {"prefer_filed_date": False, "filing_lag_days": 30}),
+        ("lag_60", {"prefer_filed_date": False, "filing_lag_days": 60}),
+        ("lag_75", {"prefer_filed_date": False, "filing_lag_days": 75}),
+        ("lag_90", {"prefer_filed_date": False, "filing_lag_days": 90}),
+    ]
+
+    rows = []
+    for label, overrides in variants:
+        console.print(f"\n[bold magenta]== Lag-grid variant: {label} ==[/bold magenta]")
+        result = run_backtest(**{**kwargs, **overrides})
+        m = result.metrics
+        rows.append({
+            "variant": label,
+            "selection_alpha": m.selection_alpha,
+            "cagr": m.cagr,
+            "universe_cagr": m.universe_cagr,
+            "spy_cagr": m.spy_cagr,
+            "max_drawdown": m.max_drawdown,
+            "sharpe_ratio": m.sharpe_ratio,
+            "avg_picks_per_quarter": m.avg_picks_per_quarter,
+            "total_quarters": m.total_quarters,
+        })
+
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = RESULTS_DIR / f"lag_grid_{date.today().isoformat()}.csv"
+    with open(out_path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+    console.print(f"\n[green]Lag-grid CSV saved to {out_path}[/green]")
 
 
 def main():
@@ -261,6 +322,12 @@ def main():
                         help="Stock universe: sp500, russell1000, us_all, tase, sp500+tase, custom (default: sp500)")
     parser.add_argument("--tickers", type=str, default=None,
                         help="Custom ticker list (comma-separated, e.g., AAPL,MSFT,TEVA.TA)")
+    parser.add_argument("--filing-lag-days", type=int, default=None,
+                        help="Override the period-end+lag proxy (default: config.BACKTEST_FILING_LAG_DAYS=75)")
+    parser.add_argument("--prefer-filed-date", action="store_true",
+                        help="Use SEC EDGAR's actual filed date when present, falling back to the lag proxy")
+    parser.add_argument("--lag-grid", action="store_true",
+                        help="Sensitivity sweep: rerun the backtest at lags {true_filed, 30, 60, 75, 90} and emit a comparison CSV")
     args = parser.parse_args()
 
     if args.backtest:
@@ -268,14 +335,29 @@ def main():
         from backtest.engine import run_backtest
         # Survivorship-free is now default; --survivorship-naive opts out
         use_survivorship_free = not args.survivorship_naive
-        run_backtest(years=args.backtest_years,
-                     include_financials=args.include_financials,
-                     verbose=args.verbose,
-                     tcost_bps=args.tcost_bps,
-                     survivorship_free=use_survivorship_free,
-                     universe_name=args.universe,
-                     min_picks=args.min_picks,
-                     semiannual=args.semiannual)
+
+        if args.lag_grid:
+            _run_lag_grid(
+                years=args.backtest_years,
+                include_financials=args.include_financials,
+                verbose=args.verbose,
+                tcost_bps=args.tcost_bps,
+                survivorship_free=use_survivorship_free,
+                universe_name=args.universe,
+                min_picks=args.min_picks,
+                semiannual=args.semiannual,
+            )
+        else:
+            run_backtest(years=args.backtest_years,
+                         include_financials=args.include_financials,
+                         verbose=args.verbose,
+                         tcost_bps=args.tcost_bps,
+                         survivorship_free=use_survivorship_free,
+                         universe_name=args.universe,
+                         min_picks=args.min_picks,
+                         semiannual=args.semiannual,
+                         filing_lag_days=args.filing_lag_days,
+                         prefer_filed_date=args.prefer_filed_date)
     else:
         custom = args.tickers.split(",") if args.tickers else None
         universe = "custom" if custom else args.universe

@@ -61,13 +61,13 @@ class TestMomentumPercentiles:
 class TestMomentumGate:
     def test_gates_bottom_quartile(self):
         """Bottom 25% momentum should be downgraded."""
-        assert apply_momentum_gate("CONVICTION BUY", 20.0) == "WATCH LIST"
-        assert apply_momentum_gate("CONVICTION BUY", 25.0) == "WATCH LIST"
+        assert apply_momentum_gate("RESEARCH CANDIDATE", 20.0) == "WATCH LIST"
+        assert apply_momentum_gate("RESEARCH CANDIDATE", 25.0) == "WATCH LIST"
 
     def test_passes_above_threshold(self):
-        assert apply_momentum_gate("CONVICTION BUY", 26.0) == "CONVICTION BUY"
-        assert apply_momentum_gate("CONVICTION BUY", 50.0) == "CONVICTION BUY"
-        assert apply_momentum_gate("CONVICTION BUY", 100.0) == "CONVICTION BUY"
+        assert apply_momentum_gate("RESEARCH CANDIDATE", 26.0) == "RESEARCH CANDIDATE"
+        assert apply_momentum_gate("RESEARCH CANDIDATE", 50.0) == "RESEARCH CANDIDATE"
+        assert apply_momentum_gate("RESEARCH CANDIDATE", 100.0) == "RESEARCH CANDIDATE"
 
     def test_only_affects_conviction_buy(self):
         assert apply_momentum_gate("VALUE TRAP", 10.0) == "VALUE TRAP"
@@ -76,4 +76,4 @@ class TestMomentumGate:
 
     def test_none_momentum_passes(self):
         """Missing momentum data should not block."""
-        assert apply_momentum_gate("CONVICTION BUY", None) == "CONVICTION BUY"
+        assert apply_momentum_gate("RESEARCH CANDIDATE", None) == "RESEARCH CANDIDATE"

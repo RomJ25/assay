@@ -12,6 +12,23 @@ from data.providers.base import FinancialData
 logger = logging.getLogger(__name__)
 
 
+def _snapshot_fiscal_age(income_rows: list[dict], as_of_date: date) -> int | None:
+    """Days between as_of_date and the latest fiscal-period-end among filtered income rows."""
+    if not income_rows:
+        return None
+    as_of = income_rows[0].get("asOfDate")
+    if not as_of:
+        return None
+    try:
+        if isinstance(as_of, str):
+            row_date = date.fromisoformat(as_of[:10])
+        else:
+            row_date = as_of
+    except (ValueError, TypeError):
+        return None
+    return (as_of_date - row_date).days
+
+
 def _safe_float(val) -> float | None:
     """Convert a value to float, returning None for NaN/None/errors."""
     if val is None:
@@ -29,6 +46,8 @@ def build_snapshot(
     raw_financials: dict,
     close_price: float,
     sp500_entry: dict,
+    filing_lag_days: int | None = None,
+    prefer_filed_date: bool = False,
 ) -> FinancialData | None:
     """Build a FinancialData snapshot for a ticker at a historical date.
 
@@ -39,6 +58,12 @@ def build_snapshot(
                         each a list of dicts with 'asOfDate' and financial fields.
         close_price: Historical close price on the rebalance date.
         sp500_entry: Dict with company_name, sector, sub_industry.
+        filing_lag_days: Days between fiscal-period-end and assumed availability.
+            Defaults to config.BACKTEST_FILING_LAG_DAYS (75). Used as proxy when
+            real `filed_date` is missing or `prefer_filed_date=False`.
+        prefer_filed_date: If True and a row carries `filed_date`, use that
+            actual filing date for the availability test. Falls back to the
+            period-end + filing_lag_days proxy when missing.
 
     Returns:
         FinancialData or None if insufficient data.
@@ -46,12 +71,22 @@ def build_snapshot(
     if not raw_financials or close_price <= 0:
         return None
 
-    filing_cutoff = as_of_date - timedelta(days=BACKTEST_FILING_LAG_DAYS)
+    lag = BACKTEST_FILING_LAG_DAYS if filing_lag_days is None else filing_lag_days
+    filing_cutoff = as_of_date - timedelta(days=lag)
 
     # Filter and sort statements by availability (most recent first)
-    income_rows = _filter_statements(raw_financials.get("income", []), filing_cutoff, annual_only=True)
-    balance_rows = _filter_statements(raw_financials.get("balance", []), filing_cutoff, annual_only=False)
-    cashflow_rows = _filter_statements(raw_financials.get("cashflow", []), filing_cutoff, annual_only=True)
+    income_rows = _filter_statements(
+        raw_financials.get("income", []), filing_cutoff, as_of_date,
+        annual_only=True, prefer_filed_date=prefer_filed_date,
+    )
+    balance_rows = _filter_statements(
+        raw_financials.get("balance", []), filing_cutoff, as_of_date,
+        annual_only=False, prefer_filed_date=prefer_filed_date,
+    )
+    cashflow_rows = _filter_statements(
+        raw_financials.get("cashflow", []), filing_cutoff, as_of_date,
+        annual_only=True, prefer_filed_date=prefer_filed_date,
+    )
 
     # Need at least 1 income statement year
     if not income_rows:
@@ -135,19 +170,32 @@ def build_snapshot(
         free_cash_flow=_extract_field(cashflow_rows, "FreeCashFlow", 4),
         operating_cash_flow=_extract_field(cashflow_rows, "OperatingCashFlow", 4),
         capital_expenditure=_extract_field(cashflow_rows, "CapitalExpenditure", 4),
+
+        # Provenance
+        data_source="edgar" if any("filed_date" in r for r in income_rows) else "yahooquery",
+        fallback_used=False,
+        fiscal_age_days=_snapshot_fiscal_age(income_rows, as_of_date),
     )
 
 
 def _filter_statements(
     rows: list[dict],
     filing_cutoff: date,
+    as_of_date: date | None = None,
     annual_only: bool = True,
+    prefer_filed_date: bool = False,
 ) -> list[dict]:
     """Filter statement rows by filing availability and sort most-recent first.
 
-    A statement is available if its asOfDate <= filing_cutoff (i.e., the company
-    had enough time to file it before the rebalance date).
+    Default availability test: row's asOfDate (period end) <= filing_cutoff
+    (period end + lag days). When prefer_filed_date=True and a row carries
+    `filed_date` (the actual SEC filing date), the test becomes
+    filed_date <= as_of_date — true point-in-time availability rather than a
+    proxy. Rows missing `filed_date` fall back to the proxy. as_of_date is
+    only consulted when prefer_filed_date=True.
     """
+    if prefer_filed_date and as_of_date is None:
+        raise ValueError("prefer_filed_date=True requires as_of_date")
     available = []
     for row in rows:
         as_of = row.get("asOfDate")
@@ -163,9 +211,20 @@ def _filter_statements(
         except (ValueError, TypeError):
             continue
 
-        # Filing lag filter
-        if row_date > filing_cutoff:
-            continue
+        # Filing-availability filter
+        if prefer_filed_date and row.get("filed_date"):
+            try:
+                filed_dt = date.fromisoformat(str(row["filed_date"])[:10])
+            except (ValueError, TypeError):
+                # Malformed filed_date — fall back to proxy
+                if row_date > filing_cutoff:
+                    continue
+            else:
+                if filed_dt > as_of_date:
+                    continue
+        else:
+            if row_date > filing_cutoff:
+                continue
 
         # Annual-only filter
         if annual_only:

@@ -1,7 +1,7 @@
 /* TypeScript types matching Python dataclasses exactly. */
 
 export type Classification =
-  | "CONVICTION BUY"
+  | "RESEARCH CANDIDATE"
   | "QUALITY GROWTH PREMIUM"
   | "WATCH LIST"
   | "HOLD"
@@ -24,6 +24,13 @@ export interface PiotroskiCriterion {
 export interface PiotroskiBreakdown {
   raw_score: number;
   criteria: Record<string, PiotroskiCriterion>;
+}
+
+export type DataQualityGrade = "red" | "yellow" | "green";
+
+export interface DataQuality {
+  grade: DataQualityGrade;
+  warnings: string[];
 }
 
 export interface ScreenStock {
@@ -60,6 +67,7 @@ export interface ScreenStock {
   beta: number | null;
   market_cap: number | null;
   revenue_gate_fired: boolean;
+  data_quality?: DataQuality;
 }
 
 export interface ScreenResponse {

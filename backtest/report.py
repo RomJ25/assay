@@ -23,7 +23,7 @@ def print_backtest_report(result) -> None:
         f"[bold]ASSAY BACKTEST — S&P 500 VALUE + QUALITY[/bold]\n"
         f"Period: {result.effective_start} to {result.effective_end} "
         f"({m.total_quarters} quarters)\n"
-        f"Rebalancing: Quarterly, equal-weight CONVICTION BUY picks",
+        f"Rebalancing: Quarterly, equal-weight RESEARCH CANDIDATE picks",
         style="bold blue",
     ))
 
@@ -207,19 +207,22 @@ def save_backtest_csv(result) -> str:
 
     console.print(f"\n[green]Backtest CSV saved to {path}[/green]")
 
-    # Detail CSV: per-stock picks with scores
+    # Detail CSV: per-stock picks with scores and gate audit trail
     detail_path = RESULTS_DIR / f"backtest_detail_{date.today().isoformat()}.csv"
     detail_fields = [
         "quarter", "ticker", "sector", "value_score", "quality_score", "piotroski_f",
         "momentum_pct",
+        "f_gate_fired", "momentum_gate_fired", "revenue_gate_fired",
+        "raw_classification", "final_classification", "gate_message",
     ]
     with open(detail_path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=detail_fields)
+        writer = csv.DictWriter(f, fieldnames=detail_fields, extrasaction="ignore")
         writer.writeheader()
         for qr in result.quarters:
             for pick in qr.pick_details:
                 row = {"quarter": qr.date.isoformat()}
                 row.update(pick)
+                row["gate_message"] = _gate_message(pick)
                 writer.writerow(row)
 
     console.print(f"[green]Detail CSV saved to {detail_path}[/green]")
@@ -229,3 +232,15 @@ def save_backtest_csv(result) -> str:
 def _pct(value: float) -> str:
     """Format a decimal as a percentage string."""
     return f"{value * 100:+.1f}%"
+
+
+def _gate_message(pick: dict) -> str:
+    """Synthesize a human-readable gate-firing summary for a pick row."""
+    fired = []
+    if pick.get("f_gate_fired"):
+        fired.append("f<6")
+    if pick.get("momentum_gate_fired"):
+        fired.append("momentum<25th%")
+    if pick.get("revenue_gate_fired"):
+        fired.append("revenue declining 2+yr")
+    return "; ".join(fired) if fired else ""

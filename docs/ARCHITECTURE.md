@@ -359,7 +359,7 @@ This produces a **uniform distribution** from ~0 to ~100 regardless of the under
 
 ```
     ┌──────────────────────────────────────────────────────────┐
-    │  ★ CONVICTION BUYS  (sorted by conviction score)        │
+    │  ★ RESEARCH CANDIDATES  (sorted by conviction score)        │
     │  ┌──────────────────────────────────────────────────┐    │
     │  │ Ticker   Conv.   Value   Quality   Confidence    │    │
     │  │ ...      ...     ...     ...       ...           │    │

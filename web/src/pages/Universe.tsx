@@ -7,13 +7,13 @@ import { useCountUp } from "../hooks/useCountUp";
 import type { ScreenStock, Classification } from "../lib/types";
 
 const MATRIX: Classification[][] = [
-  ["CONVICTION BUY", "WATCH LIST", "VALUE TRAP"],
+  ["RESEARCH CANDIDATE", "WATCH LIST", "VALUE TRAP"],
   ["QUALITY GROWTH PREMIUM", "HOLD", "AVOID"],
   ["OVERVALUED QUALITY", "OVERVALUED", "AVOID"],
 ];
 
 const SHORT_LABELS: Record<string, string> = {
-  "CONVICTION BUY": "Conviction Buy",
+  "RESEARCH CANDIDATE": "Conviction Buy",
   "QUALITY GROWTH PREMIUM": "Quality Growth",
   "WATCH LIST": "Watch List",
   HOLD: "Hold",

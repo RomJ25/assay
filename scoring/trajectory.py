@@ -3,7 +3,7 @@
 Captures "improving fundamentals + not collapsing price trend" to reduce
 value-trap risk and prioritize improving names within the same conviction bucket.
 
-Not used for ranking or classification — only for ordering within CONVICTION BUY.
+Not used for ranking or classification — only for ordering within RESEARCH CANDIDATE.
 """
 
 from __future__ import annotations

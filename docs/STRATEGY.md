@@ -8,6 +8,9 @@
 
 ---
 
+> **Naming note (2026-04-26):** This document refers to `CONVICTION BUY`. Effective 2026-04-26 the label was renamed to `RESEARCH CANDIDATE` everywhere in the live codebase, with no semantic change. This document keeps the original term to preserve the historical reasoning trail.
+
+
 ### Contents
 
 [1. The Complete Strategy](#1-the-complete-strategy) · [2. When to Buy](#2-when-to-buy) · [3. When to Hold](#3-when-to-hold) · [4. When to Sell](#4-when-to-sell) · [5. Why This Works](#5-why-this-works) · [6. The Evidence](#6-the-evidence) · [7. What Not to Do](#7-what-not-to-do) · [8. Expected Experience](#8-expected-experience) · [9. Academic Support](#9-academic-support)

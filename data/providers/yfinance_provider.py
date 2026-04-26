@@ -5,7 +5,9 @@ from __future__ import annotations
 import logging
 import math
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import date
 
+import pandas as pd
 import yfinance as yf
 
 from data.providers.base import DataProvider, FinancialData
@@ -21,6 +23,24 @@ def _safe(val) -> float | None:
         return None if (math.isnan(f) or math.isinf(f)) else f
     except (TypeError, ValueError):
         return None
+
+
+def _yfinance_fiscal_age(inc) -> int | None:
+    """Days between today and the most recent fiscal-period column in a yfinance income statement.
+
+    yfinance returns dates as the column index. Returns None if unavailable.
+    """
+    if inc is None:
+        return None
+    try:
+        if hasattr(inc, "columns") and len(inc.columns) > 0:
+            latest = pd.to_datetime(inc.columns).max()
+            if pd.isna(latest):
+                return None
+            return (date.today() - latest.date()).days
+    except (ValueError, TypeError, AttributeError):
+        return None
+    return None
 
 
 def _extract_col(df, col: str, n: int = 4) -> list[float | None]:
@@ -175,4 +195,8 @@ class YFinanceProvider(DataProvider):
 
             analyst_target=info.get("targetMeanPrice"),
             fifty_two_week_high=info.get("fiftyTwoWeekHigh"),
+
+            data_source="yfinance_fallback",
+            fallback_used=True,
+            fiscal_age_days=_yfinance_fiscal_age(inc),
         )

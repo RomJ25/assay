@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import math
 import time
+from datetime import date
 from typing import Any
 
 import pandas as pd
@@ -32,6 +33,24 @@ _BALANCE_FIELDS = [
 _CASHFLOW_FIELDS = [
     "FreeCashFlow", "OperatingCashFlow", "CapitalExpenditure",
 ]
+
+
+def _compute_fiscal_age_days(inc_df: pd.DataFrame) -> int | None:
+    """Days between today and the most recent fiscal-period-end in inc_df.
+
+    Used by the data-quality grade — values >90 days suggest the most recent
+    annual filing predates a quarter-boundary and the underlying fundamentals
+    may be stale.
+    """
+    if inc_df is None or inc_df.empty or "asOfDate" not in inc_df.columns:
+        return None
+    try:
+        latest = pd.to_datetime(inc_df["asOfDate"]).max()
+        if pd.isna(latest):
+            return None
+        return (date.today() - latest.date()).days
+    except (ValueError, TypeError):
+        return None
 
 
 def _safe_float(val: Any) -> float | None:
@@ -193,6 +212,8 @@ class YahooQueryProvider(DataProvider):
         mktcap = _get_dict_val(summ, "marketCap") or 0
         shares = mktcap / price if price > 0 and mktcap > 0 else 0
 
+        fiscal_age = _compute_fiscal_age_days(inc)
+
         return FinancialData(
             ticker=ticker,
             company_name=sp.get("company_name", ""),
@@ -238,6 +259,10 @@ class YahooQueryProvider(DataProvider):
 
             analyst_target=_get_dict_val(fdata, "targetMeanPrice"),
             fifty_two_week_high=_get_dict_val(summ, "fiftyTwoWeekHigh"),
+
+            data_source="yahooquery",
+            fallback_used=False,
+            fiscal_age_days=fiscal_age,
         )
 
     @staticmethod

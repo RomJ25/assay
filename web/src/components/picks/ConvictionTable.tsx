@@ -21,7 +21,7 @@ export function ConvictionTable({ stocks, onSelectStock }: Props) {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   const cbPicks = useMemo(
-    () => stocks.filter((s) => s.classification === "CONVICTION BUY"),
+    () => stocks.filter((s) => s.classification === "RESEARCH CANDIDATE"),
     [stocks]
   );
 
@@ -87,10 +87,15 @@ export function ConvictionTable({ stocks, onSelectStock }: Props) {
   return (
     <div className="px-4 sm:px-8 pb-8">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-[11px] font-medium uppercase tracking-[0.06em]"
-            style={{ color: "var(--color-text-muted)" }}>
-          All {cbPicks.length} Conviction Buys
-        </h2>
+        <div>
+          <h2 className="text-[11px] font-medium uppercase tracking-[0.06em]"
+              style={{ color: "var(--color-text-muted)" }}>
+            All {cbPicks.length} Research Candidates
+          </h2>
+          <p className="text-[11px] mt-1" style={{ color: "var(--color-text-muted)" }}>
+            Ranking does not predict returns within RC (Kendall τ ≈ −0.04, n=12 quarters). Treat as research input, not a forecast.
+          </p>
+        </div>
         <div className="flex items-center gap-2">
           {compareMode && compareSet.size >= 2 && (
             <button

@@ -200,9 +200,16 @@ def _build_statement_rows(
     """Build yahooquery-compatible rows from EDGAR XBRL data.
 
     Groups facts by fiscal year end date and returns one row per year.
+    Each row also carries `filed_date` — the earliest filing date observed
+    for that fiscal-year-end across all concepts. This lets backtests use
+    the true point-in-time when statements became publicly available
+    rather than a period-end-plus-lag proxy.
     """
     # Collect all annual facts by date
     date_facts: dict[str, dict] = {}
+    # Track earliest filed-date per end_date (first time this period's data
+    # was publicly available — conservative point-in-time choice).
+    date_filed: dict[str, str] = {}
 
     for field_name, xbrl_concepts in concept_map.items():
         for concept in xbrl_concepts:
@@ -244,6 +251,13 @@ def _build_statement_rows(
                 if field_name not in date_facts[end_date]:
                     date_facts[end_date][field_name] = entry.get("val")
 
+                # Track earliest filed date observed for this fiscal year-end
+                filed = entry.get("filed")
+                if filed:
+                    prior = date_filed.get(end_date)
+                    if prior is None or filed < prior:
+                        date_filed[end_date] = filed
+
     # Convert to yahooquery-compatible row format
     rows = []
     for end_date in sorted(date_facts.keys()):
@@ -255,6 +269,8 @@ def _build_statement_rows(
             "asOfDate": f"{end_date}T00:00:00",
             "periodType": "12M",
         }
+        if end_date in date_filed:
+            row["filed_date"] = date_filed[end_date]
         row.update(facts)
         rows.append(row)
 
