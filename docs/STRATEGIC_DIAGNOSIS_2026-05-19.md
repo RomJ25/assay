@@ -48,8 +48,8 @@ The core conclusion survives intact, because the *real* files (`web/src/pages/Me
 | Backtest Evidence page tells visitors: MIXED on "do conviction buys outperform"; NO on "does conviction ordering predict returns"; NEUTRAL on F-Score gate | `web/src/pages/Evidence.tsx:282–300` |
 | No out-of-sample / paper-trade / forward-picks log exists | grep across `docs/`, `scripts/`, root — no such file |
 | No monetization infrastructure in `web/src/` (no Stripe, no analytics, no email capture, no signup, no paywall, no founder identity, no testimonials) | grep `web/src/` for `stripe|posthog|plausible|gtag|analytics|signup|paywall|email|newsletter` — single mention is `docs/BACKLOG.md:175` as a future idea, nothing wired |
-| 33 days since last commit; last commit was UI polish ("Add motion system — hero count-ups, staggered reveals, drawer physics") | `git log -1 --format="%ai %s"` |
-| 50 commits 2026-02-19 → 2026-04-16, zero with revenue/marketing/distribution intent | `git log --since="2026-02-19" --format="%s"` audited |
+| 33-day gap between the user's last commit (2026-04-16) and this diagnosis (2026-05-19); that last user commit was UI motion polish (`913b2dc` — "Add motion system — hero count-ups, staggered reveals, drawer physics") | `git log --format="%ai %h %s"` |
+| 50 commits in the 90-day window 2026-02-19 → 2026-04-17, **all concentrated in 5 days** (2026-04-11 through 2026-04-16); zero with marketing/payment/distribution/signup/analytics intent (the two `revenue`-keyword matches are the algorithm's revenue-trend gate, not revenue-generation work) | `git log --since="2026-02-19" --until="2026-04-17" --format="%ai %s"` audited |
 
 ### 🟡 External priors (carried from draft, not verified here)
 
@@ -132,7 +132,7 @@ Both readings require evidence the project does not yet have. If a reading is pi
 - Hero is a count-up of CB picks; no value proposition (`web/src/components/dashboard/SignalBanner.tsx`; `web/src/pages/Home.tsx:41–46`).
 - Methodology: "not an alpha engine" (`Methodology.tsx:104`).
 - Evidence: MIXED, NEUTRAL, NO, IN AGGREGATE, IMPROVED labels (`Evidence.tsx:282–300`).
-- Footer caveats: "Research tool for idea generation. Not a trading signal." (`Home.tsx:54`; `Methodology.tsx:121`).
+- Footer caveats on both user-facing pages: `Home.tsx:54` reads "Research tool for idea generation. Not a trading signal. Minimum 3-5 year horizon."; `Methodology.tsx:121` reads "Research tool for idea generation. Not financial advice." Both surfaces preemptively disqualify the system as a basis for trading decisions.
 - No founder identity, no testimonials, no payment, no email capture, no CTA other than CSV export.
 
 ### D. Zero monetization infrastructure (✅)
@@ -141,9 +141,9 @@ Both readings require evidence the project does not yet have. If a reading is pi
 - No public-facing date-stamped picks log.
 
 ### E. The 33-day silence (✅)
-- Last commit 2026-04-16; today 2026-05-19.
-- Last commit was UI motion polish (`913b2dc`).
-- Silence followed a three-week sprint (50 commits 2026-04-11 → 2026-04-16) that produced no monetization surface, no out-of-sample evidence, no public deployment.
+- User's last commit was 2026-04-16; this diagnosis was generated 2026-05-19 → **33-day gap** with no further user activity on the branch.
+- That last commit (`913b2dc`) was UI motion polish ("Add motion system — hero count-ups, staggered reveals, drawer physics") — not validation, distribution, or monetization work.
+- The silence followed a **six-day burst** of activity (50 commits, all between 2026-04-11 and 2026-04-16, 42 of them on April 11–12 alone) that produced no monetization surface, no out-of-sample evidence, no public deployment.
 
 ### F. What was claimed in the original draft and is *not* in the repo
 - No `CAPITAL_RESEARCH_PLAN.md`, no `validation_log.md`, no `research/policy_lab.py`, no Bonferroni gate, no Portfolio Doctor experiment, no WordPress files. The original draft's framing ("your own gate not cleared") understates the problem; the real state is "no gate at all, no forward log at all, and algorithm work continues on the same in-sample data."
@@ -183,7 +183,7 @@ flowchart TD
 
 Path-specific first 60 days:
 
-- **A.** Pick a less-arbitraged universe (the repo already supports `--universe russell1000`, `tase_all`, `us_all`). Commit date-stamped forward picks to a new `docs/OUT_OF_SAMPLE_LOG.md` **before** the return window opens. Track vs AVUV. No parameter tuning during the quarter. After 4 honest quarters, you have evidence — until then, you don't.
+- **A.** Pick a less-arbitraged universe (the repo's CLI already exposes `--universe russell1000`, `--universe us_all`, `--universe tase`; the registry at `data/universe.py:532–567` also includes `tase_all`). Commit date-stamped forward picks to a new `docs/OUT_OF_SAMPLE_LOG.md` **before** the return window opens. Track vs AVUV. No parameter tuning during the quarter. After 4 honest quarters, you have evidence — until then, you don't.
 - **B.** Pick a publication surface (Substack / Beehiiv / personal site). Attach a real name. Write 10 posts in 60 days on the SMCI survivorship discovery, the Kendall τ = −0.038 finding, the "not an alpha engine" admission, the value/quality literature audit, the existing case studies. Free-sub growth is leading indicator; paid is lagging. Do not charge below ~1,000 free subs.
 - **C.** Archive the repo. Write `POSTMORTEM.md`. Reclaim the time.
 - **D.** Open-source under MIT with candid `README.md` titled something like "What I learned trying to build a transparent quant screener — and why I think it's harder than retail makes it look." Highest-EV exit if neither writing nor small-cap quant appeals.
@@ -246,4 +246,4 @@ You'll know this diagnosis was wrong if 30 days from today you have shipped a St
 - `docs/STRATEGY.md:47, 117, 164–168` — in-sample warnings, SMCI survivorship correction
 - `docs/BACKLOG.md:36, 71, 191` — sector-neutral alpha +0.1%, Kendall τ = −0.038, "no parameter tuning on the same data"
 - `docs/DESIGN_DECISIONS.md` — what has already been considered and defended; do not re-litigate
-- `git log --since="2026-04-16"` — the silence
+- `git log 913b2dc..HEAD` — the 33-day silence between the user's last commit and now
