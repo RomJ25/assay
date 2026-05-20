@@ -1,5 +1,9 @@
 # Assay
 
+> ### 📄 Read this first: [POSTMORTEM.md](POSTMORTEM.md)
+>
+> Assay is an **open-sourced, completed research project** — not a product and not investment advice. After adversarial testing and a review of the academic literature, the honest conclusion is that a transparent retail screener of this kind cannot beat a low-cost factor ETF after real-world frictions. The screener works as designed; it is just not something to run capital through. **[The post-mortem](POSTMORTEM.md) explains why, with evidence** — and it is the most useful thing in this repository. The technical documentation below remains accurate; read it with the post-mortem's conclusions in mind.
+
 **A system that only acts when the evidence is aligned — and stays silent when it isn't.**
 
 *A U.S. equity value + quality screener — S&P 500 or Russell 1000 — a first filter for research, not a trading signal. Built for investors who would rather see zero picks than a forced shortlist of twenty.*
