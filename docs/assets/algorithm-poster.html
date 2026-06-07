@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Assay — The Conviction Algorithm</title>
+<style>
+  /* ── Geist (the app's own font files, served over http) ── */
+  @font-face { font-family:"Geist Mono"; src:url("/web/node_modules/geist/dist/fonts/geist-mono/GeistMono-Regular.woff2") format("woff2"); font-weight:400; }
+  @font-face { font-family:"Geist Mono"; src:url("/web/node_modules/geist/dist/fonts/geist-mono/GeistMono-Medium.woff2") format("woff2"); font-weight:500; }
+  @font-face { font-family:"Geist Mono"; src:url("/web/node_modules/geist/dist/fonts/geist-mono/GeistMono-SemiBold.woff2") format("woff2"); font-weight:600; }
+  @font-face { font-family:"Geist"; src:url("/web/node_modules/geist/dist/fonts/geist-sans/Geist-Regular.woff2") format("woff2"); font-weight:400; }
+  @font-face { font-family:"Geist"; src:url("/web/node_modules/geist/dist/fonts/geist-sans/Geist-Medium.woff2") format("woff2"); font-weight:500; }
+  @font-face { font-family:"Geist"; src:url("/web/node_modules/geist/dist/fonts/geist-sans/Geist-SemiBold.woff2") format("woff2"); font-weight:600; }
+
+  :root{
+    --s0:#09090b; --s1:#0e0e11; --s2:#1a1a1e; --s3:#27272a;
+    --line:#1c1c20; --line2:#26262b; --line3:#34343a;
+    --cb:#22c55e; --qgp:#3b82f6; --wl:#eab308; --hold:#71717a;
+    --oq:#a78bfa; --ov:#f97316; --vt:#f43f5e; --avoid:#a8a29e;
+    --val:#60a5fa; --qual:#34d399;
+    --t0:#fafafa; --t1:#a1a1aa; --t2:#71717a; --t3:#52525b;
+    --sans:"Geist",ui-sans-serif,system-ui,sans-serif;
+    --mono:"Geist Mono",ui-monospace,monospace;
+    --r:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--s0);}
+  body{
+    font-family:var(--sans); color:var(--t0); -webkit-font-smoothing:antialiased;
+    background:
+      radial-gradient(1200px 560px at 50% -10%, rgba(34,197,94,0.07), transparent 58%),
+      radial-gradient(1000px 680px at 96% 12%, rgba(59,130,246,0.045), transparent 52%),
+      radial-gradient(900px 700px at 2% 70%, rgba(244,63,94,0.03), transparent 55%),
+      var(--s0);
+  }
+  .poster{ width:1200px; margin:0 auto; padding:72px 64px 56px; position:relative; }
+  .poster::before{
+    content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+    background-image:radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size:28px 28px; mask-image:linear-gradient(180deg,#000,#000 74%,transparent);
+  }
+  .poster > *{ position:relative; z-index:1; }
+
+  .eyebrow{ font-family:var(--mono); font-size:11px; letter-spacing:.28em; text-transform:uppercase; color:var(--t2); }
+
+  /* ───── Header ───── */
+  header{ text-align:center; margin-bottom:8px; }
+  .wordmark{ font-family:var(--mono); font-weight:500; letter-spacing:.62em; font-size:13px; color:var(--t2); padding-left:.62em; }
+  h1{ font-family:var(--sans); font-weight:600; font-size:52px; letter-spacing:-0.025em; margin:18px 0 0; line-height:1.02; }
+  h1 .accent{ position:relative; color:var(--cb); }
+  .subwrap{ max-width:660px; margin:18px auto 0; }
+  .sub{ color:var(--t1); font-size:15.5px; margin:0; line-height:1.6; }
+  .sub b{ color:var(--t0); font-weight:500; }
+  .metaline{ margin-top:20px; font-family:var(--mono); font-size:11.5px; color:var(--t2); letter-spacing:.06em; }
+  .metaline b{ color:var(--t1); font-weight:500; }
+  .metaline .sep{ color:var(--line3); padding:0 10px; }
+
+  .rule{ height:1px; background:linear-gradient(90deg,transparent,var(--line2) 14%,var(--line2) 86%,transparent); margin:34px 0 4px; }
+
+  /* ───── Stage flow ───── */
+  .stage{ display:grid; grid-template-columns:60px 1fr; gap:24px; }
+  .rail{ display:flex; flex-direction:column; align-items:center; padding-top:6px; }
+  .node{ width:44px; height:44px; border-radius:50%; border:1px solid var(--line3); background:var(--s0);
+    display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:13px; font-weight:600; color:var(--t1); flex:0 0 auto; }
+  .stage.focus .node{ border-color:rgba(34,197,94,0.6); color:var(--cb); box-shadow:0 0 0 4px rgba(34,197,94,0.08); }
+  .spine{ width:1px; flex:1 1 auto; background:linear-gradient(180deg,var(--line3),var(--line)); margin:8px 0; min-height:24px; position:relative; }
+  .spine::after{ content:""; position:absolute; bottom:-1px; left:50%; transform:translateX(-50%); width:5px; height:5px;
+    border-right:1px solid var(--line3); border-bottom:1px solid var(--line3); rotate:45deg; }
+  .stage:last-of-type .spine{ display:none; }
+
+  .card{ background:linear-gradient(180deg,#0d0d10,#0a0a0c); border:1px solid var(--line); border-radius:var(--r);
+    padding:24px 28px; margin-bottom:8px; }
+  .card .head{ display:flex; align-items:baseline; gap:14px; }
+  .card .head h2{ font-family:var(--sans); font-weight:600; font-size:21px; margin:0; letter-spacing:-0.015em; }
+  .card .head .tag{ font-family:var(--mono); font-size:10.5px; letter-spacing:.18em; color:var(--t2); text-transform:uppercase; margin-left:auto; }
+  .card .desc{ color:var(--t1); font-size:13.5px; line-height:1.6; margin:10px 0 0; max-width:none; }
+  .card .desc b{ color:var(--t0); font-weight:500; }
+  .mono{ font-family:var(--mono); } .muted{ color:var(--t2); }
+
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+  .chip{ font-family:var(--mono); font-size:11px; color:var(--t1); border:1px solid var(--line2); border-radius:7px; padding:5px 10px; background:rgba(255,255,255,0.014); }
+  .chip b{ color:var(--t0); font-weight:600; }
+  .chip.soft{ color:var(--t2); border-style:dashed; }
+
+  /* ───── Two dimensions ───── */
+  .two{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:18px; }
+  .dim{ border:1px solid var(--line2); border-radius:12px; padding:18px; background:rgba(255,255,255,0.012); position:relative; }
+  .dim::before{ content:""; position:absolute; left:0; top:18px; bottom:18px; width:2px; border-radius:2px; }
+  .dim.value::before{ background:var(--val); }
+  .dim.quality::before{ background:var(--qual); }
+  .dim .dh{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:16px; padding-left:10px; }
+  .dim .dh .name{ font-family:var(--mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; }
+  .dim.value .name{ color:var(--val); } .dim.quality .name{ color:var(--qual); }
+  .dim .dh .formula{ font-family:var(--mono); font-size:11px; color:var(--t2); }
+  .signal{ margin:11px 0; padding-left:10px; }
+  .signal .srow{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+  .signal .slabel{ font-size:12.5px; color:var(--t0); font-weight:500; }
+  .signal .ssub{ font-family:var(--mono); font-size:10.5px; color:var(--t2); font-weight:400; margin-left:5px; }
+  .signal .swt{ font-family:var(--mono); font-size:12px; color:var(--t0); font-weight:600; }
+  .track{ height:6px; border-radius:3px; background:var(--s2); overflow:hidden; }
+  .track i{ display:block; height:100%; border-radius:3px; }
+  .dim .note{ font-family:var(--mono); font-size:10.5px; color:var(--t2); margin-top:14px; padding-left:10px; padding-top:12px; border-top:1px solid var(--line); }
+
+  /* ───── Conviction hero ───── */
+  .hero{ text-align:center; padding:30px 28px 26px; background:
+      radial-gradient(560px 200px at 50% 0%, rgba(34,197,94,0.07), transparent 70%), linear-gradient(180deg,#0d0d10,#0a0a0c); }
+  .hero .formula{ font-family:var(--mono); font-weight:500; font-size:38px; letter-spacing:-0.01em; color:var(--t0); white-space:nowrap; }
+  .hero .formula .rad{ color:var(--cb); font-weight:600; }
+  .hero .formula .v{ color:var(--val); } .hero .formula .q{ color:var(--qual); }
+  .hero .gloss{ color:var(--t1); font-size:13.5px; line-height:1.6; max-width:700px; margin:14px auto 0; }
+  .hero .gloss b{ color:var(--t0); font-weight:500; }
+  .tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:24px; }
+  .tile{ border:1px solid var(--line2); border-radius:11px; padding:14px 10px; background:rgba(255,255,255,0.012); }
+  .tile .in{ font-family:var(--mono); font-size:11px; color:var(--t2); }
+  .tile .out{ font-family:var(--mono); font-weight:600; font-size:30px; margin:6px 0 2px; letter-spacing:-0.02em; }
+  .tile .cap{ font-size:10.5px; color:var(--t2); letter-spacing:.03em; }
+  .tile.peak .out{ color:var(--cb); } .tile.peak{ border-color:rgba(34,197,94,0.32); }
+  .tile.good .out{ color:#86efac; }
+  .tile.mid .out{ color:var(--t1); }
+  .tile.bad .out{ color:var(--vt); } .tile.bad{ border-color:rgba(244,63,94,0.3); }
+  .heroconf{ font-family:var(--mono); font-size:11.5px; color:var(--t1); margin-top:22px; padding-top:18px; border-top:1px solid var(--line); }
+  .heroconf .hi{ color:var(--cb); } .heroconf .mo{ color:var(--wl); } .heroconf .lo{ color:#ef4444; } .heroconf .em{ color:var(--t2); }
+  .parallel{ font-family:var(--mono); font-size:10.5px; color:var(--t2); margin-top:12px; letter-spacing:.02em; }
+  .parallel b{ color:var(--t1); font-weight:500; }
+
+  /* ───── Matrix (focal) ───── */
+  .matrix-card{ padding:26px 30px 30px; border-color:var(--line2);
+    box-shadow:0 0 0 1px rgba(34,197,94,0.04), 0 24px 60px -30px rgba(0,0,0,0.9); }
+  .mx{ display:grid; grid-template-columns:20px 30px 1fr; gap:12px; margin-top:20px; align-items:stretch; }
+  .ystrip{ border-radius:4px; background:linear-gradient(180deg,
+      rgba(34,197,94,0.55), rgba(234,179,8,0.4) 50%, rgba(244,63,94,0.5)); }
+  .ylab{ display:flex; align-items:center; justify-content:center; }
+  .ylab span{ writing-mode:vertical-rl; transform:rotate(180deg); font-family:var(--mono); font-size:11px; letter-spacing:.24em; text-transform:uppercase; color:var(--t1); }
+  .grid{ display:grid; grid-template-columns:repeat(3,1fr); grid-auto-rows:96px; gap:9px; }
+  .cell{ border-radius:11px; border:1px solid var(--line2); padding:13px 14px; display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden; }
+  .cell .coord{ position:absolute; top:11px; right:13px; font-family:var(--mono); font-size:9.5px; color:var(--t3); letter-spacing:.04em; }
+  .cell .cn{ font-family:var(--sans); font-weight:600; font-size:14px; line-height:1.18; max-width:84%; }
+  .cell .cd{ font-family:var(--mono); font-size:10px; color:var(--t2); letter-spacing:.01em; }
+  .cell.star{ background:radial-gradient(120% 120% at 80% 10%, rgba(34,197,94,0.22), rgba(34,197,94,0.10));
+    border-color:rgba(34,197,94,0.6); box-shadow:0 0 0 1px rgba(34,197,94,0.45), 0 0 42px rgba(34,197,94,0.20); }
+  .cell.star .cn{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .cell.star .badge{ font-family:var(--mono); font-size:9px; color:var(--cb); border:1px solid rgba(34,197,94,0.55); border-radius:5px; padding:2px 6px; letter-spacing:.1em; }
+  .xrow{ display:grid; grid-template-columns:20px 30px 1fr; gap:12px; margin-top:11px; }
+  .xticks{ grid-column:3; display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
+  .xticks .t{ text-align:center; font-family:var(--mono); font-size:10.5px; color:var(--t2); letter-spacing:.03em; }
+  .xstriprow{ display:grid; grid-template-columns:20px 30px 1fr; gap:12px; margin-top:7px; }
+  .xstrip{ grid-column:3; height:4px; border-radius:3px; background:linear-gradient(90deg,
+      rgba(244,63,94,0.5), rgba(234,179,8,0.4) 50%, rgba(34,197,94,0.55)); }
+  .xtitle{ grid-column:3; text-align:center; font-family:var(--mono); font-size:11px; letter-spacing:.24em; text-transform:uppercase; color:var(--t1); margin-top:8px; }
+
+  /* ───── Gates ───── */
+  .gates{ display:grid; grid-template-columns:repeat(3,1fr); gap:13px; margin-top:18px; }
+  .gate{ border:1px solid var(--line2); border-top:2px solid var(--wl); border-radius:11px; padding:15px 16px; background:linear-gradient(180deg,rgba(234,179,8,0.04),rgba(234,179,8,0.01)); }
+  .gate .gt{ font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--wl); margin-bottom:9px; }
+  .gate .gc{ font-family:var(--mono); font-size:12.5px; color:var(--t0); margin-bottom:8px; font-weight:500; }
+  .gate .gx{ font-size:11.5px; color:var(--t1); line-height:1.55; }
+  .gate .src{ font-family:var(--mono); font-size:10px; color:var(--t3); margin-top:10px; }
+
+  /* ───── Output spectrum ───── */
+  .spectrum{ margin-top:18px; }
+  .specbar{ height:16px; border-radius:8px; display:flex; overflow:hidden; }
+  .specbar i{ display:block; height:100%; }
+  .speclabels{ display:flex; justify-content:space-between; margin-top:10px; font-family:var(--mono); font-size:11px; }
+  .speclabels b{ font-weight:600; } .speclabels span{ color:var(--t2); }
+
+  /* ───── Validation ───── */
+  .valwrap{ margin-top:34px; border:1px solid var(--line2); border-radius:16px; overflow:hidden;
+    background:linear-gradient(180deg,#0e0d0f,#0a0a0c); box-shadow:0 20px 50px -34px rgba(0,0,0,0.9); }
+  .valhead{ display:flex; align-items:center; gap:12px; padding:18px 28px; border-bottom:1px solid var(--line); }
+  .valhead h2{ margin:0; font-size:19px; font-weight:600; letter-spacing:-0.01em; }
+  .valhead .dot{ width:9px; height:9px; border-radius:50%; background:var(--vt); box-shadow:0 0 14px rgba(244,63,94,0.7); }
+  .valhead .tag{ font-family:var(--mono); font-size:10.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--t2); margin-left:auto; }
+  .valgrid{ display:grid; grid-template-columns:1.3fr 1fr 1fr; }
+  .vcell{ padding:22px 28px; border-right:1px solid var(--line); }
+  .vcell:last-child{ border-right:none; }
+  .vcell .vt{ font-family:var(--mono); font-size:11px; letter-spacing:.13em; text-transform:uppercase; color:var(--t1); margin-bottom:12px; }
+  .vcell .vbody{ font-size:13px; color:var(--t1); line-height:1.65; }
+  .vcell .vbody i{ color:var(--t0); font-style:italic; }
+  .flip{ display:flex; align-items:center; gap:14px; margin:4px 0 14px; font-family:var(--mono); }
+  .flip .from{ color:var(--cb); font-size:25px; font-weight:600; }
+  .flip .arr{ color:var(--t2); font-size:20px; }
+  .flip .to{ color:var(--vt); font-size:25px; font-weight:600; }
+  .flip .lab{ font-size:9.5px; color:var(--t2); display:block; letter-spacing:.06em; margin-top:2px; }
+  .vlist{ list-style:none; padding:0; margin:0; }
+  .vlist li{ font-family:var(--mono); font-size:11.5px; color:var(--t1); padding:6px 0; display:flex; gap:10px; align-items:baseline; line-height:1.4; }
+  .vlist li::before{ content:"›"; color:var(--cb); flex:0 0 auto; }
+  .vlist li b{ color:var(--t0); font-weight:500; }
+
+  /* ───── Citations + footer ───── */
+  .cites{ margin-top:30px; }
+  .cites .lab{ font-family:var(--mono); font-size:10.5px; letter-spacing:.24em; text-transform:uppercase; color:var(--t2); text-align:center; margin-bottom:14px; }
+  .citerow{ display:flex; flex-wrap:wrap; gap:9px; justify-content:center; }
+  .cite{ font-family:var(--mono); font-size:11px; color:var(--t1); border:1px solid var(--line2); border-radius:20px; padding:6px 14px; background:rgba(255,255,255,0.012); }
+  .cite span{ color:var(--t3); }
+  footer{ text-align:center; margin-top:34px; }
+  footer .disc{ font-style:italic; color:var(--t2); font-size:12.5px; }
+  footer .stamp{ font-family:var(--mono); font-size:10.5px; color:var(--t3); letter-spacing:.16em; margin-top:9px; }
+</style>
+</head>
+<body>
+<div class="poster">
+
+  <!-- ───────── HEADER ───────── -->
+  <header>
+    <div class="wordmark">A S S A Y</div>
+    <h1>The Conviction <span class="accent">Algorithm</span></h1>
+    <div class="subwrap">
+      <p class="sub">A transparent, two-dimensional factor engine. Reported financials and market prices go in;
+        a ranked, classified, gate-checked conviction list comes out — with <b>zero forward-looking inputs</b> in the ranking path.</p>
+    </div>
+    <div class="metaline">
+      <b>S&amp;P 500 · Russell 1000</b><span class="sep">/</span>
+      <b>Value × Quality</b><span class="sep">/</span>
+      <b>geometric mean</b><span class="sep">/</span>
+      rank, don't predict<span class="sep">/</span>
+      no ML · no black boxes
+    </div>
+  </header>
+
+  <div class="rule"></div>
+
+  <!-- ───────── 01 INPUT ───────── -->
+  <div class="stage">
+    <div class="rail"><div class="node">01</div><div class="spine"></div></div>
+    <div class="card">
+      <div class="head"><h2>Universe &amp; Filings</h2><span class="tag">Input · point-in-time</span></div>
+      <p class="desc">Each rebalance pulls the constituent list and the latest annual statements into one
+        <span class="mono" style="color:var(--t0)">FinancialData</span> record per name — a normalized, multi-section record up to four years deep,
+        read through a None-safe <span class="mono">.get(field, year)</span> so a single missing line never crashes the pipeline.</p>
+      <div class="chips">
+        <span class="chip"><b>Income</b> revenue · EBIT · net income · GP</span>
+        <span class="chip"><b>Balance</b> assets · debt · current A/L · shares</span>
+        <span class="chip"><b>Cash flow</b> OCF · capex · FCF</span>
+        <span class="chip"><b>Market</b> price · EV · market cap · beta</span>
+        <span class="chip soft">SQLite cache · 7d fundamentals · 24h prices</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───────── 02 SCORE ───────── -->
+  <div class="stage">
+    <div class="rail"><div class="node">02</div><div class="spine"></div></div>
+    <div class="card">
+      <div class="head"><h2>Two Independent Dimensions</h2><span class="tag">Score · two 0–100 axes</span></div>
+      <p class="desc">Value and Quality are built from disjoint inputs — they share almost no raw fields —
+        so the two scores carry genuinely independent information. Most metrics become 0–100 percentile ranks across the universe;
+        the Piotroski F-Score is the exception — an absolute count of nine pass/fail tests, normalized to 100.</p>
+      <div class="two">
+        <div class="dim value">
+          <div class="dh"><span class="name">Value · is it cheap?</span><span class="formula">0.70·EY + 0.30·FCF</span></div>
+          <div class="signal">
+            <div class="srow"><span class="slabel">Earnings Yield<span class="ssub">EBIT / EV</span></span><span class="swt">70%</span></div>
+            <div class="track"><i style="width:70%;background:var(--val)"></i></div>
+          </div>
+          <div class="signal">
+            <div class="srow"><span class="slabel">FCF Yield<span class="ssub">(OCF − capex) / EV</span></span><span class="swt">30%</span></div>
+            <div class="track"><i style="width:30%;background:var(--val)"></i></div>
+          </div>
+          <div class="note">negative EBIT ranks at bottom · banks → 1/PE fallback</div>
+        </div>
+        <div class="dim quality">
+          <div class="dh"><span class="name">Quality · is it good?</span><span class="formula">0.40 / 0.40 / 0.20</span></div>
+          <div class="signal">
+            <div class="srow"><span class="slabel">Piotroski F-Score<span class="ssub">9 criteria / 9</span></span><span class="swt">40%</span></div>
+            <div class="track"><i style="width:40%;background:var(--qual)"></i></div>
+          </div>
+          <div class="signal">
+            <div class="srow"><span class="slabel">Profitability<span class="ssub">(GP + R&amp;D) / assets</span></span><span class="swt">40%</span></div>
+            <div class="track"><i style="width:40%;background:var(--qual)"></i></div>
+          </div>
+          <div class="signal">
+            <div class="srow"><span class="slabel">Safety<span class="ssub">½ inv-β + ½ inv-leverage</span></span><span class="swt">20%</span></div>
+            <div class="track"><i style="width:20%;background:var(--qual)"></i></div>
+          </div>
+          <div class="note">single signal only → ×0.80 penalty</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───────── 03 CLASSIFY (focal) ───────── -->
+  <div class="stage focus">
+    <div class="rail"><div class="node">03</div><div class="spine"></div></div>
+    <div class="card matrix-card">
+      <div class="head"><h2>The 3 × 3 Classification Matrix</h2><span class="tag">Classify · thresholds 40 / 70</span></div>
+      <p class="desc">The two scores map straight into a type. Each axis splits into low (&lt;40), mid (40–70) and high (≥70),
+        so every stock lands in one of nine buckets — and only the cell that is cheap <i>and</i> healthy is promoted to a research candidate.</p>
+      <div class="mx">
+        <div class="ystrip"></div>
+        <div class="ylab"><span>Value →</span></div>
+        <div class="grid">
+          <div class="cell" style="background:rgba(244,63,94,0.11);border-color:rgba(244,63,94,0.34)">
+            <span class="coord">V↑ · Q↓</span><div class="cn" style="color:var(--vt)">Value Trap</div><div class="cd">cheap, deteriorating</div></div>
+          <div class="cell" style="background:rgba(234,179,8,0.11);border-color:rgba(234,179,8,0.34)">
+            <span class="coord">V↑ · Q→</span><div class="cn" style="color:var(--wl)">Watch List</div><div class="cd">cheap, middling</div></div>
+          <div class="cell star">
+            <span class="coord" style="color:var(--cb)">V↑ · Q↑</span><div class="cn" style="color:var(--cb)">Research Candidate <span class="badge">★ GOAL</span></div><div class="cd">cheap AND healthy</div></div>
+
+          <div class="cell" style="background:rgba(168,162,158,0.06);border-color:rgba(168,162,158,0.26)">
+            <span class="coord">V→ · Q↓</span><div class="cn" style="color:var(--avoid)">Avoid</div><div class="cd">no edge either side</div></div>
+          <div class="cell" style="background:rgba(113,113,122,0.12);border-color:rgba(113,113,122,0.34)">
+            <span class="coord">V→ · Q→</span><div class="cn" style="color:#a1a1aa">Hold</div><div class="cd">middle of the road</div></div>
+          <div class="cell" style="background:rgba(59,130,246,0.11);border-color:rgba(59,130,246,0.34)">
+            <span class="coord">V→ · Q↑</span><div class="cn" style="color:var(--qgp)">Quality Growth Premium</div><div class="cd">great biz, fair price</div></div>
+
+          <div class="cell" style="background:rgba(168,162,158,0.06);border-color:rgba(168,162,158,0.26)">
+            <span class="coord">V↓ · Q↓</span><div class="cn" style="color:var(--avoid)">Avoid</div><div class="cd">low quality, dear</div></div>
+          <div class="cell" style="background:rgba(249,115,22,0.11);border-color:rgba(249,115,22,0.34)">
+            <span class="coord">V↓ · Q→</span><div class="cn" style="color:var(--ov)">Overvalued</div><div class="cd">neither cheap nor quality</div></div>
+          <div class="cell" style="background:rgba(167,139,250,0.11);border-color:rgba(167,139,250,0.34)">
+            <span class="coord">V↓ · Q↑</span><div class="cn" style="color:var(--oq)">Overvalued Quality</div><div class="cd">great biz, priced for it</div></div>
+        </div>
+      </div>
+      <div class="xrow"><div class="xticks"><div class="t">Q &lt; 40</div><div class="t">40 – 70</div><div class="t">Q ≥ 70</div></div></div>
+      <div class="xstriprow"><div class="xstrip"></div></div>
+      <div class="xrow" style="margin-top:0"><div class="xtitle">Quality →</div></div>
+    </div>
+  </div>
+
+  <!-- ───────── 04 GATES ───────── -->
+  <div class="stage">
+    <div class="rail"><div class="node">04</div><div class="spine"></div></div>
+    <div class="card">
+      <div class="head"><h2>Three Downgrade Gates</h2><span class="tag">Gate · candidate → watch list</span></div>
+      <p class="desc">Landing in the goal cell is necessary but not sufficient. Three independent vetoes can demote a research candidate
+        back to the watch list — each catching a failure mode the threshold map can't see.</p>
+      <div class="gates">
+        <div class="gate">
+          <div class="gt">F-Score Gate</div>
+          <div class="gc">raw F &lt; 6 → downgrade</div>
+          <div class="gx">Strong gross profitability can mask multiple simultaneous signs of financial deterioration.</div>
+          <div class="src">Piotroski 2000</div>
+        </div>
+        <div class="gate">
+          <div class="gt">Momentum Gate</div>
+          <div class="gc">12-1m in bottom 25% → downgrade</div>
+          <div class="gx">Excludes the cheapest names the market is still actively dumping. A veto only — never a scoring axis.</div>
+          <div class="src">Jegadeesh-Titman 1993 · RAFI 2024 (+2.8%/yr)</div>
+        </div>
+        <div class="gate">
+          <div class="gt">Revenue Gate</div>
+          <div class="gc">2+ yrs declining → downgrade</div>
+          <div class="gx">Persistent top-line decline is the clearest structural value-trap signal beyond earnings.</div>
+          <div class="src">Chen, Chen, Hsin &amp; Lee 2014</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───────── 05 CONVICTION & CONFIDENCE (hero) ───────── -->
+  <div class="stage focus">
+    <div class="rail"><div class="node">05</div><div class="spine"></div></div>
+    <div class="card hero">
+      <div class="eyebrow" style="margin-bottom:14px">Rank &amp; grade the survivors · complements, not substitutes</div>
+      <div class="formula">Conviction = <span class="rad">√</span>(&nbsp;<span class="v">Value</span> × <span class="q">Quality</span>&nbsp;)</div>
+      <p class="gloss">The surviving candidates are ordered by a single score. The arithmetic mean would treat the axes as substitutes —
+        a great price papering over a bad business. The geometric mean treats them as <b>complements</b>:
+        by AM–GM it is maximized only when V = Q, so <b>both must be strong</b>.</p>
+      <div class="tiles">
+        <div class="tile peak"><div class="in">V 95 · Q 95</div><div class="out">95.0</div><div class="cap">peak conviction</div></div>
+        <div class="tile good"><div class="in">V 80 · Q 80</div><div class="out">80.0</div><div class="cap">balanced strength</div></div>
+        <div class="tile mid"><div class="in">V 50 · Q 50</div><div class="out">50.0</div><div class="cap">middling</div></div>
+        <div class="tile bad"><div class="in">V 90 · Q 10</div><div class="out">30.0</div><div class="cap">imbalance, punished</div></div>
+      </div>
+      <div class="heroconf">
+        and each survivor is graded — confidence = min(V−70, Q−70) →
+        <span class="hi">▲ HIGH ≥15</span> · <span class="mo">● MODERATE ≥5</span> · <span class="lo">▼ LOW</span>
+        <span class="em">— the weakest axis sets the grade</span>
+      </div>
+      <div class="parallel">Conviction and the matrix are <b>two parallel reads of the same (V, Q) pair</b> — the matrix assigns the type, conviction ranks the strength. Neither feeds the other.</div>
+    </div>
+  </div>
+
+  <!-- ───────── 06 OUTPUT ───────── -->
+  <div class="stage">
+    <div class="rail"><div class="node">06</div></div>
+    <div class="card">
+      <div class="head"><h2>Ranked, Classified Output</h2><span class="tag">Output · console · CSV · JSON · web</span></div>
+      <p class="desc">Surviving research candidates are ordered by conviction and laid across the universe spectrum —
+        from a tight set of conviction buys to the broad avoid tail.</p>
+      <div class="spectrum">
+        <div class="specbar">
+          <i style="width:9%;background:var(--cb)"></i>
+          <i style="width:32%;background:var(--wl)"></i>
+          <i style="width:40%;background:var(--hold)"></i>
+          <i style="width:19%;background:var(--avoid)"></i>
+        </div>
+        <div class="speclabels">
+          <span style="color:var(--cb)"><b>◣ Conviction Buy</b> <span>18</span></span>
+          <span style="color:var(--wl)"><b>Watch List</b> <span>61</span></span>
+          <span style="color:var(--hold)"><b>Hold</b> <span>76</span></span>
+          <span style="color:var(--avoid)"><span>37</span> <b>Avoid ◢</b></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───────── VALIDATION ───────── -->
+  <div class="valwrap">
+    <div class="valhead"><span class="dot"></span><h2>Validation &amp; Intellectual Honesty</h2><span class="tag">the rigor behind the numbers</span></div>
+    <div class="valgrid">
+      <div class="vcell">
+        <div class="vt">The SMCI Audit</div>
+        <div class="flip">
+          <span class="from">+2.2%<span class="lab">/yr · naive</span></span>
+          <span class="arr">→</span>
+          <span class="to">−1.5%<span class="lab">/yr · corrected</span></span>
+        </div>
+        <div class="vbody">An April 2026 adversarial audit found the <i>entire</i> reported selection alpha came from survivorship bias —
+          chiefly SMCI, scored in Q4 2023 though it didn't join the S&amp;P 500 until March 2024. Correcting that one name flipped the edge negative.
+          The biased mode survives only as <span class="mono" style="color:var(--t1)">--survivorship-naive</span>.</div>
+      </div>
+      <div class="vcell">
+        <div class="vt">Point-in-Time Backtest</div>
+        <ul class="vlist">
+          <li><b>Survivorship-free</b> — actual index membership per quarter</li>
+          <li><b>75-day filing lag</b> — 10-K deadline + buffer, no look-ahead</li>
+          <li><b>Equal-weight</b> — built for real individual portfolios</li>
+          <li><b>10 bps round-trip</b> cost · quarter-end rebalance</li>
+          <li><b>Two benchmarks</b> — SPY and universe-EW selection alpha</li>
+        </ul>
+      </div>
+      <div class="vcell">
+        <div class="vt">Stated Limits</div>
+        <ul class="vlist">
+          <li><b>4-yr sample</b> — illustrative, not inferential</li>
+          <li><b>&lt;30 quarters</b> auto-warns in the report</li>
+          <li><b>4 of 9</b> Piotroski conventions differ from academia — documented, not hidden</li>
+          <li>Every deviation logged in <span class="mono" style="color:var(--t1)">DESIGN_DECISIONS.md</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───────── CITATIONS ───────── -->
+  <div class="cites">
+    <div class="lab">Academic Foundation</div>
+    <div class="citerow">
+      <span class="cite">Carlisle <span>’14</span> · Acquirer’s Multiple</span>
+      <span class="cite">Piotroski <span>’00</span> · F-Score</span>
+      <span class="cite">Novy-Marx <span>’13</span> · Gross Profitability</span>
+      <span class="cite">Novy-Marx &amp; Medhat <span>’25</span> · GP+R&amp;D</span>
+      <span class="cite">Asness·Frazzini·Pedersen <span>’19</span> · QMJ Safety</span>
+      <span class="cite">Jegadeesh &amp; Titman <span>’93</span> · Momentum</span>
+      <span class="cite">Schwartz &amp; Hanauer <span>’24</span> · Formula Investing</span>
+    </div>
+  </div>
+
+  <footer>
+    <div class="disc">Research tool for idea generation. Not a trading signal. Minimum 3–5 year horizon.</div>
+    <div class="stamp">ASSAY · VALUE × QUALITY CONVICTION ENGINE</div>
+  </footer>
+
+</div>
+</body>
+</html>

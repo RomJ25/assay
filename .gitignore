@@ -10,5 +10,10 @@ build/
 .venv/
 .pytest_cache/
 storage/logos/
+# Regenerable data caches — auto-downloaded by data/fama_french.py and
+# data/sp500_historical.py from pinned upstream sources (Dartmouth, fja05680/sp500).
+storage/*.csv
+# Stray screenshots dropped in the repo root by screenshot/verify tooling.
+/*.png
 web/node_modules/
 web/dist/
