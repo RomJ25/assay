@@ -467,9 +467,9 @@ One-day returns are noisy. What is not noisy is that the formula's mechanical pr
 
 ## 9. Takeaway — The Asymmetry in One Day
 
-The README opens with a specific anecdote about the system's most distinctive behavior:
+The README describes the system's most distinctive behavior — its willingness to return nothing rather than a forced list:
 
-> *"From Q1 2022 through Q1 2023, it produced zero picks for five straight quarters. In the worst of those quarters, the S&P 500 fell 16% — Assay had nothing to buy. It didn't predict the crash. It simply couldn't find a single stock where cheapness, quality, and financial health all aligned. That willingness to say 'nothing qualifies' is the system's most distinctive behavior."* — [`README.md`](../../README.md)
+> *"At a stricter value bar the screen surfaces just one or two names in several recent quarters and zero at the December 2025 rebalance. That willingness to return nothing — rather than a forced shortlist of twenty — is the system's most distinctive behavior."* — [`README.md`](../../README.md)
 
 2026-04-08 is the same behavior compressed into a single day. Five weeks of a macro-driven rally had made Energy the cheapest and hottest sector on the tape. Assay looked at the reported fundamentals — F-scores of 3, 4, 5; ROA trending down; margins compressing; leverage rising — and declined. Not because it knew a ceasefire was coming. Because it doesn't use macro views at all. It classified every one of those names into a non-CB bucket before the event, using only data from annual financial statements and market prices. When the event landed, the classification was already in the CSV.
 

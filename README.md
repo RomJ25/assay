@@ -4,7 +4,9 @@
 
 *A U.S. equity value + quality screener — S&P 500 or Russell 1000 — a first filter for research, not a trading signal. Built for investors who would rather see zero picks than a forced shortlist of twenty.*
 
-Most screeners give you a list every time you run them. Assay is different. For five consecutive quarterly rebalances from March 2022 through March 2023, it produced zero picks. In the worst of those quarters, the S&P 500 fell 16% — Assay had nothing to buy. It didn't predict the crash. It simply couldn't find a single stock where cheapness, quality, and financial health all aligned. That willingness to say "nothing qualifies" is the system's most distinctive behavior.
+Most screeners give you a list every time you run them. Assay doesn't force one. At its default bar the number of qualifying names contracts sharply when the market gets expensive — from a typical 15–25 down to as few as 6 (the rebalance ending September 2025). Tighten the value bar and it goes all the way to silence: at a stricter setting the screen surfaced just one or two names in several quarters of 2024–2025 and **zero** at the December 2025 rebalance. That willingness to return nothing — rather than a forced shortlist of twenty — is the system's most distinctive behavior.
+
+One honest caveat up front: Assay is a *fundamentals filter, not a market-timing signal*. In the 2022 bear market the default screen stayed fully invested — it held 17 names through the quarter the S&P 500 fell 16% — and did **not** sidestep the drawdown. It decides *what* clears a combined value-and-quality bar, not *when* to be in the market. (Every figure here is reproducible from the backtest CSVs in `results/`.)
 
 When Assay does surface a name, you know:
 - It's **cheap** relative to the full universe (Value score >= 70, driven by Earnings Yield with a Free Cash Flow reality check)
@@ -16,6 +18,8 @@ When Assay does surface a name, you know:
 The result is a short list of research candidates — typically 15-25 in normal markets, occasionally zero when nothing qualifies — where every name has survived every filter. Use it as a research input: do your own work on each candidate (read the 10-K, check the bear case, sanity-check the data) before committing capital. Empirical testing inside this repo (`docs/DESIGN_DECISIONS.md`) shows ranking *within* the candidate list does NOT predict subsequent returns, so resist the urge to weight the top of the list more heavily.
 
 Assay doesn't predict prices. It doesn't forecast earnings. It doesn't use machine learning. Every score traces to observable, auditable data — nine binary Piotroski criteria, two percentile ranks, one geometric mean. You can see exactly why every stock is where it is and decide whether you agree.
+
+> **⚖️ Honest verdict — read this before trusting the numbers.** This is a research idea-generation tool, **not** a capital-ready trading system. Tested against a pre-declared capital gate (30+ quarters, Bonferroni-significant excess return, ≥3% CAGR alpha vs. the equal-weight screened universe, ≥55% hit rate), the production algorithm **does not clear the bar** — its edge at small scale is statistically indistinguishable from zero, and an earlier headline alpha figure was traced largely to a single survivorship-biased name. The full, unflattering write-up is in **[docs/CAPITAL_RESEARCH_PLAN.md](docs/CAPITAL_RESEARCH_PLAN.md)**. Treat Assay as a disciplined screening and learning artifact, not a money-maker.
 
 ## How It Works
 
@@ -39,8 +43,11 @@ Assay doesn't predict prices. It doesn't forecast earnings. It doesn't use machi
 
 ## Quick Start
 
+Requires **Python 3.11+**. No API keys needed; all data sources are free.
+
 ```bash
-# Install
+# Install (use a virtual environment)
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
 # Screen S&P 500 (default, financials excluded)
@@ -173,7 +180,7 @@ This is not a prediction engine. It does not forecast prices, estimate fair valu
 
 Financials (banks, insurance, REITs) are excluded by default because the EBIT/EV model is structurally wrong for them. Use `--include-financials` to override, understanding that these stocks use a 1/PE fallback for value scoring.
 
-**146 tests. No API keys required. All data sources free.**
+**197 tests. No API keys required. All data sources free.**
 
 ## Case Studies
 
