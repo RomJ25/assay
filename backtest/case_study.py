@@ -114,7 +114,7 @@ def compute_stock_returns_from_event_prices(
 
 
 BUCKET_ORDER = [
-    "CONVICTION BUY", "QUALITY GROWTH PREMIUM", "WATCH LIST",
+    "RESEARCH CANDIDATE", "QUALITY GROWTH PREMIUM", "WATCH LIST",
     "HOLD", "OVERVALUED QUALITY", "OVERVALUED", "VALUE TRAP", "AVOID",
 ]
 
@@ -156,13 +156,13 @@ def compute_bucket_returns(
 
 def test_gradient_monotonicity(bucket_stats: dict[str, BucketStats]) -> dict:
     """Check if CB > WL > HOLD > AVOID ordering holds."""
-    key_buckets = ["CONVICTION BUY", "WATCH LIST", "HOLD", "AVOID"]
+    key_buckets = ["RESEARCH CANDIDATE", "WATCH LIST", "HOLD", "AVOID"]
     returns = {}
     for b in key_buckets:
         s = bucket_stats.get(b)
         returns[b] = s.mean_return if s and s.n > 0 else None
 
-    cb = returns.get("CONVICTION BUY")
+    cb = returns.get("RESEARCH CANDIDATE")
     wl = returns.get("WATCH LIST")
     hold = returns.get("HOLD")
     avoid = returns.get("AVOID")
@@ -193,7 +193,7 @@ def test_gradient_monotonicity(bucket_stats: dict[str, BucketStats]) -> dict:
 def test_gate_effectiveness(
     snapshot: FullQuarterSnapshot,
     returns: dict[str, float],
-    gate: str,  # "f_gate" or "momentum_gate"
+    gate: str,  # "f_gate", "momentum_gate", or "revenue_gate"
 ) -> dict:
     """Compare returns of gate survivors vs gate victims."""
     survivors = []
@@ -205,14 +205,19 @@ def test_gate_effectiveness(
             continue
 
         if gate == "f_gate":
-            if sd.final_classification == "CONVICTION BUY":
+            if sd.final_classification == "RESEARCH CANDIDATE":
                 survivors.append((sd.ticker, ret))
             elif sd.f_gate_fired:
                 victims.append((sd.ticker, ret, sd.value_score, sd.quality_score, sd.piotroski_f))
         elif gate == "momentum_gate":
-            if sd.final_classification == "CONVICTION BUY":
+            if sd.final_classification == "RESEARCH CANDIDATE":
                 survivors.append((sd.ticker, ret))
             elif sd.momentum_gate_fired:
+                victims.append((sd.ticker, ret, sd.value_score, sd.quality_score, sd.piotroski_f))
+        elif gate == "revenue_gate":
+            if sd.final_classification == "RESEARCH CANDIDATE":
+                survivors.append((sd.ticker, ret))
+            elif sd.revenue_gate_fired:
                 victims.append((sd.ticker, ret, sd.value_score, sd.quality_score, sd.piotroski_f))
 
     surv_mean = sum(r for _, r in survivors) / len(survivors) if survivors else None
@@ -237,11 +242,11 @@ def test_confidence_gradient(
     snapshot: FullQuarterSnapshot,
     returns: dict[str, float],
 ) -> dict:
-    """Test if HIGH > MODERATE > LOW within CONVICTION BUY."""
+    """Test if HIGH > MODERATE > LOW within RESEARCH CANDIDATE."""
     tiers: dict[str, list[float]] = {"HIGH": [], "MODERATE": [], "LOW": []}
 
     for sd in snapshot.stock_details:
-        if sd.final_classification != "CONVICTION BUY":
+        if sd.final_classification != "RESEARCH CANDIDATE":
             continue
         ret = returns.get(sd.ticker)
         if ret is None or sd.confidence is None:
@@ -287,7 +292,7 @@ def test_value_traps(
         all_rets.append(ret)
         if sd.final_classification == "VALUE TRAP":
             vt_rets.append((sd.ticker, ret, sd.sector))
-        elif sd.final_classification == "CONVICTION BUY":
+        elif sd.final_classification == "RESEARCH CANDIDATE":
             cb_rets.append(ret)
 
     vt_mean = sum(r for _, r, _ in vt_rets) / len(vt_rets) if vt_rets else None
@@ -315,7 +320,7 @@ def test_asymmetry(
     """Compute per-stock excess returns for CB picks over universe mean."""
     excess = []
     for sd in snapshot.stock_details:
-        if sd.final_classification != "CONVICTION BUY":
+        if sd.final_classification != "RESEARCH CANDIDATE":
             continue
         ret = returns.get(sd.ticker)
         if ret is None:
@@ -351,7 +356,7 @@ def test_sector_neutralized(
     # Compute sector-neutralized excess for CB picks
     cb_excess = []
     for sd in snapshot.stock_details:
-        if sd.final_classification != "CONVICTION BUY":
+        if sd.final_classification != "RESEARCH CANDIDATE":
             continue
         ret = returns.get(sd.ticker)
         if ret is None:
@@ -393,7 +398,7 @@ def test_repeat_picks(
     for snapshot, returns in snapshots_with_returns:
         current_cb = set()
         for sd in snapshot.stock_details:
-            if sd.final_classification != "CONVICTION BUY":
+            if sd.final_classification != "RESEARCH CANDIDATE":
                 continue
             current_cb.add(sd.ticker)
             ret = returns.get(sd.ticker)
@@ -427,7 +432,7 @@ def test_conviction_ordering(
     """Test if higher conviction_score predicts higher returns within CB."""
     pairs = []
     for sd in snapshot.stock_details:
-        if sd.final_classification != "CONVICTION BUY":
+        if sd.final_classification != "RESEARCH CANDIDATE":
             continue
         ret = returns.get(sd.ticker)
         if ret is None:
