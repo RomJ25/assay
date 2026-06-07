@@ -1,5 +1,10 @@
 .env
-results/
+# Backtest/screen output is generated and stays ignored — EXCEPT the pinned
+# snapshot the site renders and the docs quote (see docs/REPRODUCIBILITY.md).
+results/*
+!results/screen_2026-04-26.json
+!results/backtest_2026-04-26.csv
+!results/backtest_detail_2026-04-26.csv
 *.db
 __pycache__/
 *.pyc

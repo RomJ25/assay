@@ -9,7 +9,7 @@
 
 Most screeners give you a list every time you run them. Assay doesn't force one. At its default bar the number of qualifying names contracts sharply when the market gets expensive — from a typical 15–25 down to as few as 6 (the rebalance ending September 2025). Tighten the value bar and it goes all the way to silence: at a stricter setting the screen surfaced just one or two names in several quarters of 2024–2025 and **zero** at the December 2025 rebalance. That willingness to return nothing — rather than a forced shortlist of twenty — is the system's most distinctive behavior.
 
-One honest caveat up front: Assay is a *fundamentals filter, not a market-timing signal*. In the 2022 bear market the default screen stayed fully invested — it held 17 names through the quarter the S&P 500 fell 16% — and did **not** sidestep the drawdown. It decides *what* clears a combined value-and-quality bar, not *when* to be in the market. (Every figure here is reproducible from the backtest CSVs in `results/`.)
+One honest caveat up front: Assay is a *fundamentals filter, not a market-timing signal*. In the 2022 bear market the default screen stayed fully invested — it held 17 names through the quarter the S&P 500 fell 16% — and did **not** sidestep the drawdown. It decides *what* clears a combined value-and-quality bar, not *when* to be in the market. (Every figure here is reproducible — see [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md).)
 
 When Assay does surface a name, you know:
 - It's **cheap** relative to the full universe (Value score >= 70, driven by Earnings Yield with a Free Cash Flow reality check)
