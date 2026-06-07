@@ -170,6 +170,8 @@ The April 2026 empirical investigation tested Assay's screener across 12 quarter
     +-------------------------------------------------------------------+
 ```
 
+> **Superseded figures.** These are the earlier **12-quarter, survivorship-naive** numbers. The April 2026 survivorship audit re-ran the study survivorship-free over **16 quarters**; under that honest measurement the quarterly-rebalance selection alpha is **−0.7%/yr** (not −1.3%) and CAGR **+9.2%** (not +11.2%). See [`docs/STRATEGY.md` §6](../STRATEGY.md#6-the-evidence). The qualitative conclusion below (the screener underperforms its own universe under quarterly rebalancing) is unchanged.
+
 Assay's portfolio returned +11.2% annualized. The universe returned +12.5%. The raw selection alpha was -1.3% — the screener underperformed its own universe.
 
 This is not a contradiction with the academic evidence. The gap between +7.1% theoretical and -1.3% actual has identifiable causes:
@@ -184,7 +186,7 @@ This is not a contradiction with the academic evidence. The gap between +7.1% th
 
 **5. The period tested included the tail end of the worst value decade on record.** The 2021-2024 investigation period overlapped with the aftermath of the 2010s value drawdown. A screener that tilts toward value during a value headwind will underperform.
 
-The honest summary: Assay captures a fraction of the theoretical premium under quarterly rebalancing. The gap is expected and explainable. However, switching from quarterly rebalancing to a selective sell strategy (hold winners, sell only when fundamentals break) improved selection alpha from -1.3% to +1.0% over the same period. The selective sell strategy returned +18.7% CAGR vs the quarterly rebalance's +15.2%. See `docs/STRATEGY.md` for the recommended approach.
+The honest summary: Assay captures a fraction of the theoretical premium under quarterly rebalancing. The gap is expected and explainable. A selective-sell variant (hold winners, sell only when fundamentals break) is *directionally* better, but an April 2026 survivorship-bias audit retracted the earlier headline figures (+18.7% CAGR / +1.0% selection alpha): a single pre-addition name — SMCI, added to the S&P 500 in March 2024 but present in earlier backtest quarters — accounted for essentially all of the claimed alpha. Under survivorship-free measurement with 10 bps round-trip costs, selective sell shows **+10.4% CAGR and only +0.4%/yr selection alpha — statistically indistinguishable from zero at n=16 quarters**. See [`docs/STRATEGY.md` §6](../STRATEGY.md#6-the-evidence) for the corrected evidence and the SMCI retraction.
 
 Whether the screener will converge further toward the academic premium over longer periods is an open question that only time can answer.
 

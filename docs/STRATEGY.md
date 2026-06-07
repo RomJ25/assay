@@ -60,7 +60,7 @@ A stock enters the portfolio when it is classified as **CONVICTION BUY**:
 - **F-Score ≥ 6/9** — passes the financial health gate
 - **Momentum > 25th percentile** — not in freefall
 
-All four conditions must be met simultaneously. The screener typically finds 15-25 stocks per quarter that qualify, occasionally zero when nothing meets the bar.
+All four conditions must be met simultaneously. The number that qualifies swings with the market — roughly 15 in the current full-universe screen, fewer in lean quarters (as low as 2 in the survivorship-free backtest), and occasionally zero when nothing meets the bar.
 
 **Position sizing:** Equal-weight across all positions. No concentration bets.
 

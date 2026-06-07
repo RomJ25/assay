@@ -53,7 +53,7 @@ export function SignalBanner({ stocks, universe, date, screened }: Props) {
         {displayCount}
       </span>
       <span className="text-lg mb-0.5 anim-fade-up" style={{ color: "var(--color-text-secondary)", animationDelay: "300ms" }}>
-        {isZero ? "nothing qualifies today" : "conviction buys"}
+        {isZero ? "nothing qualifies today" : "research candidates"}
       </span>
       <span className="text-[13px] mb-8 anim-fade" style={{ color: "var(--color-text-muted)", animationDelay: "500ms" }}>
         from {screened} screened

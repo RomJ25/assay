@@ -5,7 +5,7 @@ Provides 60+ years of monthly returns for:
 - 32 portfolios sorted by Size × Book-to-Market × Operating Profitability
 
 Portfolio [32] (BIG × HiBM × HiOP) is the academic equivalent of
-Assay's CONVICTION BUY: large-cap, cheap, profitable stocks.
+Assay's RESEARCH CANDIDATE: large-cap, cheap, profitable stocks.
 
 Source: https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html
 Data: CRSP universe (survivorship-free, peer-reviewed)
@@ -114,7 +114,7 @@ def download_factors() -> pd.DataFrame:
 def download_portfolios_32() -> pd.DataFrame:
     """Download 32 portfolios sorted by Size × B/M × OP (monthly returns).
 
-    Column [32] "BIG HiBM HiOP" is the academic CONVICTION BUY equivalent.
+    Column [32] "BIG HiBM HiOP" is the academic RESEARCH CANDIDATE equivalent.
     Returns in percentage points.
     """
     text = _download_zip_csv(_PORTFOLIOS_32_URL, "ff_32_portfolios.csv")

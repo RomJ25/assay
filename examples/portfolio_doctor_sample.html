@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang='en'><head>
+<meta charset='utf-8'>
+<title>Assay Portfolio Doctor — Sample Report</title>
+<style>
+
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 760px;
+       margin: 32px auto; padding: 0 20px; color: #1f2328; line-height: 1.55; }
+h1 { border-bottom: 1px solid #d0d7de; padding-bottom: 8px; }
+h2 { border-bottom: 1px solid #eaeef2; padding-bottom: 6px; margin-top: 36px; }
+h3 { margin-top: 28px; color: #24292f; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; }
+th, td { border: 1px solid #d0d7de; padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background: #f6f8fa; font-weight: 600; }
+code, pre { font-family: ui-monospace, SFMono-Regular, monospace; background: #f6f8fa;
+            padding: 1px 4px; border-radius: 3px; font-size: 13px; }
+blockquote { border-left: 4px solid #d0d7de; padding: 4px 14px; margin: 12px 0; color: #57606a;
+             background: #f6f8fa; border-radius: 0 4px 4px 0; }
+ul { padding-left: 22px; }
+li { margin: 4px 0; }
+.badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px;
+         font-weight: 600; }
+.badge-high { background: #ffebe9; color: #82071e; border: 1px solid #ff8182; }
+.badge-med  { background: #fff8c5; color: #633c01; border: 1px solid #d4a72c; }
+.badge-low  { background: #ddf4ff; color: #0550ae; border: 1px solid #54aeff; }
+.dq { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+.dq-green   { background: #dafbe1; color: #1a7f37; border: 1px solid #4ac26b; }
+.dq-yellow  { background: #fff8c5; color: #633c01; border: 1px solid #d4a72c; }
+.dq-red     { background: #ffebe9; color: #82071e; border: 1px solid #ff8182; }
+.dq-unknown { background: #eaeef2; color: #57606a; border: 1px solid #afb8c1; }
+.disclaimer { color: #57606a; font-size: 14px; }
+hr { border: none; border-top: 1px solid #d0d7de; margin: 28px 0; }
+.scorecard { background: #f6f8fa; padding: 12px 16px; border-radius: 6px; margin: 12px 0; }
+
+</style></head><body>
+<h1>Assay Portfolio Doctor — Sample Report</h1>
+<p class='disclaimer'><em>Generated 2026-04-26 from S&amp;P 500 snapshot dated 2026-04-26 (prior baseline: 2026-04-05)</em></p>
+<blockquote><strong>Public-data review tool. Not personalized financial advice.</strong> Review flags, not buy/sell recommendations. Minimum 3–5 year horizon. Selection alpha unproven; this report organizes evidence — it does not forecast returns.</blockquote>
+<h2>1. Executive summary</h2><ul>
+<li><strong>Reviewed:</strong> 10 tickers</li>
+<li><strong>Sell-review flags:</strong> 3</li>
+<li><strong>Monitor flags:</strong> 6</li>
+<li><strong>Data-quality warnings:</strong> 8</li>
+<li><strong>No-action holdings:</strong> 1</li>
+</ul>
+<blockquote><em>Important: these are research-review flags, not buy/sell recommendations.</em></blockquote>
+<h2>2. What this report won't tell you</h2><ul>
+<li><strong>It will not predict returns.</strong> Empirical testing on this system shows selection alpha is unproven and too fragile to sell as a forecast.</li>
+<li><strong>It will not tell you to buy or sell.</strong> Every flag is a <em>review</em> trigger, not an action.</li>
+<li><strong>It will not factor in your personal situation.</strong> Tax basis, holding period, concentration, time horizon, liquidity needs — all yours to weigh.</li>
+<li><strong>It will not tell you the bull case.</strong> The system is structurally skeptical; the bull case is yours to build.</li>
+<li><strong>It will not replace reading the 10-K.</strong> The screen organizes public evidence; it does not understand the business.</li>
+</ul>
+<h2>3. Holdings requiring review</h2>
+<table><thead><tr><th>Ticker</th><th>Review state</th><th>Severity</th><th>Primary reason</th><th>Data quality</th><th>Next research action</th></tr></thead><tbody>
+<tr><td><strong>AAPL</strong></td><td>Monitor</td><td><span class="badge badge-med">medium</span></td><td>OVERVALUED QUALITY — mixed evidence, no all-clear</td><td><span class="dq dq-yellow">yellow</span></td><td>Re-check at next 10-Q. Update thesis if classification stays in this band 2+ quarters.</td></tr>
+<tr><td><strong>MSFT</strong></td><td>Monitor</td><td><span class="badge badge-med">medium</span></td><td>OVERVALUED — V low while Q mid</td><td><span class="dq dq-yellow">yellow</span></td><td>Re-check at next 10-Q. Update thesis if classification stays in this band 2+ quarters.</td></tr>
+<tr><td><strong>GOOGL</strong></td><td>Monitor</td><td><span class="badge badge-med">medium</span></td><td>OVERVALUED QUALITY — mixed evidence, no all-clear</td><td><span class="dq dq-yellow">yellow</span></td><td>Re-check at next 10-Q. Update thesis if classification stays in this band 2+ quarters.</td></tr>
+<tr><td><strong>JNJ</strong></td><td>Sell Review</td><td><span class="badge badge-med">medium</span></td><td>low absolute Piotroski F-score (F=3/9)</td><td><span class="dq dq-yellow">yellow</span></td><td>Pull the Piotroski breakdown: which 3+ criteria are failing? Focus on profitability and accrual quality.</td></tr>
+<tr><td><strong>INTC</strong></td><td>Monitor</td><td><span class="badge badge-med">medium</span></td><td>OVERVALUED — V low while Q mid; thesis review date (2026-04-01) is past</td><td><span class="dq dq-yellow">yellow</span></td><td>Re-check at next 10-Q. Update thesis if classification stays in this band 2+ quarters.</td></tr>
+<tr><td><strong>DIS</strong></td><td>Monitor</td><td><span class="badge badge-med">medium</span></td><td>WATCH LIST — mixed evidence, no all-clear</td><td><span class="dq dq-yellow">yellow</span></td><td>Re-check at next 10-Q. Update thesis if classification stays in this band 2+ quarters.</td></tr>
+<tr><td><strong>PYPL</strong></td><td>Sell Review</td><td><span class="badge badge-med">medium</span></td><td>new gate fired this quarter (momentum_gate_fired)</td><td><span class="dq dq-yellow">yellow</span></td><td>Re-examine the original thesis. What changed materially since purchase?</td></tr>
+<tr><td><strong>TGT</strong></td><td>Monitor</td><td><span class="badge badge-low">low</span></td><td>WATCH LIST — mixed evidence, no all-clear</td><td><span class="dq dq-green">green</span></td><td>Re-check at next 10-Q. Update thesis if classification stays in this band 2+ quarters.</td></tr>
+<tr><td><strong>NVDA</strong></td><td>Sell Review</td><td><span class="badge badge-med">medium</span></td><td>low absolute Piotroski F-score (F=4/9)</td><td><span class="dq dq-green">green</span></td><td>Pull the Piotroski breakdown: which 3+ criteria are failing? Focus on profitability and accrual quality.</td></tr>
+</tbody></table>
+<h2>4. What changed since prior screen</h2>
+<p class='disclaimer'><em>Compared 2026-04-26 (current) vs. 2026-04-05 (prior). At a 21-day window, deltas are small by design — the format is what's being demonstrated. Real value compounds over true quarterly cadence (next 10-K cycle).</em></p>
+<h3>AAPL</h3><ul>
+<li>value_score: 27.1 → 29.6</li>
+<li>quality_score: 91.2 → 83.1</li>
+<li>conviction_score: 49.7 → 49.6</li>
+</ul>
+<h3>MSFT</h3><ul>
+<li>Classification: <strong>QUALITY GROWTH PREMIUM</strong> → <strong>OVERVALUED</strong></li>
+<li>value_score: 44.7 → 39.3</li>
+<li>quality_score: 68.5 → 64.1</li>
+<li>conviction_score: 55.3 → 50.2</li>
+<li>piotroski_f: 6 → 5</li>
+</ul>
+<h3>GOOGL</h3><ul>
+<li>value_score: 27.3 → 24.8</li>
+<li>quality_score: 74.2 → 74.1</li>
+<li>conviction_score: 45.0 → 42.9</li>
+</ul>
+<h3>JNJ</h3><ul>
+<li>value_score: 42.1 → 51.5</li>
+<li>quality_score: 57.8 → 59.4</li>
+<li>conviction_score: 49.3 → 55.3</li>
+<li>piotroski_f: 4 → 3</li>
+</ul>
+<h3>INTC</h3><ul>
+<li>Classification: <strong>INSUFFICIENT DATA</strong> → <strong>OVERVALUED</strong></li>
+<li>value_score:  → 4.0</li>
+<li>quality_score: 33.7 → 45.6</li>
+<li>conviction_score:  → 13.5</li>
+<li>piotroski_f: 5 → 6</li>
+</ul>
+<h3>DIS</h3><ul>
+<li>Classification: <strong>RESEARCH CANDIDATE</strong> → <strong>WATCH LIST</strong></li>
+<li>value_score: 73.9 → 74.6</li>
+<li>quality_score: 63.7 → 57.4</li>
+<li>conviction_score: 68.6 → 65.4</li>
+</ul>
+<h3>PYPL</h3><ul>
+<li>Classification: <strong>RESEARCH CANDIDATE</strong> → <strong>WATCH LIST</strong></li>
+<li>Gate newly fired: <code>momentum_gate_fired</code></li>
+<li>value_score: 98.6 → 99.0</li>
+<li>quality_score: 71.6 → 70.5</li>
+<li>conviction_score: 84.0 → 83.5</li>
+</ul>
+<h3>TGT</h3><ul>
+<li>Classification: <strong>RESEARCH CANDIDATE</strong> → <strong>WATCH LIST</strong></li>
+<li>value_score: 75.5 → 77.4</li>
+<li>quality_score: 78.5 → 69.6</li>
+<li>conviction_score: 77.0 → 73.4</li>
+</ul>
+<h3>NVDA</h3><ul>
+<li>Classification: <strong>OVERVALUED QUALITY</strong> → <strong>OVERVALUED</strong></li>
+<li>value_score: 18.3 → 20.5</li>
+<li>quality_score: 71.1 → 66.8</li>
+<li>conviction_score: 36.1 → 37.0</li>
+</ul>
+<h3>CMCSA</h3><ul>
+<li>value_score: 95.7 → 97.5</li>
+<li>quality_score: 80.8 → 71.8</li>
+<li>conviction_score: 87.9 → 83.7</li>
+</ul>
+<h2>5. Per-ticker evidence scorecard</h2>
+<h3>AAPL — Apple Inc.</h3>
+<div class='scorecard'>
+<p><strong>Sector:</strong> Information Technology &nbsp;|&nbsp; <strong>Position:</strong> holding &nbsp;|&nbsp; <strong>Classification:</strong> <strong>OVERVALUED QUALITY</strong></p>
+<p><strong>Thesis as written:</strong> <em>High-quality ecosystem compounder; services margin expansion</em></p>
+<ul>
+<li>Value score: 29.6 &nbsp;|&nbsp; Quality score: 83.1 &nbsp;|&nbsp; Conviction: 49.6</li>
+<li>Piotroski F: 8/9 &nbsp;|&nbsp; Gross profitability: 0.64</li>
+<li>Earnings yield: 3.3% &nbsp;|&nbsp; FCF yield: 2.5% &nbsp;|&nbsp; P/E: 34.4 &nbsp;|&nbsp; 12m momentum: 20.0%</li>
+<li>Gates fired: none</li>
+<li>Data quality: <span class="dq dq-yellow">yellow</span> — latest annual filing is 208 days old (&gt;95d threshold)</li>
+</ul>
+</div>
+<p><strong>Bear case:</strong></p><ul>
+<li>Quality is excellent (Q=83.1, F=8/9, GP=0.64) — the ecosystem-compounder thesis is intact on the screen&#x27;s terms. **The risk is the price, not the business.** P/E 34.4 with FCF yield 2.5% prices in continued services growth and hardware refresh durability. Any meaningful slip in either compresses the multiple before it compresses earnings.</li>
+<li>Quality score dropped 91.2 → 83.1 over the prior 21 days (see §4). That is a non-trivial slip in a name positioned as &#x27;high quality.&#x27; Identify which Q component fell — leverage, accrual quality, or operating efficiency.</li>
+<li>208-day fiscal age is the highest in the portfolio. Apple&#x27;s fiscal year ends late September, so the screen is using FY2024 data for FY2026-Q2 decision-making. The next 10-K materially repaints the picture.</li>
+<li>Services margin expansion is the thesis&#x27;s load-bearing assumption. The DOJ App Store rulings, EU DMA enforcement, and Google search-default revenue (a meaningful slice of Services) are all overhangs the financial statements have not yet quantified.</li>
+</ul>
+<p><strong>Before any action, verify:</strong></p><ul>
+<li>☐ Read the latest 10-Q MD&amp;A (focus: revenue, margin, segment commentary)</li>
+<li>☐ Check share-count trend (dilution offset to fundamental gains)</li>
+<li>☐ Confirm whether free cash flow weakness is temporary or structural</li>
+<li>☐ Verify primary-source filing date and refresh fundamentals if stale</li>
+<li>☐ Compare current evidence against the thesis as written at purchase</li>
+</ul>
+<h3>MSFT — Microsoft</h3>
+<div class='scorecard'>
+<p><strong>Sector:</strong> Information Technology &nbsp;|&nbsp; <strong>Position:</strong> holding &nbsp;|&nbsp; <strong>Classification:</strong> <strong>OVERVALUED</strong></p>
+<p><strong>Thesis as written:</strong> <em>Cloud + AI operating leverage; durable enterprise franchise</em></p>
+<ul>
+<li>Value score: 39.3 &nbsp;|&nbsp; Quality score: 64.1 &nbsp;|&nbsp; Conviction: 50.2</li>
+<li>Piotroski F: 5/9 &nbsp;|&nbsp; Gross profitability: 0.37</li>
+<li>Earnings yield: 4.0% &nbsp;|&nbsp; FCF yield: 2.2% &nbsp;|&nbsp; P/E: 26.6 &nbsp;|&nbsp; 12m momentum: -5.6%</li>
+<li>Gates fired: none</li>
+<li>Data quality: <span class="dq dq-yellow">yellow</span> — latest annual filing is 300 days old (&gt;95d threshold)</li>
+</ul>
+</div>
+<p><strong>Bear case:</strong></p><ul>
+<li>Classification flipped from QUALITY GROWTH PREMIUM → OVERVALUED in the prior 21-day window (see §4). F-score also dropped 6 → 5. Two simultaneous quality signals weakened. The thesis describes &#x27;operating leverage&#x27;; recent fundamentals describe operating *deleverage* from AI capex.</li>
+<li>AI capex compression: the operating-leverage thesis assumes Azure AI revenue growth outpaces capex amortization. That trade-off has not yet shown in the financials and may not for several quarters. F=5 with deteriorating Q is exactly the pattern you&#x27;d see if capex is rising faster than revenue is converting.</li>
+<li>12m momentum −5.6% says the market is pricing this skepticism even as the headline narrative remains positive. When momentum and quality both turn against a name, it is rarely a buying opportunity until at least one stabilizes.</li>
+<li>300-day fiscal age is the longest in the portfolio. Microsoft&#x27;s FY ends in June; the screen is using FY2025 fundamentals well into FY2026. The most recent 10-Q (not yet incorporated) is the one that matters for the AI-capex question.</li>
+</ul>
+<p><strong>Before any action, verify:</strong></p><ul>
+<li>☐ Read the latest 10-Q MD&amp;A (focus: revenue, margin, segment commentary)</li>
+<li>☐ Check share-count trend (dilution offset to fundamental gains)</li>
+<li>☐ Confirm whether free cash flow weakness is temporary or structural</li>
+<li>☐ Verify primary-source filing date and refresh fundamentals if stale</li>
+<li>☐ Compare current evidence against the thesis as written at purchase</li>
+</ul>
+<h3>GOOGL — Alphabet Inc. (Class A)</h3>
+<div class='scorecard'>
+<p><strong>Sector:</strong> Communication Services &nbsp;|&nbsp; <strong>Position:</strong> holding &nbsp;|&nbsp; <strong>Classification:</strong> <strong>OVERVALUED QUALITY</strong></p>
+<p><strong>Thesis as written:</strong> <em>Search moat + cloud upside despite ad-cyclicality risk</em></p>
+<ul>
+<li>Value score: 24.8 &nbsp;|&nbsp; Quality score: 74.1 &nbsp;|&nbsp; Conviction: 42.9</li>
+<li>Piotroski F: 6/9 &nbsp;|&nbsp; Gross profitability: 0.51</li>
+<li>Earnings yield: 3.1% &nbsp;|&nbsp; FCF yield: 1.8% &nbsp;|&nbsp; P/E: 31.9 &nbsp;|&nbsp; 12m momentum: 81.7%</li>
+<li>Gates fired: none</li>
+<li>Data quality: <span class="dq dq-yellow">yellow</span> — latest annual filing is 116 days old (&gt;95d threshold)</li>
+</ul>
+</div>
+<p><strong>Bear case:</strong></p><ul>
+<li>Quality is solid (Q=74.1, F=6/9, GP=0.51) but value is bottom-quartile (V=24.8). The thesis acknowledges &#x27;ad-cyclicality risk&#x27;; the screen is also pricing in moat *durability* risk via the lowest FCF yield (1.8%) of any name in the portfolio&#x27;s holding sleeve.</li>
+<li>12m momentum +81.7% has done the work the financials are catching up to. The cloud-upside leg of the thesis is partly priced; what isn&#x27;t yet priced is the ad-revenue impact of generative-search alternatives (ChatGPT, Perplexity, Claude) eroding query share at the margin.</li>
+<li>DOJ search-monopoly remedies remain in motion and are not reflected in any of the screen&#x27;s quality components. A forced separation of Chrome / Android default-search payments to Apple would compress the highest-margin query-distribution moat.</li>
+<li>F-score didn&#x27;t drop in the prior window (see §4), but the value score slipped 27.3 → 24.8. The pattern is &#x27;quality stable, market more expensive&#x27; — i.e., multiple expansion did the work, not fundamental improvement.</li>
+</ul>
+<p><strong>Before any action, verify:</strong></p><ul>
+<li>☐ Read the latest 10-Q MD&amp;A (focus: revenue, margin, segment commentary)</li>
+<li>☐ Check share-count trend (dilution offset to fundamental gains)</li>
+<li>☐ Confirm whether free cash flow weakness is temporary or structural</li>
+<li>☐ Verify primary-source filing date and refresh fundamentals if stale</li>
+<li>☐ Compare current evidence against the thesis as written at purchase</li>
+</ul>
+<h3>JNJ — Johnson &amp; Johnson</h3>
+<div class='scorecard'>
+<p><strong>Sector:</strong> Health Care &nbsp;|&nbsp; <strong>Position:</strong> holding &nbsp;|&nbsp; <strong>Classification:</strong> <strong>HOLD</strong></p>
+<p><strong>Thesis as written:</strong> <em>Defensive healthcare cash machine; consumer-spinoff completed</em></p>
+<ul>
+<li>Value score: 51.5 &nbsp;|&nbsp; Quality score: 59.4 &nbsp;|&nbsp; Conviction: 55.3</li>
+<li>Piotroski F: 3/9 &nbsp;|&nbsp; Gross profitability: 0.39</li>
+<li>Earnings yield: 4.4% &nbsp;|&nbsp; FCF yield: 3.3% &nbsp;|&nbsp; P/E: 26.4 &nbsp;|&nbsp; 12m momentum: 60.7%</li>
+<li>Gates fired: none</li>
+<li>Data quality: <span class="dq dq-yellow">yellow</span> — latest annual filing is 116 days old (&gt;95d threshold)</li>
+</ul>
+</div>
+<p><strong>Bear case:</strong></p><ul>
+<li>Piotroski F=3/9 is the headline finding for a name positioned in the thesis as a &#x27;defensive cash machine.&#x27; Six of nine accounting criteria are failing — meaning the post-Kenvue financial profile no longer looks like the cash machine it did pre-spinoff. The bull narrative depends on margin and ROA stability; the F-score says both are weakening on a year-over-year comparison.</li>
+<li>F-score dropped 4 → 3 between the prior screen and this one (see §4). One additional criterion failed in the latest filing. Identify which: F=3 with positive 12m momentum (+60.7%) implies the market is pricing in optimism the financial trend doesn&#x27;t yet support.</li>
+<li>The HOLD classification (V=51.5, Q=59.4) means this is no longer a &#x27;buy at a discount&#x27; story — it&#x27;s a &#x27;do I keep holding through deterioration?&#x27; story. The defensive thesis only works if quality stabilizes before earnings catch the deterioration.</li>
+<li>Talc/Tylenol litigation reserves and pharma pipeline gaps are exogenous tail risks not captured in F-score. Re-read the latest 10-Q litigation disclosures before sizing decisions.</li>
+</ul>
+<p><strong>Before any action, verify:</strong></p><ul>
+<li>☐ Read the latest 10-Q MD&amp;A (focus: revenue, margin, segment commentary)</li>
+<li>☐ Check share-count trend (dilution offset to fundamental gains)</li>
+<li>☐ Confirm whether free cash flow weakness is temporary or structural</li>
+<li>☐ Verify primary-source filing date and refresh fundamentals if stale</li>
+<li>☐ Compare current evidence against the thesis as written at purchase</li>
+</ul>
+<h3>INTC — Intel</h3>
+<div class='scorecard'>
+<p><strong>Sector:</strong> Information Technology &nbsp;|&nbsp; <strong>Position:</strong> holding &nbsp;|&nbsp; <strong>Classification:</strong> <strong>OVERVALUED</strong></p>
+<p><strong>Thesis as written:</strong> <em>Foundry turnaround optionality; bought as deep value</em></p>
+<ul>
+<li>Value score: 4.0 &nbsp;|&nbsp; Quality score: 45.6 &nbsp;|&nbsp; Conviction: 13.5</li>
+<li>Piotroski F: 6/9 &nbsp;|&nbsp; Gross profitability: 0.15</li>
+<li>Earnings yield: -0.0% &nbsp;|&nbsp; FCF yield: -1.1% &nbsp;|&nbsp; P/E: — &nbsp;|&nbsp; 12m momentum: 119.6%</li>
+<li>Gates fired: none</li>
+<li>Data quality: <span class="dq dq-yellow">yellow</span> — latest annual filing is 116 days old (&gt;95d threshold)</li>
+</ul>
+</div>
+<p><strong>Bear case:</strong></p><ul>
+<li>The thesis says &#x27;deep value.&#x27; The screen says V=4.0 — the **2nd percentile** of the 425-stock universe on value. That is not deep value; that is no value. The earnings yield is negative (−0.0%, rounding hides the sign), FCF yield is −1.1%, P/E is undefined because earnings flipped negative. There is no fundamental anchor under the share price right now.</li>
+<li>12-month momentum +120% has done all the heavy lifting. The market priced in foundry-turnaround optionality faster than the financials can validate it. If Intel 18A yields, customer wins, or the IFS spin-off drag for one quarter, the +120% becomes the downside.</li>
+<li>Gross profitability of 0.15 is bottom-quartile for a semiconductor name — even before turnaround capex. The foundry build is structurally negative for near-term GP (high depreciation, low utilization), and Q (return on assets, leverage, accruals) reflects this.</li>
+<li>The thesis review date (2026-04-01) is past per the portfolio CSV — and the classification has weakened from INSUFFICIENT DATA to OVERVALUED in the most recent 21 days (see §4). Re-write the thesis: what concrete milestone (process node yield, foundry customer, FCF positive) would change your view?</li>
+<li>Foundry capex is not yet self-funding. The thesis only resolves favorably if either (a) external customers fund the investment cycle or (b) the rest of the business stabilizes enough to absorb it. Neither has occurred in the most recent filings.</li>
+</ul>
+<p><strong>Before any action, verify:</strong></p><ul>
+<li>☐ Read the latest 10-Q MD&amp;A (focus: revenue, margin, segment commentary)</li>
+<li>☐ Check share-count trend (dilution offset to fundamental gains)</li>
+<li>☐ Confirm whether free cash flow weakness is temporary or structural</li>
+<li>☐ Verify primary-source filing date and refresh fundamentals if stale</li>
+<li>☐ Compare current evidence against the thesis as written at purchase</li>
+</ul>
+<h3>DIS — Walt Disney Company (The)</h3>
+<div class='scorecard'>
+<p><strong>Sector:</strong> Communication Services &nbsp;|&nbsp; <strong>Position:</strong> watchlist &nbsp;|&nbsp; <strong>Classification:</strong> <strong>WATCH LIST</strong></p>
+<p><strong>Thesis as written:</strong> <em>Streaming margin recovery candidate post-restructuring</em></p>
+<ul>
+<li>Value score: 74.6 &nbsp;|&nbsp; Quality score: 57.4 &nbsp;|&nbsp; Conviction: 65.4</li>
+<li>Piotroski F: 8/9 &nbsp;|&nbsp; Gross profitability: 0.18</li>
+<li>Earnings yield: 6.1% &nbsp;|&nbsp; FCF yield: 4.4% &nbsp;|&nbsp; P/E: 15.1 &nbsp;|&nbsp; 12m momentum: 7.1%</li>
+<li>Gates fired: none</li>
+<li>Data quality: <span class="dq dq-yellow">yellow</span> — latest annual filing is 208 days old (&gt;95d threshold)</li>
+</ul>
+</div>
+<p><strong>Bear case:</strong></p><ul>
+<li>Lost RESEARCH CANDIDATE status this quarter (CB → WATCH LIST). Quality dropped 63.7 → 57.4 across 21 days — that&#x27;s a meaningful deterioration on a name where the entire thesis is &#x27;quality recovers.&#x27; If the recovery is happening, this snapshot does not show it.</li>
+<li>Gross profitability 0.18 is bottom-decile; F=8/9 says the *direction* of accounting metrics is improving (most year-over-year comparisons cleared) but the *level* remains weak. Direction-without-level is fragile: one bad linear-TV quarter or one expensive content slate can flip several Piotroski criteria back to fail.</li>
+<li>Streaming &#x27;margin recovery&#x27; depends on three things simultaneously: (1) DTC revenue growth holding, (2) content amortization stabilizing, (3) linear TV declining no faster than DTC grows. The screen captures (3) imperfectly; (1) and (2) won&#x27;t be visible until the next 10-Q.</li>
+<li>208-day fiscal age — Disney&#x27;s FY ends late September, so the screen is reading FY2024 fundamentals. Any post-Iger-return strategic shifts in studios, parks pricing, or sports rights are not in the data yet.</li>
+<li>Parks/Experiences cyclicality is the largest unscored risk. Secular consumer-spending pullback would compress the segment carrying the bulk of operating profit.</li>
+</ul>
+<p><strong>Before any action, verify:</strong></p><ul>
+<li>☐ Read the latest 10-Q MD&amp;A (focus: revenue, margin, segment commentary)</li>
+<li>☐ Check share-count trend (dilution offset to fundamental gains)</li>
+<li>☐ Confirm whether free cash flow weakness is temporary or structural</li>
+<li>☐ Verify primary-source filing date and refresh fundamentals if stale</li>
+<li>☐ Compare current evidence against the thesis as written at purchase</li>
+</ul>
+<h3>PYPL — PayPal</h3>
+<div class='scorecard'>
+<p><strong>Sector:</strong> Financials &nbsp;|&nbsp; <strong>Position:</strong> watchlist &nbsp;|&nbsp; <strong>Classification:</strong> <strong>WATCH LIST</strong></p>
+<p><strong>Thesis as written:</strong> <em>Cheap if branded-checkout durability holds</em></p>
+<ul>
+<li>Value score: 99.0 &nbsp;|&nbsp; Quality score: 70.5 &nbsp;|&nbsp; Conviction: 83.5</li>
+<li>Piotroski F: 9/9 &nbsp;|&nbsp; Gross profitability: 0.23</li>
+<li>Earnings yield: 13.2% &nbsp;|&nbsp; FCF yield: 11.5% &nbsp;|&nbsp; P/E: 9.3 &nbsp;|&nbsp; 12m momentum: -30.9%</li>
+<li>Gates fired: momentum gate</li>
+<li>Data quality: <span class="dq dq-yellow">yellow</span> — latest annual filing is 116 days old (&gt;95d threshold)</li>
+</ul>
+</div>
+<p><strong>Bear case:</strong></p><ul>
+<li>This is the cleanest &#x27;cheap-and-good but unloved&#x27; reading the system can produce: V=99, Q=70.5, F=9/9, P/E 9.3, FCF yield 11.5%. **And the system flagged it WATCH LIST anyway** because the momentum gate fired. That gate exists precisely for cases like this — when the market is selling a fundamentally clean name, it usually knows something the financial statements haven&#x27;t yet caught.</li>
+<li>12-month total return of −30.9% with F=9/9 is rare, and historically those divergences split: roughly half resolve in favor of the fundamentals, half resolve in favor of the price action. The empirical edge in either direction is small. Don&#x27;t treat the V=99/F=9 combination as a &#x27;discount waiting to be revealed.&#x27;</li>
+<li>The branded-checkout thesis (per the portfolio note) is the single load-bearing assumption. Apple Pay, Stripe-embedded checkout, Shopify Pay, and Klarna&#x27;s checkout all encroach on the take-rate. If branded-checkout TPV growth slows below 3–5%/yr, the FCF yield evaporates as the multiple compresses on a now-no-growth name.</li>
+<li>The momentum-gate firing in this 21-day window (see §4) is a *new* signal; the prior screen had this name as a RESEARCH CANDIDATE. The gate caught the deterioration in real time — a working example of why the system flags rather than recommends.</li>
+<li>Yellow data quality (116-day fiscal age) means scoring uses last fiscal year-end fundamentals; the next 10-Q will likely move all four quality components. Re-screen after the next filing before any sizing decision.</li>
+</ul>
+<p><strong>Before any action, verify:</strong></p><ul>
+<li>☐ Read the latest 10-Q MD&amp;A (focus: revenue, margin, segment commentary)</li>
+<li>☐ Check share-count trend (dilution offset to fundamental gains)</li>
+<li>☐ Confirm whether free cash flow weakness is temporary or structural</li>
+<li>☐ Verify primary-source filing date and refresh fundamentals if stale</li>
+<li>☐ Compare current evidence against the thesis as written at purchase</li>
+</ul>
+<h3>TGT — Target Corporation</h3>
+<div class='scorecard'>
+<p><strong>Sector:</strong> Consumer Staples &nbsp;|&nbsp; <strong>Position:</strong> watchlist &nbsp;|&nbsp; <strong>Classification:</strong> <strong>WATCH LIST</strong></p>
+<p><strong>Thesis as written:</strong> <em>Mean-reversion candidate post-margin compression</em></p>
+<ul>
+<li>Value score: 77.4 &nbsp;|&nbsp; Quality score: 69.6 &nbsp;|&nbsp; Conviction: 73.4</li>
+<li>Piotroski F: 6/9 &nbsp;|&nbsp; Gross profitability: 0.49</li>
+<li>Earnings yield: 7.0% &nbsp;|&nbsp; FCF yield: 3.9% &nbsp;|&nbsp; P/E: 15.9 &nbsp;|&nbsp; 12m momentum: 31.1%</li>
+<li>Gates fired: none</li>
+<li>Data quality: <span class="dq dq-green">green</span></li>
+</ul>
+</div>
+<p><strong>Bear case:</strong></p><ul>
+<li>Lost RESEARCH CANDIDATE status this quarter (CB → WATCH LIST). Quality dropped 78.5 → 69.6 — nearly 9 points in 21 days. **Green data quality means we trust this read.** Whatever margin pressure is in the most recent filing is real, not a snapshot artifact.</li>
+<li>The thesis is &#x27;mean reversion post-margin compression.&#x27; The screen is now saying margins are still compressing, not reverting. F-score didn&#x27;t change but Quality slipped — typically that means working-capital or operating-efficiency components are weakening even when the binary criteria (positive earnings, positive cash flow) still pass.</li>
+<li>Consumer-staples sector context: the price-conscious consumer migration to Walmart in 2023–2025 was the original cause of TGT&#x27;s margin compression. The screen has no signal that that migration has reversed. Re-confirm the thesis premise before sizing.</li>
+<li>V=77.4 (top-quartile value) means the stock is already cheap on conventional metrics. Cheap-and-getting-cheaper resolves only when the margin trend turns. Watch for two consecutive quarters of GP/EBIT margin expansion before treating the mean-reversion thesis as live.</li>
+</ul>
+<p><strong>Before any action, verify:</strong></p><ul>
+<li>☐ Read the latest 10-Q MD&amp;A (focus: revenue, margin, segment commentary)</li>
+<li>☐ Check share-count trend (dilution offset to fundamental gains)</li>
+<li>☐ Confirm whether free cash flow weakness is temporary or structural</li>
+<li>☐ Compare current evidence against the thesis as written at purchase</li>
+</ul>
+<h3>NVDA — Nvidia</h3>
+<div class='scorecard'>
+<p><strong>Sector:</strong> Information Technology &nbsp;|&nbsp; <strong>Position:</strong> holding &nbsp;|&nbsp; <strong>Classification:</strong> <strong>OVERVALUED</strong></p>
+<p><strong>Thesis as written:</strong> <em>AI compute leader at premium valuation</em></p>
+<ul>
+<li>Value score: 20.5 &nbsp;|&nbsp; Quality score: 66.8 &nbsp;|&nbsp; Conviction: 37.0</li>
+<li>Piotroski F: 4/9 &nbsp;|&nbsp; Gross profitability: 0.83</li>
+<li>Earnings yield: 2.6% &nbsp;|&nbsp; FCF yield: 1.9% &nbsp;|&nbsp; P/E: 42.6 &nbsp;|&nbsp; 12m momentum: 60.2%</li>
+<li>Gates fired: none</li>
+<li>Data quality: <span class="dq dq-green">green</span></li>
+</ul>
+</div>
+<p><strong>Bear case:</strong></p><ul>
+<li>The headline divergence: gross profitability is exceptional (0.83 — a top-decile signal of moat), yet Piotroski F=4/9. Five accounting criteria are failing despite the moat. That gap usually means working-capital growth, accruals, or dilution is eating into the cash-flow quality the gross margin would otherwise imply.</li>
+<li>Valuation has no margin for error: P/E 42.6, FCF yield 1.9%, earnings yield 2.6%. The thesis explicitly accepts &#x27;premium valuation&#x27; — but that thesis only survives if growth keeps compounding at hyperscaler-capex rates. Any 1–2 quarters of decel and the multiple compresses sharply.</li>
+<li>12m momentum +60% reflects the recent run; the OVERVALUED classification (V=20.5) reflects the bill that has come due. Both can be true. The question is which signal you weight when sizing.</li>
+<li>Customer concentration: roughly half of data-center revenue ties to a handful of hyperscalers. Their capex cycles are not yet known to be steady-state. A capex air-pocket would compress revenue growth and EPS simultaneously.</li>
+<li>The classification flipped from OVERVALUED QUALITY → OVERVALUED in the prior 21-day window (see §4). Quality slipped a tier while value stayed compressed — a directional signal worth watching for two more quarters.</li>
+</ul>
+<p><strong>Before any action, verify:</strong></p><ul>
+<li>☐ Read the latest 10-Q MD&amp;A (focus: revenue, margin, segment commentary)</li>
+<li>☐ Check share-count trend (dilution offset to fundamental gains)</li>
+<li>☐ Confirm whether free cash flow weakness is temporary or structural</li>
+<li>☐ Compare current evidence against the thesis as written at purchase</li>
+</ul>
+<h3>CMCSA — Comcast</h3>
+<div class='scorecard'>
+<p><strong>Sector:</strong> Communication Services &nbsp;|&nbsp; <strong>Position:</strong> holding &nbsp;|&nbsp; <strong>Classification:</strong> <strong>RESEARCH CANDIDATE</strong></p>
+<p><strong>Thesis as written:</strong> <em>Broadband moat + media optionality at low-double-digit P/E</em></p>
+<ul>
+<li>Value score: 97.5 &nbsp;|&nbsp; Quality score: 71.8 &nbsp;|&nbsp; Conviction: 83.7</li>
+<li>Piotroski F: 8/9 &nbsp;|&nbsp; Gross profitability: 0.33</li>
+<li>Earnings yield: 11.2% &nbsp;|&nbsp; FCF yield: 10.5% &nbsp;|&nbsp; P/E: 5.4 &nbsp;|&nbsp; 12m momentum: -7.6%</li>
+<li>Gates fired: none</li>
+<li>Data quality: <span class="dq dq-yellow">yellow</span> — latest annual filing is 116 days old (&gt;95d threshold)</li>
+</ul>
+</div>
+<p><strong>Bear case:</strong></p><ul>
+<li>This is the cleanest name in the portfolio on the screen&#x27;s terms (V=97.5, Q=71.8, F=8/9, P/E 5.4) — but &#x27;cleanest on screen&#x27; and &#x27;best forward return&#x27; are not the same statement. The empirical work in `docs/DESIGN_DECISIONS.md` shows ranking within RESEARCH CANDIDATE has Kendall τ ≈ −0.04 with subsequent returns. Treat the high score as evidence that nothing is currently broken, not as a forecast.</li>
+<li>Negative 12m momentum (−7.6%) is the market&#x27;s tell. The fundamentals look pristine; the price is drifting lower. That divergence resolves either through fundamental catch-up (good for holders) or through fundamental break-down (bad). The system can&#x27;t tell you which.</li>
+<li>Cable broadband subscribers: net adds turned negative in 2024 industry-wide as fiber overbuild and fixed-wireless access penetrated suburban markets. Comcast&#x27;s broadband moat depends on either (a) faster DOCSIS deployment to defend share or (b) revenue-per-user growth offsetting unit decline. The current GP of 0.33 cannot widen if competitive pricing intensifies.</li>
+<li>Media (NBCUniversal, Peacock) is the optionality leg of the thesis. Streaming margins remain thin sector-wide; cord-cutting compresses the linear advertising base every quarter. The thesis assumes media is &#x27;optionality&#x27; — re-confirm that the market is not pricing in negative optionality.</li>
+<li>Yellow data quality from 116-day fiscal age means the broadband-trend update from the most recent 10-Q is not yet captured. Re-screen after the next filing before sizing.</li>
+</ul>
+<h2>6. Data-quality warnings</h2>
+<ul>
+<li><strong>AAPL</strong> (<span class="dq dq-yellow">yellow</span>): latest annual filing is 208 days old (&gt;95d threshold)</li>
+<li><strong>MSFT</strong> (<span class="dq dq-yellow">yellow</span>): latest annual filing is 300 days old (&gt;95d threshold)</li>
+<li><strong>GOOGL</strong> (<span class="dq dq-yellow">yellow</span>): latest annual filing is 116 days old (&gt;95d threshold)</li>
+<li><strong>JNJ</strong> (<span class="dq dq-yellow">yellow</span>): latest annual filing is 116 days old (&gt;95d threshold)</li>
+<li><strong>INTC</strong> (<span class="dq dq-yellow">yellow</span>): latest annual filing is 116 days old (&gt;95d threshold)</li>
+<li><strong>DIS</strong> (<span class="dq dq-yellow">yellow</span>): latest annual filing is 208 days old (&gt;95d threshold)</li>
+<li><strong>PYPL</strong> (<span class="dq dq-yellow">yellow</span>): latest annual filing is 116 days old (&gt;95d threshold)</li>
+<li><strong>CMCSA</strong> (<span class="dq dq-yellow">yellow</span>): latest annual filing is 116 days old (&gt;95d threshold)</li>
+</ul>
+<h2>7. Decision journal prompt</h2>
+<p>For each flagged holding, write one paragraph answering:</p><ul>
+<li>Why do I own (or watch) this company?</li>
+<li>What evidence would make me change my mind?</li>
+<li>What changed since my original thesis?</li>
+<li>Am I reacting to price movement or business evidence?</li>
+<li>What is the next filing or event that matters?</li>
+<li>Have I read the bear case fairly, or am I dismissing it?</li>
+</ul>
+<hr>
+<p class='disclaimer'><em>Sample artifact for the Assay Portfolio Doctor. Reviews public evidence; does not predict returns. Reviewed in conjunction with primary filings and the investor's own thesis. Not personalized financial advice.</em></p>
+</body></html>

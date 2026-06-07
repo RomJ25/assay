@@ -34,11 +34,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Environment
+# Persistent state lives under /app/state (results, sqlite cache) — mounted as
+# a volume in docker-compose. Kept separate from /app/data/ (Python package
+# with universe + fetcher modules) so the volume never shadows source code.
 ENV TZ=America/New_York
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
-ENV ASSAY_RESULTS=/app/data/results
-ENV ASSAY_CACHE_DB=/app/data/cache.db
+ENV ASSAY_RESULTS=/app/state/results
+ENV ASSAY_CACHE_DB=/app/state/cache.db
 ENV ASSAY_UNIVERSE=sp500
 ENV ASSAY_MODE=server
 
@@ -64,9 +67,11 @@ COPY --from=frontend /app/web/dist ./web/dist
 COPY entrypoint.sh ./
 RUN chmod +x entrypoint.sh
 
-# Create non-root user and data directories
+# Create non-root user and persistent-state directories
+# /app/state → results + sqlite cache (volume mount point)
+# /app/storage/logos → stock logo PNGs (volume mount point)
 RUN useradd -m -u 1000 appuser && \
-    mkdir -p /app/data/results /app/storage/logos && \
+    mkdir -p /app/state/results /app/storage/logos && \
     chown -R appuser:appuser /app
 
 USER appuser

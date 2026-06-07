@@ -1,0 +1,68 @@
+{
+  "_README": "Per-ticker hand-polished bear cases for the Portfolio Doctor sample report. Loaded by scripts/generate_portfolio_doctor_sample.py when present, replacing the rule-based scaffolding for any ticker listed here. Edit when the underlying snapshot moves materially (gate firings, classification flips, F-score shifts).",
+  "AAPL": [
+    "Quality is excellent (Q=83.1, F=8/9, GP=0.64) — the ecosystem-compounder thesis is intact on the screen's terms. **The risk is the price, not the business.** P/E 34.4 with FCF yield 2.5% prices in continued services growth and hardware refresh durability. Any meaningful slip in either compresses the multiple before it compresses earnings.",
+    "Quality score dropped 91.2 → 83.1 over the prior 21 days (see §4). That is a non-trivial slip in a name positioned as 'high quality.' Identify which Q component fell — leverage, accrual quality, or operating efficiency.",
+    "208-day fiscal age is the highest in the portfolio. Apple's fiscal year ends late September, so the screen is using FY2024 data for FY2026-Q2 decision-making. The next 10-K materially repaints the picture.",
+    "Services margin expansion is the thesis's load-bearing assumption. The DOJ App Store rulings, EU DMA enforcement, and Google search-default revenue (a meaningful slice of Services) are all overhangs the financial statements have not yet quantified."
+  ],
+  "MSFT": [
+    "Classification flipped from QUALITY GROWTH PREMIUM → OVERVALUED in the prior 21-day window (see §4). F-score also dropped 6 → 5. Two simultaneous quality signals weakened. The thesis describes 'operating leverage'; recent fundamentals describe operating *deleverage* from AI capex.",
+    "AI capex compression: the operating-leverage thesis assumes Azure AI revenue growth outpaces capex amortization. That trade-off has not yet shown in the financials and may not for several quarters. F=5 with deteriorating Q is exactly the pattern you'd see if capex is rising faster than revenue is converting.",
+    "12m momentum −5.6% says the market is pricing this skepticism even as the headline narrative remains positive. When momentum and quality both turn against a name, it is rarely a buying opportunity until at least one stabilizes.",
+    "300-day fiscal age is the longest in the portfolio. Microsoft's FY ends in June; the screen is using FY2025 fundamentals well into FY2026. The most recent 10-Q (not yet incorporated) is the one that matters for the AI-capex question."
+  ],
+  "GOOGL": [
+    "Quality is solid (Q=74.1, F=6/9, GP=0.51) but value is bottom-quartile (V=24.8). The thesis acknowledges 'ad-cyclicality risk'; the screen is also pricing in moat *durability* risk via the lowest FCF yield (1.8%) of any name in the portfolio's holding sleeve.",
+    "12m momentum +81.7% has done the work the financials are catching up to. The cloud-upside leg of the thesis is partly priced; what isn't yet priced is the ad-revenue impact of generative-search alternatives (ChatGPT, Perplexity, Claude) eroding query share at the margin.",
+    "DOJ search-monopoly remedies remain in motion and are not reflected in any of the screen's quality components. A forced separation of Chrome / Android default-search payments to Apple would compress the highest-margin query-distribution moat.",
+    "F-score didn't drop in the prior window (see §4), but the value score slipped 27.3 → 24.8. The pattern is 'quality stable, market more expensive' — i.e., multiple expansion did the work, not fundamental improvement."
+  ],
+  "JNJ": [
+    "Piotroski F=3/9 is the headline finding for a name positioned in the thesis as a 'defensive cash machine.' Six of nine accounting criteria are failing — meaning the post-Kenvue financial profile no longer looks like the cash machine it did pre-spinoff. The bull narrative depends on margin and ROA stability; the F-score says both are weakening on a year-over-year comparison.",
+    "F-score dropped 4 → 3 between the prior screen and this one (see §4). One additional criterion failed in the latest filing. Identify which: F=3 with positive 12m momentum (+60.7%) implies the market is pricing in optimism the financial trend doesn't yet support.",
+    "The HOLD classification (V=51.5, Q=59.4) means this is no longer a 'buy at a discount' story — it's a 'do I keep holding through deterioration?' story. The defensive thesis only works if quality stabilizes before earnings catch the deterioration.",
+    "Talc/Tylenol litigation reserves and pharma pipeline gaps are exogenous tail risks not captured in F-score. Re-read the latest 10-Q litigation disclosures before sizing decisions."
+  ],
+  "INTC": [
+    "The thesis says 'deep value.' The screen says V=4.0 — the **2nd percentile** of the 425-stock universe on value. That is not deep value; that is no value. The earnings yield is negative (−0.0%, rounding hides the sign), FCF yield is −1.1%, P/E is undefined because earnings flipped negative. There is no fundamental anchor under the share price right now.",
+    "12-month momentum +120% has done all the heavy lifting. The market priced in foundry-turnaround optionality faster than the financials can validate it. If Intel 18A yields, customer wins, or the IFS spin-off drag for one quarter, the +120% becomes the downside.",
+    "Gross profitability of 0.15 is bottom-quartile for a semiconductor name — even before turnaround capex. The foundry build is structurally negative for near-term GP (high depreciation, low utilization), and Q (return on assets, leverage, accruals) reflects this.",
+    "The thesis review date (2026-04-01) is past per the portfolio CSV — and the classification has weakened from INSUFFICIENT DATA to OVERVALUED in the most recent 21 days (see §4). Re-write the thesis: what concrete milestone (process node yield, foundry customer, FCF positive) would change your view?",
+    "Foundry capex is not yet self-funding. The thesis only resolves favorably if either (a) external customers fund the investment cycle or (b) the rest of the business stabilizes enough to absorb it. Neither has occurred in the most recent filings."
+  ],
+  "DIS": [
+    "Lost RESEARCH CANDIDATE status this quarter (CB → WATCH LIST). Quality dropped 63.7 → 57.4 across 21 days — that's a meaningful deterioration on a name where the entire thesis is 'quality recovers.' If the recovery is happening, this snapshot does not show it.",
+    "Gross profitability 0.18 is bottom-decile; F=8/9 says the *direction* of accounting metrics is improving (most year-over-year comparisons cleared) but the *level* remains weak. Direction-without-level is fragile: one bad linear-TV quarter or one expensive content slate can flip several Piotroski criteria back to fail.",
+    "Streaming 'margin recovery' depends on three things simultaneously: (1) DTC revenue growth holding, (2) content amortization stabilizing, (3) linear TV declining no faster than DTC grows. The screen captures (3) imperfectly; (1) and (2) won't be visible until the next 10-Q.",
+    "208-day fiscal age — Disney's FY ends late September, so the screen is reading FY2024 fundamentals. Any post-Iger-return strategic shifts in studios, parks pricing, or sports rights are not in the data yet.",
+    "Parks/Experiences cyclicality is the largest unscored risk. Secular consumer-spending pullback would compress the segment carrying the bulk of operating profit."
+  ],
+  "PYPL": [
+    "This is the cleanest 'cheap-and-good but unloved' reading the system can produce: V=99, Q=70.5, F=9/9, P/E 9.3, FCF yield 11.5%. **And the system flagged it WATCH LIST anyway** because the momentum gate fired. That gate exists precisely for cases like this — when the market is selling a fundamentally clean name, it usually knows something the financial statements haven't yet caught.",
+    "12-month total return of −30.9% with F=9/9 is rare, and historically those divergences split: roughly half resolve in favor of the fundamentals, half resolve in favor of the price action. The empirical edge in either direction is small. Don't treat the V=99/F=9 combination as a 'discount waiting to be revealed.'",
+    "The branded-checkout thesis (per the portfolio note) is the single load-bearing assumption. Apple Pay, Stripe-embedded checkout, Shopify Pay, and Klarna's checkout all encroach on the take-rate. If branded-checkout TPV growth slows below 3–5%/yr, the FCF yield evaporates as the multiple compresses on a now-no-growth name.",
+    "The momentum-gate firing in this 21-day window (see §4) is a *new* signal; the prior screen had this name as a RESEARCH CANDIDATE. The gate caught the deterioration in real time — a working example of why the system flags rather than recommends.",
+    "Yellow data quality (116-day fiscal age) means scoring uses last fiscal year-end fundamentals; the next 10-Q will likely move all four quality components. Re-screen after the next filing before any sizing decision."
+  ],
+  "TGT": [
+    "Lost RESEARCH CANDIDATE status this quarter (CB → WATCH LIST). Quality dropped 78.5 → 69.6 — nearly 9 points in 21 days. **Green data quality means we trust this read.** Whatever margin pressure is in the most recent filing is real, not a snapshot artifact.",
+    "The thesis is 'mean reversion post-margin compression.' The screen is now saying margins are still compressing, not reverting. F-score didn't change but Quality slipped — typically that means working-capital or operating-efficiency components are weakening even when the binary criteria (positive earnings, positive cash flow) still pass.",
+    "Consumer-staples sector context: the price-conscious consumer migration to Walmart in 2023–2025 was the original cause of TGT's margin compression. The screen has no signal that that migration has reversed. Re-confirm the thesis premise before sizing.",
+    "V=77.4 (top-quartile value) means the stock is already cheap on conventional metrics. Cheap-and-getting-cheaper resolves only when the margin trend turns. Watch for two consecutive quarters of GP/EBIT margin expansion before treating the mean-reversion thesis as live."
+  ],
+  "NVDA": [
+    "The headline divergence: gross profitability is exceptional (0.83 — a top-decile signal of moat), yet Piotroski F=4/9. Five accounting criteria are failing despite the moat. That gap usually means working-capital growth, accruals, or dilution is eating into the cash-flow quality the gross margin would otherwise imply.",
+    "Valuation has no margin for error: P/E 42.6, FCF yield 1.9%, earnings yield 2.6%. The thesis explicitly accepts 'premium valuation' — but that thesis only survives if growth keeps compounding at hyperscaler-capex rates. Any 1–2 quarters of decel and the multiple compresses sharply.",
+    "12m momentum +60% reflects the recent run; the OVERVALUED classification (V=20.5) reflects the bill that has come due. Both can be true. The question is which signal you weight when sizing.",
+    "Customer concentration: roughly half of data-center revenue ties to a handful of hyperscalers. Their capex cycles are not yet known to be steady-state. A capex air-pocket would compress revenue growth and EPS simultaneously.",
+    "The classification flipped from OVERVALUED QUALITY → OVERVALUED in the prior 21-day window (see §4). Quality slipped a tier while value stayed compressed — a directional signal worth watching for two more quarters."
+  ],
+  "CMCSA": [
+    "This is the cleanest name in the portfolio on the screen's terms (V=97.5, Q=71.8, F=8/9, P/E 5.4) — but 'cleanest on screen' and 'best forward return' are not the same statement. The empirical work in `docs/DESIGN_DECISIONS.md` shows ranking within RESEARCH CANDIDATE has Kendall τ ≈ −0.04 with subsequent returns. Treat the high score as evidence that nothing is currently broken, not as a forecast.",
+    "Negative 12m momentum (−7.6%) is the market's tell. The fundamentals look pristine; the price is drifting lower. That divergence resolves either through fundamental catch-up (good for holders) or through fundamental break-down (bad). The system can't tell you which.",
+    "Cable broadband subscribers: net adds turned negative in 2024 industry-wide as fiber overbuild and fixed-wireless access penetrated suburban markets. Comcast's broadband moat depends on either (a) faster DOCSIS deployment to defend share or (b) revenue-per-user growth offsetting unit decline. The current GP of 0.33 cannot widen if competitive pricing intensifies.",
+    "Media (NBCUniversal, Peacock) is the optionality leg of the thesis. Streaming margins remain thin sector-wide; cord-cutting compresses the linear advertising base every quarter. The thesis assumes media is 'optionality' — re-confirm that the market is not pricing in negative optionality.",
+    "Yellow data quality from 116-day fiscal age means the broadband-trend update from the most recent 10-Q is not yet captured. Re-screen after the next filing before sizing."
+  ]
+}

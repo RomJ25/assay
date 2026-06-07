@@ -66,6 +66,8 @@ export interface ScreenStock {
   dividend_yield: number | null;
   beta: number | null;
   market_cap: number | null;
+  f_gate_fired?: boolean;
+  momentum_gate_fired?: boolean;
   revenue_gate_fired: boolean;
   data_quality?: DataQuality;
 }

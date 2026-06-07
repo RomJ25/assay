@@ -165,7 +165,7 @@ def simulate_selective_sell(
     """Simulate selective-sell portfolio aligned with STRATEGY.md.
 
     Instead of selling everything that leaves CB each quarter, this strategy:
-    - BUYS when a stock enters CONVICTION BUY
+    - BUYS when a stock enters RESEARCH CANDIDATE
     - HOLDS if it moves to WATCH LIST or QUALITY GROWTH PREMIUM
     - SELLS on VALUE TRAP, AVOID, OVERVALUED, or INSUFFICIENT DATA
     - MONITORS HOLD for one quarter; sells if HOLD persists 2+ consecutive quarters
@@ -205,7 +205,7 @@ def simulate_selective_sell(
                 break
 
         # Add new CB entries
-        new_cb = {t for t, cl in classifications.items() if cl == "CONVICTION BUY"}
+        new_cb = {t for t, cl in classifications.items() if cl == "RESEARCH CANDIDATE"}
         added_count = len(new_cb - prev_portfolio)  # compute BEFORE updating prev_portfolio
         portfolio.update(new_cb)
 

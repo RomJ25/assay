@@ -54,7 +54,7 @@ export function WhatChanged() {
         {diff.new_picks.length > 0 && (
           <div className="mb-4">
             <div className="text-[12px] font-medium mb-2" style={{ color: "#22c55e" }}>
-              New to Conviction Buy
+              New to Research Candidate
             </div>
             {diff.new_picks.map((s, i) => (
               <div key={s.ticker} className="flex items-center gap-3 py-1.5 anim-fade-up"
@@ -77,7 +77,7 @@ export function WhatChanged() {
         {diff.dropped_picks.length > 0 && (
           <div className="mb-4">
             <div className="text-[12px] font-medium mb-2" style={{ color: "#ef4444" }}>
-              Dropped from Conviction Buy ({diff.dropped_picks.length})
+              Dropped from Research Candidate ({diff.dropped_picks.length})
             </div>
             {(expanded ? diff.dropped_picks : diff.dropped_picks.slice(0, 5)).map((s, i) => {
               const newCl = s.new_classification;

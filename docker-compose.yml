@@ -6,8 +6,8 @@ services:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
-      - ASSAY_RESULTS=/app/data/results
-      - ASSAY_CACHE_DB=/app/data/cache.db
+      - ASSAY_RESULTS=/app/state/results
+      - ASSAY_CACHE_DB=/app/state/cache.db
       - ASSAY_UNIVERSE=${ASSAY_UNIVERSE:-sp500}
       - ASSAY_TOP_N=${ASSAY_TOP_N:-30}
       - ASSAY_MODE=server
@@ -15,21 +15,26 @@ services:
       - ASSAY_SCHEDULE_HOUR=06
       - ASSAY_SCHEDULE_MIN=00
     volumes:
-      - assay_data:/app/data
+      # Persistent results + sqlite cache. Kept under /app/state (not /app/data)
+      # so the volume can't shadow the Python data/ package on rebuilds.
+      - assay_state:/app/state
       - assay_logos:/app/storage/logos
     restart: unless-stopped
     init: true
+    stop_grace_period: 15s
     deploy:
       resources:
         limits:
           memory: 2g
           cpus: "2.0"
     healthcheck:
+      # Web server comes up within seconds (initial scan runs in the background),
+      # so a short start_period keeps the Docker Desktop status accurate.
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 120s
+      start_period: 30s
 
   scan:
     build: .
@@ -37,16 +42,16 @@ services:
     profiles: ["scan"]
     environment:
       - PYTHONUNBUFFERED=1
-      - ASSAY_RESULTS=/app/data/results
-      - ASSAY_CACHE_DB=/app/data/cache.db
+      - ASSAY_RESULTS=/app/state/results
+      - ASSAY_CACHE_DB=/app/state/cache.db
       - ASSAY_UNIVERSE=${ASSAY_UNIVERSE:-sp500}
       - ASSAY_TOP_N=${ASSAY_TOP_N:-30}
       - ASSAY_MODE=scan
     volumes:
-      - assay_data:/app/data
+      - assay_state:/app/state
       - assay_logos:/app/storage/logos
     restart: on-failure
 
 volumes:
-  assay_data:
+  assay_state:
   assay_logos:
