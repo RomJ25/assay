@@ -170,6 +170,8 @@ The April 2026 empirical investigation tested Assay's screener across 12 quarter
     +-------------------------------------------------------------------+
 ```
 
+> **Superseded figures.** These are the earlier **12-quarter, survivorship-naive** numbers. The April 2026 survivorship audit re-ran the study survivorship-free over **16 quarters**; under that honest measurement the quarterly-rebalance selection alpha is **−0.7%/yr** (not −1.3%) and CAGR **+9.2%** (not +11.2%). See [`docs/STRATEGY.md` §6](../STRATEGY.md#6-the-evidence). The qualitative conclusion below (the screener underperforms its own universe under quarterly rebalancing) is unchanged.
+
 Assay's portfolio returned +11.2% annualized. The universe returned +12.5%. The raw selection alpha was -1.3% — the screener underperformed its own universe.
 
 This is not a contradiction with the academic evidence. The gap between +7.1% theoretical and -1.3% actual has identifiable causes:

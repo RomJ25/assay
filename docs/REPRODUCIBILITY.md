@@ -11,9 +11,11 @@ committed so a fresh clone shows real data instead of an empty state:
 
 | File | Size | Powers |
 |---|---|---|
-| `results/screen_2026-04-26.json` | ~1.2 MB | Home, Universe, stock sheets, search |
-| `results/backtest_2026-04-26.csv` | <1 KB | Evidence page summary table |
+| `results/screen_2026-04-26.json` | ~1.2 MB | Home, Universe, stock sheets, search — 425 names, 15 of them RESEARCH CANDIDATE |
+| `results/backtest_2026-04-26.csv` | <1 KB | Evidence page summary table — 8 quarters (2024-03-31 → 2026-03-31), num_picks 2–11 |
 | `results/backtest_detail_2026-04-26.csv` | ~5 KB | Evidence per-pick detail |
+
+> **Scope note.** This pinned backtest is an 8-quarter (2024–2026) snapshot — that is what the committed CSV and the live Evidence page show. The broader strategy analysis in `docs/STRATEGY.md` §6 uses a separate 16-quarter (2022–2026) survivorship-free study, and `docs/CASE_STUDIES/long_term_evidence.md` an earlier 12-quarter one; those longer runs are regenerated locally (see commands below), not shipped in the snapshot.
 
 All other `results/*` output is git-ignored (it is regenerated locally). When you
 re-run the screener, a newer-dated file is written and the API automatically
@@ -59,10 +61,11 @@ The default is **survivorship-free** (point-in-time S&P 500 constituents). The
 
 | Claim (where it appears) | Command | Verify in |
 |---|---|---|
-| Default screen contracts to ~6 names in expensive markets; held 17 through the 2022 −16% quarter (`README.md`) | `python main.py --backtest` | `results/backtest_*.csv` (`num_picks` column) |
-| Strict bar reaches **zero** picks at the Dec 2025 rebalance (`README.md`) | `python main.py --backtest` with the stricter buy threshold (see `docs/DESIGN_DECISIONS.md` "buy80") | `results/e5_buy80_*.csv` |
+| Live screen surfaces **15 of 425** names as RESEARCH CANDIDATE (`README.md`) | `python main.py` | committed `results/screen_2026-04-26.json` (count `classification == "RESEARCH CANDIDATE"`) |
+| Backtest pick count contracts to **as few as 2** (rebalance ending March 2026) (`README.md`) | `python main.py --backtest` | committed `results/backtest_2026-04-26.csv` (`num_picks` column) |
+| Stricter "buy80" bar reaches **zero** picks at its late-2025 rebalance (`README.md`) | `python scripts/run_e5.py` (regenerates the buy80 run — not shipped in the snapshot) | regenerated `results/e5_buy80_*.csv` + committed narrative in `docs/DESIGN_DECISIONS.md` ("buy80" entry) |
 | Selective sell: **+10.4% CAGR / +0.4%/yr** selection alpha, within noise (`docs/STRATEGY.md` §6) | `python scripts/run_policy_lab.py` | policy-lab output + `docs/CAPITAL_RESEARCH_PLAN.md` |
-| Within-list conviction ranking does **not** predict returns (`README.md`, `docs/DESIGN_DECISIONS.md`) | `python backtest/case_study.py` | case-study bucket/Kendall-tau output |
+| Within-list conviction ranking does **not** predict returns (`README.md`, `docs/DESIGN_DECISIONS.md`) | `python scripts/run_investigation.py` | Kendall-τ / bucket output |
 | 62 years of value+quality factor evidence (+7.1%/yr) (`docs/CASE_STUDIES/long_term_evidence.md`) | `python -c "from data.fama_french import download_portfolios_32; print(download_portfolios_32().tail())"` | Kenneth French Data Library (cited) |
 
 ## Data sources (all free, auto-cached)

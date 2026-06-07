@@ -11,9 +11,9 @@
 
 *A U.S. equity value + quality screener — S&P 500 or Russell 1000 — a first filter for research, not a trading signal. Built for investors who would rather see zero picks than a forced shortlist of twenty.*
 
-Most screeners give you a list every time you run them. Assay doesn't force one. At its default bar the number of qualifying names contracts sharply when the market gets expensive — from a typical 15–25 down to as few as 6 (the rebalance ending September 2025). Tighten the value bar and it goes all the way to silence: at a stricter setting the screen surfaced just one or two names in several quarters of 2024–2025 and **zero** at the December 2025 rebalance. That willingness to return nothing — rather than a forced shortlist of twenty — is the system's most distinctive behavior.
+Most screeners give you a list every time you run them. Assay doesn't force one. In the committed 2026-04-26 screen, just **15 of 425** S&P 500 names clear its combined value-and-quality bar — and when the market is expensive that count contracts further. The committed backtest (2024–2026, the CSVs in `results/`) falls to as few as **2** qualifying names (the rebalance ending March 2026); tighten the value bar and it reaches silence entirely — the stricter "buy80" configuration documented in [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md) produced **zero** picks at its late-2025 rebalance. That willingness to return almost nothing — rather than a forced shortlist of twenty — is the system's most distinctive behavior.
 
-One honest caveat up front: Assay is a *fundamentals filter, not a market-timing signal*. In the 2022 bear market the default screen stayed fully invested — it held 17 names through the quarter the S&P 500 fell 16% — and did **not** sidestep the drawdown. It decides *what* clears a combined value-and-quality bar, not *when* to be in the market. (Every figure here is reproducible — see [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md).)
+One honest caveat up front: Assay is a *fundamentals filter, not a market-timing signal*. It decides *what* clears a combined value-and-quality bar, not *when* to be in the market — it does not rotate to cash to dodge drawdowns. (Every figure here is reproducible from the committed snapshot — see [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md).)
 
 When Assay does surface a name, you know:
 - It's **cheap** relative to the full universe (Value score >= 70, driven by Earnings Yield with a Free Cash Flow reality check)
@@ -22,7 +22,7 @@ When Assay does surface a name, you know:
 - It's **not in freefall** (passed the momentum gate)
 - And both cheapness and quality are high **at the same time** (geometric mean prevents one good dimension from masking a terrible one)
 
-The result is a short list of research candidates — typically 15-25 in normal markets, occasionally zero when nothing qualifies — where every name has survived every filter. Use it as a research input: do your own work on each candidate (read the 10-K, check the bear case, sanity-check the data) before committing capital. Empirical testing inside this repo (`docs/DESIGN_DECISIONS.md`) shows ranking *within* the candidate list does NOT predict subsequent returns, so resist the urge to weight the top of the list more heavily.
+The result is a short list of research candidates — around 15-20 in a calm market (15 in the committed snapshot), down to a handful or zero when little qualifies — where every name has survived every filter. Use it as a research input: do your own work on each candidate (read the 10-K, check the bear case, sanity-check the data) before committing capital. Empirical testing inside this repo (`docs/DESIGN_DECISIONS.md`) shows ranking *within* the candidate list does NOT predict subsequent returns, so resist the urge to weight the top of the list more heavily.
 
 Assay doesn't predict prices. It doesn't forecast earnings. It doesn't use machine learning. Every score traces to observable, auditable data — nine binary Piotroski criteria, two percentile ranks, one geometric mean. You can see exactly why every stock is where it is and decide whether you agree.
 
