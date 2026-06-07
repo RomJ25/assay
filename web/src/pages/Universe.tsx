@@ -13,7 +13,7 @@ const MATRIX: Classification[][] = [
 ];
 
 const SHORT_LABELS: Record<string, string> = {
-  "RESEARCH CANDIDATE": "Conviction Buy",
+  "RESEARCH CANDIDATE": "Research Candidate",
   "QUALITY GROWTH PREMIUM": "Quality Growth",
   "WATCH LIST": "Watch List",
   HOLD: "Hold",

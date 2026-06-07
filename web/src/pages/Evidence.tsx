@@ -281,7 +281,7 @@ function QuarterlyTable({ quarters, picks }: { quarters: BacktestQuarter[]; pick
 
 function InvestigationSummary() {
   const findings = [
-    { question: "Do conviction buys outperform?", signal: "MIXED", color: "#eab308",
+    { question: "Do research candidates outperform?", signal: "MIXED", color: "#eab308",
       detail: "CB beat AVOID in 6/11 quarters. Average spread: -0.8%. Directional but not reliable per-quarter." },
     { question: "Does the momentum gate catch falling knives?", signal: "YES", color: "#22c55e",
       detail: "98 victims averaged +2.6% vs CB's +4.5%. Gate removed underperformers in 7/10 quarters." },

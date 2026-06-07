@@ -51,7 +51,7 @@ export function ConvictionTable({ stocks, onSelectStock }: Props) {
     return (
       <div className="flex flex-col items-center py-16 px-8">
         <p className="text-lg mb-2" style={{ color: "var(--color-text-secondary)" }}>
-          No conviction buys this screen.
+          No research candidates this screen.
         </p>
         <p className="text-[13px]" style={{ color: "var(--color-text-muted)" }}>
           The screener found no stocks where value, quality, and momentum all align.
@@ -79,7 +79,7 @@ export function ConvictionTable({ stocks, onSelectStock }: Props) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `assay_conviction_buys.csv`;
+    a.download = `assay_research_candidates.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
