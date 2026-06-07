@@ -217,6 +217,196 @@ def _fetch_tase_all() -> tuple[list[str], dict[str, dict]]:
 
 _TWELVE_DATA_US_EXCHANGES = ["NYSE", "NASDAQ"]
 _TWELVE_DATA_US_TYPES = ["Common Stock", "American Depositary Receipt", "REIT"]
+_SECTOR_PROFILE_CACHE_TTL_HOURS = 720  # 30 days - company sector mappings move slowly
+_SECTOR_PROFILE_BATCH_SIZE = 200
+_UNKNOWN_VALUES = {"", "unknown", "nan", "none", "null", "n/a"}
+_YAHOO_TO_GICS_SECTOR = {
+    "Basic Materials": "Materials",
+    "Consumer Cyclical": "Consumer Discretionary",
+    "Consumer Defensive": "Consumer Staples",
+    "Financial Services": "Financials",
+    "Healthcare": "Health Care",
+    "Technology": "Information Technology",
+}
+
+
+def _is_unknown(value: object) -> bool:
+    """Return True when metadata is absent or placeholder-like."""
+    if value is None:
+        return True
+    return str(value).strip().lower() in _UNKNOWN_VALUES
+
+
+def _normalize_us_sector(sector: object) -> str | None:
+    """Normalize Yahoo sector labels to the GICS-style labels used by S&P data."""
+    if _is_unknown(sector):
+        return None
+    raw = str(sector).strip()
+    return _YAHOO_TO_GICS_SECTOR.get(raw, raw)
+
+
+def _sector_fields_from_profile(profile: object) -> tuple[str | None, str | None]:
+    """Extract normalized sector and industry fields from a Yahoo asset profile."""
+    if not isinstance(profile, dict):
+        return None, None
+    sector = _normalize_us_sector(profile.get("sectorDisp") or profile.get("sector"))
+    industry_raw = profile.get("industryDisp") or profile.get("industry")
+    industry = None if _is_unknown(industry_raw) else str(industry_raw).strip()
+    return sector, industry
+
+
+def _apply_sector_profile_values(
+    info: dict[str, dict],
+    profile_values: dict[str, dict[str, str]],
+) -> int:
+    """Fill missing sector metadata from normalized profile values in-place."""
+    updated = 0
+    for ticker, values in profile_values.items():
+        if ticker not in info:
+            continue
+        row = info[ticker]
+        changed = False
+        sector = _normalize_us_sector(values.get("sector"))
+        sub_industry = values.get("sub_industry")
+        if sector and _is_unknown(row.get("sector")):
+            row["sector"] = sector
+            changed = True
+        if sub_industry and not _is_unknown(sub_industry) and _is_unknown(row.get("sub_industry")):
+            row["sub_industry"] = str(sub_industry).strip()
+            changed = True
+        if changed:
+            updated += 1
+    return updated
+
+
+def _ensure_sector_profile_cache(conn) -> None:
+    conn.execute("""CREATE TABLE IF NOT EXISTS sector_profile_cache (
+        ticker TEXT PRIMARY KEY,
+        sector TEXT NOT NULL,
+        sub_industry TEXT NOT NULL,
+        fetched_at TEXT NOT NULL
+    )""")
+
+
+def _get_sector_profile_cache(tickers: list[str]) -> dict[str, dict[str, str]]:
+    """Return fresh cached sector metadata for tickers."""
+    import sqlite3
+
+    if not tickers or not CACHE_DB_PATH.exists():
+        return {}
+    cutoff = (datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=_SECTOR_PROFILE_CACHE_TTL_HOURS)).isoformat()
+    cached: dict[str, dict[str, str]] = {}
+    try:
+        conn = sqlite3.connect(str(CACHE_DB_PATH))
+        _ensure_sector_profile_cache(conn)
+        for i in range(0, len(tickers), 500):
+            batch = tickers[i:i + 500]
+            placeholders = ",".join("?" for _ in batch)
+            rows = conn.execute(
+                f"""SELECT ticker, sector, sub_industry
+                    FROM sector_profile_cache
+                    WHERE fetched_at > ? AND ticker IN ({placeholders})""",
+                [cutoff, *batch],
+            ).fetchall()
+            for ticker, sector, sub_industry in rows:
+                cached[ticker] = {"sector": sector, "sub_industry": sub_industry}
+        conn.close()
+    except Exception as e:
+        logger.debug(f"Sector profile cache read failed: {e}")
+    return cached
+
+
+def _set_sector_profile_cache(profile_values: dict[str, dict[str, str]]) -> None:
+    """Cache normalized sector metadata."""
+    import sqlite3
+
+    if not profile_values:
+        return
+    CACHE_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    now = datetime.now(UTC).replace(tzinfo=None).isoformat()
+    rows = [
+        (
+            ticker,
+            values.get("sector") or "Unknown",
+            values.get("sub_industry") or "Unknown",
+            now,
+        )
+        for ticker, values in profile_values.items()
+    ]
+    try:
+        conn = sqlite3.connect(str(CACHE_DB_PATH))
+        _ensure_sector_profile_cache(conn)
+        conn.executemany(
+            """INSERT OR REPLACE INTO sector_profile_cache
+               (ticker, sector, sub_industry, fetched_at) VALUES (?, ?, ?, ?)""",
+            rows,
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.debug(f"Sector profile cache write failed: {e}")
+
+
+def _enrich_info_with_sector_profiles(
+    info: dict[str, dict],
+    tickers: list[str] | None = None,
+    *,
+    batch_size: int = _SECTOR_PROFILE_BATCH_SIZE,
+) -> int:
+    """Fill unknown US sector metadata from cached/Yahoo asset profiles."""
+    target = [
+        t for t in (tickers or list(info.keys()))
+        if t in info and (_is_unknown(info[t].get("sector")) or _is_unknown(info[t].get("sub_industry")))
+    ]
+    if not target:
+        return 0
+
+    updated = 0
+    cached = _get_sector_profile_cache(target)
+    updated += _apply_sector_profile_values(info, cached)
+
+    remaining = [
+        t for t in target
+        if t not in cached and (_is_unknown(info[t].get("sector")) or _is_unknown(info[t].get("sub_industry")))
+    ]
+    if not remaining:
+        return updated
+
+    try:
+        from yahooquery import Ticker as YQTicker
+    except Exception as e:
+        logger.warning(f"Sector profile enrichment unavailable: {e}")
+        return updated
+
+    fetched = 0
+    for i in range(0, len(remaining), batch_size):
+        batch = remaining[i:i + batch_size]
+        batch_values: dict[str, dict[str, str]] = {}
+        try:
+            profiles = YQTicker(batch, asynchronous=True, max_workers=8, progress=False, timeout=10).asset_profile
+            if isinstance(profiles, dict):
+                for ticker in batch:
+                    profile = profiles.get(ticker)
+                    sector, industry = _sector_fields_from_profile(profile)
+                    batch_values[ticker] = {
+                        "sector": sector or "Unknown",
+                        "sub_industry": industry or "Unknown",
+                    }
+        except Exception as e:
+            logger.warning(f"Sector profile batch {i // batch_size + 1} failed: {e}")
+            continue
+
+        _set_sector_profile_cache(batch_values)
+        updated += _apply_sector_profile_values(info, batch_values)
+        fetched += len(batch_values)
+
+    if target:
+        unknown_left = sum(1 for t in target if _is_unknown(info[t].get("sector")))
+        logger.info(
+            f"Sector profile enrichment: updated {updated}, fetched {fetched}, "
+            f"unknown remaining {unknown_left}/{len(target)}"
+        )
+    return updated
 
 
 def _fetch_us_all() -> tuple[list[str], dict[str, dict]]:
@@ -297,7 +487,7 @@ _MIN_MARKET_CAP_R1000 = 3_000_000_000  # $3B floor
 _R1000_CACHE_TTL_HOURS = 168  # 7 days — market caps don't shift enough to matter weekly
 
 
-def _get_r1000_cache() -> tuple[list[str], dict[str, dict]] | None:
+def _get_r1000_cache(max_age_hours: int | None = _R1000_CACHE_TTL_HOURS) -> tuple[list[str], dict[str, dict]] | None:
     """Return cached R1000 qualified tickers if fresh, else None."""
     import sqlite3
     db_path = CACHE_DB_PATH
@@ -309,8 +499,14 @@ def _get_r1000_cache() -> tuple[list[str], dict[str, dict]] | None:
             data_json TEXT NOT NULL,
             fetched_at TEXT NOT NULL
         )""")
-        cutoff = (datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=_R1000_CACHE_TTL_HOURS)).isoformat()
-        row = conn.execute("SELECT data_json FROM r1000_cache WHERE fetched_at > ?", (cutoff,)).fetchone()
+        if max_age_hours is None:
+            row = conn.execute("SELECT data_json FROM r1000_cache ORDER BY fetched_at DESC LIMIT 1").fetchone()
+        else:
+            cutoff = (datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=max_age_hours)).isoformat()
+            row = conn.execute(
+                "SELECT data_json FROM r1000_cache WHERE fetched_at > ? ORDER BY fetched_at DESC LIMIT 1",
+                (cutoff,),
+            ).fetchone()
         conn.close()
         if row is None:
             return None
@@ -358,6 +554,9 @@ def _fetch_russell1000() -> tuple[list[str], dict[str, dict]]:
     cached = _get_r1000_cache()
     if cached is not None:
         tickers, info = cached
+        enriched = _enrich_info_with_sector_profiles(info, tickers)
+        if enriched:
+            _set_r1000_cache(tickers, info)
         logger.info(f"Russell 1000 proxy: {len(tickers)} stocks (from cache)")
         return tickers, info
 
@@ -412,6 +611,10 @@ def _fetch_russell1000() -> tuple[list[str], dict[str, dict]]:
             logger.warning(f"Market cap batch {i // batch_size + 1} failed: {e}")
 
     logger.info(f"Russell 1000 proxy: {len(qualified_tickers)} stocks with market cap >= ${_MIN_MARKET_CAP_R1000 / 1e9:.0f}B")
+
+    # Broader Russell proxy names start as Twelve Data listings with no sector.
+    # Sector caps and sector-relative tests are unreliable until this is filled.
+    _enrich_info_with_sector_profiles(qualified_info, qualified_tickers)
 
     # Cache for next time
     _set_r1000_cache(qualified_tickers, qualified_info)
