@@ -1,5 +1,8 @@
 # Assay
 
+[![CI](https://github.com/RomJ25/assay/actions/workflows/ci.yml/badge.svg)](https://github.com/RomJ25/assay/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+
 **A system that only acts when the evidence is aligned — and stays silent when it isn't.**
 
 *A U.S. equity value + quality screener — S&P 500 or Russell 1000 — a first filter for research, not a trading signal. Built for investors who would rather see zero picks than a forced shortlist of twenty.*
