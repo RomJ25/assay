@@ -301,10 +301,12 @@ function GateStatus({ stock }: { stock: ScreenStock }) {
         />
         <GateRow
           label="Momentum Gate"
-          passed={true}
-          detail={stock.momentum_12m != null
-            ? `12-1 month return: ${(stock.momentum_12m * 100).toFixed(1)}% (above 25th percentile cutoff)`
-            : "Momentum data available"}
+          passed={!stock.momentum_gate_fired}
+          detail={stock.momentum_gate_fired
+            ? "Bottom-25% momentum — downgraded"
+            : stock.momentum_12m != null
+              ? `12-1 month return: ${(stock.momentum_12m * 100).toFixed(1)}% (above 25th percentile cutoff)`
+              : "Above 25th percentile cutoff"}
         />
         <GateRow
           label="Revenue Gate"
@@ -492,9 +494,9 @@ function MetricsGrid({ metrics }: { metrics: { label: string; value: string | nu
 /* ── Data Quality Chip (Slice D) ── */
 
 const DQ_COLORS: Record<string, { bg: string; fg: string; label: string }> = {
-  green:  { bg: "#10b98126", fg: "#059669", label: "DATA OK" },
-  yellow: { bg: "#f59e0b26", fg: "#b45309", label: "DATA WARN" },
-  red:    { bg: "#ef444426", fg: "#b91c1c", label: "DATA INSUFFICIENT" },
+  green:  { bg: "#10b98126", fg: "#34d399", label: "DATA OK" },
+  yellow: { bg: "#f59e0b26", fg: "#fbbf24", label: "DATA WARN" },
+  red:    { bg: "#ef444426", fg: "#f87171", label: "DATA INSUFFICIENT" },
 };
 
 function DataQualityChip({ dq }: { dq?: { grade: string; warnings: string[] } }) {
