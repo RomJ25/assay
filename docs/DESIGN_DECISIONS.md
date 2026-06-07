@@ -869,6 +869,8 @@ Universe expansion to Russell 1000 improved selection alpha from −0.7% to +0.6
 
 ### 2026-04-12 — Selective sell strategy re-investigation
 
+> **⚠️ Superseded by the 2026-04-15 survivorship audit (entry above).** The +18.7% CAGR / +1.0% selection-alpha figures in this entry are inflated by survivorship bias — SMCI (added to the S&P 500 in March 2024) appeared in pre-addition backtest quarters. Under survivorship-free measurement (point-in-time constituents, 10 bps costs, n=16) the corrected figures are **+10.4% CAGR and +0.4%/yr selection alpha — within noise**. See `docs/STRATEGY.md` §6. Prior reasoning is preserved below per this document's "update in place, do not delete" convention.
+
 **Scope.** Re-ran the full 12-quarter investigation under the selective sell strategy (hold CB/WL/QGP/OQ, sell only VT/AVOID/OV, monitor HOLD for 1 quarter). Compared to original quarterly rebalance findings.
 
 **Outcome.** Selective sell strategy significantly outperformed quarterly rebalance: CAGR +18.7% vs +11.2% (+7.5% improvement). Selection alpha flipped from -1.3% to +1.0%. Two investigation findings revised:
